@@ -98,12 +98,27 @@
 
 ---
 
-## 公開方法（GitHub Pages）
+## 公開方法（Cloudflare Workers）
 
-1. リポジトリの **Settings → Pages**
-2. Source: **Deploy from a branch**
-3. Branch: `claude/diablo-style-hackslash-game-khlbrr` / `/ (root)` → Save
-4. 数分後 `https://itk03.github.io/Hack_and_Slash/` で開ける
+GitHub Pages は無料プランの private リポジトリでは使えないため Cloudflare を使う。
+本実装で使う D1 と同じアカウントに収まる。
+
+`wrangler.jsonc` が静的アセット配信の設定。**`./public` だけを配信する**ので、
+`docs/`（マネタイズ戦略を含む）は公開されない。ここは変えないこと。
+
+Cloudflare 側の設定:
+
+| 項目 | 値 |
+|---|---|
+| Build command | 空欄 |
+| Deploy command | `npx wrangler deploy` |
+| Root directory | `/` |
+| **Branch** | **`claude/diablo-style-hackslash-game-khlbrr`** |
+
+`main` を指したままだと README しか無いので中身が空になる。
+
+デプロイ後は `https://hack-and-slash.<サブドメイン>.workers.dev` で開ける。
+以降は push するたびに自動更新される。
 
 URL を送るだけで友人が遊べる。インストールも登録も不要。
 

@@ -1,0 +1,13 @@
+{
+  // Cloudflare Workers の静的アセット配信のみを使う構成。
+  // Worker スクリプト (main) は無し = 純粋な静的サイトとして動く。
+  //
+  // 重要: directory は必ず "./public" にすること。
+  // "./" にすると docs/ (マネタイズ戦略を含む) まで公開されてしまう。
+  "name": "hack-and-slash",
+  "compatibility_date": "2026-08-01",
+  "assets": {
+    "directory": "./public",
+    "not_found_handling": "single-page-application"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "hack-and-slash",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.1",
+    "wrangler": "^4.118.0"
+  }
+}
