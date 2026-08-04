@@ -346,7 +346,12 @@ const CFG={
   ],
 
   /* --- 進行 --- */
-  XP_BASE:40,XP_GROW:1.115,LV_CAP:100,STAT_PER_LV:3,
+  LV_CAP:100, STAT_PER_LV:5,
+  /* 到達目安（層あたりの獲得XPを実測して逆算）
+     Lv10 = 1〜10層を3周 / Lv20 = 11〜20層を5周
+     Lv30 = 21〜30層を10周 / Lv40 = 31〜40層を20周 */
+  XP_ANCHOR:[[1,0],[10,20200],[20,128500],[30,486000],[40,1438000]],
+  XP_TAIL:1.1128,   // Lv40 以降は1レベルごとにこの倍率
   SKIP_STEP:5,        // 何層ごとにスキップ開始地点を選べるか
   SHRINE_CHANCE:.30,  // フロアに祭壇が出る確率
   POTION_HEAL:.20, POTION_MAX:3, POTION_COST:140,
@@ -359,6 +364,15 @@ const CFG={
 
 const TAU=Math.PI*2;
 const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t;
+function xpCum(lv){
+  if(lv<=1)return 0;
+  const A=CFG.XP_ANCHOR;
+  for(let i=1;i<A.length;i++){
+    const[a,ca]=A[i-1],[b,cb]=A[i];
+    if(lv<=b)return Math.round(ca+(cb-ca)*Math.pow((lv-a)/(b-a),1.7));}
+  const[lb,cb]=A[A.length-1];
+  return Math.round(cb*Math.pow(CFG.XP_TAIL,lv-lb));}
+const xpNeed=lv=>Math.max(10,xpCum(lv+1)-xpCum(lv));
 const d2=(ax,ay,bx,by)=>{const x=ax-bx,y=ay-by;return x*x+y*y;};
 let _s=(Math.random()*4294967296)>>>0;
 function rnd(){_s|=0;_s=(_s+0x6D2B79F5)|0;let t=Math.imul(_s^(_s>>>15),1|_s);
@@ -731,7 +745,7 @@ const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   combo:0,comboT:0,dmgLog:[],dps:0,startFloor:1,
   inv:{f:"all",sort:"score",sel:null},
   alloc:null,
-  base:{lv:1,xp:0,need:CFG.XP_BASE,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0}};
+  base:{lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0}};
 
 const armorDR=a=>Math.min(.45,a/(a+120+S.floor*22));
 function derive(){
@@ -749,8 +763,8 @@ function derive(){
   const manaPw=pw.includes("mana")?1.5:1;
   const atkS=C.atkStat==="mag"?mag:str;   // 戦士=筋力 / 魔術師=魔力
   return {C,pw,str,mag,def,agi,spi,luk,
-    max:Math.round(C.hp+def*2.2+lv*7+t.hp),
-    atkFlat:(C.atkStat==="mag"?t.matk:t.atk)+atkS*.78+lv*.85, atkMul:1+t.atkP/100, armor,
+    max:Math.round(C.hp+def*2.6+lv*17+t.hp),
+    atkFlat:(C.atkStat==="mag"?t.matk:t.atk)+atkS*.92+lv*2.1, atkMul:1+t.atkP/100, armor,
     rng:1+t.rng/100,
     crit:.05+agi*.0022+t.crit/100, cdmg:1.8+t.cdmg/100,
     as:1+agi*.0022+t.as/100,
@@ -970,8 +984,8 @@ function dropGold(x,y,v){S.drops.push({x,y,gold:v,t:0});}
 function gainXP(v){const b=S.base;
   if(b.lv>=CFG.LV_CAP){b.para++;return;}
   b.xp+=v;
-  while(b.xp>=b.need&&b.lv<CFG.LV_CAP){
-    b.xp-=b.need;b.lv++;b.need=Math.round(b.need*CFG.XP_GROW);b.pts+=CFG.STAT_PER_LV;
+  while(b.lv<CFG.LV_CAP&&b.xp>=xpNeed(b.lv)){
+    b.xp-=xpNeed(b.lv);b.lv++;b.pts+=CFG.STAT_PER_LV;
     S.p.d=derive();recalcHP(S.p);SFX.lvl();}
   updHUD();}
 function hurtP(dm){const p=S.p;if(p.hurtT>0)return;
@@ -1707,7 +1721,7 @@ function updHUD(){
   $("mpF").style.width=(p.mp/p.d.mpMax*100)+"%";
   $("mpT").textContent="MP "+Math.floor(p.mp)+"/"+p.d.mpMax;
   const b=S.base;
-  $("xpF").style.width=(b.lv>=CFG.LV_CAP?100:b.xp/b.need*100)+"%";
+  $("xpF").style.width=(b.lv>=CFG.LV_CAP?100:b.xp/xpNeed(b.lv)*100)+"%";
   $("lvT").textContent="Lv"+b.lv+(b.para?"+"+b.para:"");
   const dg=dangerOf(S.floor);
   $("flT").innerHTML=S.floor+' <span style="color:'+dg.c+';font-size:9px">'+dg.n+'</span>';
@@ -1941,7 +1955,8 @@ function renderTown(){
       <div class="stat"><span>最深到達</span><b>${S.deepest}</b></div>
       <div class="stat"><span>潜行回数</span><b>${S.log.runs.length}</b></div>
       <div class="stat"><span>生還</span><b>${S.log.runs.filter(r=>r.alive).length}</b></div>
-      <div class="stat"><span>累計撃破</span><b>${S.log.runs.reduce((a,r)=>a+(r.kills||0),0)}</b></div></div>`);
+      <div class="stat"><span>累計撃破</span><b>${S.log.runs.reduce((a,r)=>a+(r.kills||0),0)}</b></div>
+      <div class="stat"><span>次のレベルまで</span><b>${S.base.lv>=CFG.LV_CAP?"—":(xpNeed(S.base.lv)-S.base.xp)+" exp"}</b></div></div>`);
     btn("プレイログを表示","gh",()=>{
       const r=S.log.runs,w=document.createElement("div");
       w.innerHTML=`<textarea readonly>${JSON.stringify({runs:r.length,
@@ -2124,7 +2139,7 @@ function switchClass(k){
   S.chars[S.cls]={base:S.base};
   const sv=S.chars[k];
   S.base=sv&&sv.base?sv.base
-    :{lv:1,xp:0,need:CFG.XP_BASE,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0};
+    :{lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0};
   S.cls=k;S.alloc=null;
   const w=S.gear.weapon;                       // 装備できない武器だけ外す
   if(w&&w.wt&&WCLS[w.wt]!==k){S.stash.push(w);S.gear.weapon=null;
@@ -2224,7 +2239,8 @@ function load(){try{
   S.pots=d.pots==null?CFG.POTION_MAX:d.pots;S.log=d.log||{runs:[]};
   S.settings=Object.assign({map:1,dmg:1,shake:1},d.settings||{});
   S.admin=!!d.admin;S.chars=d.chars||{};
-  const nb=Object.assign({lv:1,xp:0,need:CFG.XP_BASE,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0},d.base||{});
+  const nb=Object.assign({lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0},d.base||{});
+  delete nb.need;
   if(nb.dex!==undefined||nb.vit!==undefined){   // 旧スキーマは全部振り直しにして返す
     nb.pts+=(nb.str|0)+(nb.dex|0)+(nb.vit|0)+(nb.ene|0)+(nb.luk|0);
     nb.str=nb.mag=nb.def=nb.agi=nb.spi=nb.luk=0;
