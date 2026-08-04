@@ -331,7 +331,11 @@ const CFG={
   HP_SCALE:.38, DMG_SCALE:.44,           // 高難度: 深く潜ると急激に強くなる
   E_SPEED_BASE:.46, E_SPEED_PER:.028, E_SPEED_MAX:1.0,
   ELITE_CHANCE:.07, ELITE_HP:5, ELITE_DMG:1.7, BOSS_EVERY:5,
-  BOSS_MUL:{5:.3,10:.7},   // 深度ごとのボス補正(HPと攻撃力に同時に掛かる)
+  BOSS_MUL:{5:.3,10:.7},    // 深度ごとのボス補正(HPと攻撃力に同時に掛かる)
+  BOSS_RATE:{5:.3,10:.5},   // 攻撃頻度の倍率(0.3 = 頻度7割減)
+  BOSS_SLOW_TO:15,          // この深度までは動きを緩くする
+  BOSS_SLOW_SP:.65,         // 移動速度
+  BOSS_SLOW_TEL:1.6,        // 予備動作の長さ
   WIND:.46,
 
   /* --- ドロップ --- */
@@ -855,7 +859,11 @@ function spawnBoss(fl){
   const b=BOSSES[((fl/CFG.BOSS_EVERY|0)-1)%BOSSES.length];
   const hs=1+CFG.HP_SCALE*(fl-1)*1.15,rl=rooms[rooms.stairIdx];
   const bm=CFG.BOSS_MUL[fl]==null?1:CFG.BOSS_MUL[fl];
-  const e={k:"boss",n:b.n,x:rl.cx+.5,y:rl.cy+.5,r:.8,sp:b.sp,aR:1.8,cd:1.6,cdT:1.8,
+  const rate=CFG.BOSS_RATE[fl]==null?1:CFG.BOSS_RATE[fl];
+  const slow=fl<=CFG.BOSS_SLOW_TO;
+  const e={k:"boss",n:b.n,x:rl.cx+.5,y:rl.cy+.5,r:.8,
+    sp:b.sp*(slow?CFG.BOSS_SLOW_SP:1),aR:1.8,
+    cd:1.6/rate,cdT:1.8/rate,telMul:(slow?CFG.BOSS_SLOW_TEL:1),
     xp:600+fl*60,col:b.col,sz:b.sz,boss:1,ai:"boss",rng:0,keep:0,touch:0,
     hp:b.hp*hs*bm,max:b.hp*hs*bm,dmg:b.dmg*(1+CFG.DMG_SCALE*(fl-1))*bm,
     flash:0,kbx:0,kby:0,agro:false,frz:0,stun:0,elite:null,shield:0,regen:0,dot:0,dotT:0,
@@ -988,7 +996,7 @@ function gainXP(v){const b=S.base;
   b.xp+=v;
   while(b.lv<CFG.LV_CAP&&b.xp>=xpNeed(b.lv)){
     b.xp-=xpNeed(b.lv);b.lv++;b.pts+=CFG.STAT_PER_LV;
-    S.p.d=derive();recalcHP(S.p);SFX.lvl();}
+    S.p.d=derive();recalcHP(S.p);SFX.lvl();save();}   // 即保存: 死んでもレベルは残る
   updHUD();}
 function hurtP(dm){const p=S.p;if(p.hurtT>0)return;
   if(rnd()<dodgeRate()){p.hurtT=.16;
@@ -1272,7 +1280,7 @@ function update(dt){
 
 function bossAI(e,d,ux,uy,dt){
   const p=S.p;
-  if(e.phase===1&&e.hp<e.max*.5){e.phase=2;e.sp*=1.2;e.cd*=.72;toast("ボスが激昂した");shk(9);SFX.boss();}
+  if(e.phase===1&&e.hp<e.max*.5){e.phase=2;e.sp*=1.15;e.cd*=.8;toast("ボスが激昂した");shk(9);SFX.boss();}
   if(e.tel>0){e.tel-=dt;
     if(e.tel<=0){
       if(e.telK==="charge")S.fx.push({t:"boom",x:e.x+Math.cos(e.telA)*2.8,y:e.y+Math.sin(e.telA)*2.8,
@@ -1281,15 +1289,16 @@ function bossAI(e,d,ux,uy,dt){
       shk(9);}
     return;}
   e.cdT-=dt;e.sumT-=dt;
-  if(e.sumT<=0){e.sumT=e.phase===2?9:14;
+  if(e.sumT<=0){e.sumT=(e.phase===2?9:14)*(e.telMul||1);
     for(let i=0;i<(e.phase===2?4:2);i++)
       spawnE(rnd()<.5?"grunt":"swarm",e.x+rr(-3,3),e.y+rr(-3,3),S.floor,false);
     toast("増援");}
   if(e.cdT<=0){e.cdT=e.cd;
-    if(d>5){e.tel=.75;e.telK="charge";e.telA=Math.atan2(uy,ux);}
-    else{e.tel=.85;e.telK="slam";e.telX=p.x;e.telY=p.y;}
+    const tm=e.telMul||1;
+    if(d>5){e.tel=.75*tm;e.telK="charge";e.telA=Math.atan2(uy,ux);}
+    else{e.tel=.85*tm;e.telK="slam";e.telX=p.x;e.telY=p.y;}
     tone(140,.3,"sawtooth",.12,90);return;}
-  if(d<e.aR+p.r){e.touch-=dt;if(e.touch<=0){e.touch=1.2;hurtP(e.dmg*.3);}}
+  if(d<e.aR+p.r){e.touch-=dt;if(e.touch<=0){e.touch=1.2*(e.telMul||1);hurtP(e.dmg*.3);}}
   if(d>e.aR*.9)mv(e,ux*e.sp*eSpeedMul(S.floor)*dt,uy*e.sp*eSpeedMul(S.floor)*dt);}
 
 /* ---------- 行動ボタン ---------- */
