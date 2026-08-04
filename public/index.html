@@ -331,6 +331,7 @@ const CFG={
   HP_SCALE:.38, DMG_SCALE:.44,           // 高難度: 深く潜ると急激に強くなる
   E_SPEED_BASE:.46, E_SPEED_PER:.028, E_SPEED_MAX:1.0,
   ELITE_CHANCE:.07, ELITE_HP:5, ELITE_DMG:1.7, BOSS_EVERY:5,
+  BOSS_MUL:{5:.3,10:.7},   // 深度ごとのボス補正(HPと攻撃力に同時に掛かる)
   WIND:.46,
 
   /* --- ドロップ --- */
@@ -853,9 +854,10 @@ function spawnE(k,x,y,fl,elite){
 function spawnBoss(fl){
   const b=BOSSES[((fl/CFG.BOSS_EVERY|0)-1)%BOSSES.length];
   const hs=1+CFG.HP_SCALE*(fl-1)*1.15,rl=rooms[rooms.stairIdx];
+  const bm=CFG.BOSS_MUL[fl]==null?1:CFG.BOSS_MUL[fl];
   const e={k:"boss",n:b.n,x:rl.cx+.5,y:rl.cy+.5,r:.8,sp:b.sp,aR:1.8,cd:1.6,cdT:1.8,
     xp:600+fl*60,col:b.col,sz:b.sz,boss:1,ai:"boss",rng:0,keep:0,touch:0,
-    hp:b.hp*hs,max:b.hp*hs,dmg:b.dmg*(1+CFG.DMG_SCALE*(fl-1)),
+    hp:b.hp*hs*bm,max:b.hp*hs*bm,dmg:b.dmg*(1+CFG.DMG_SCALE*(fl-1))*bm,
     flash:0,kbx:0,kby:0,agro:false,frz:0,stun:0,elite:null,shield:0,regen:0,dot:0,dotT:0,
     wind:0,tel:0,telK:null,telX:0,telY:0,telA:0,phase:1,sumT:8};
   S.enemies.push(e);S.boss=e;
