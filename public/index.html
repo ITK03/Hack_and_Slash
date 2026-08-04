@@ -472,14 +472,16 @@ function holdBtn(el,i){
 const CLASSES={
   warrior:{name:"戦士",desc:"高耐久の近接。MPを技に注ぎ込んで戦う。",
     hp:170,mp:80,defMul:1,atk:[14,20],range:2.4,arc:1.6,proj:null,
-    atkStat:"str",str:16,mag:2,def:14,agi:8,spi:6,luk:6,col:"#e07038",
+    atkStat:"str",atkName:"物理攻撃力",mpRegMul:1.2,dodgeMul:.3,msMul:1,
+    str:16,mag:2,def:14,agi:8,spi:6,luk:6,col:"#e07038",
     skills:[
       {n:"薙ぎ払い",c:12,cd:.55,k:"cleave",dmg:[46,66],r:3.4,arc:1.55},
       {n:"突進斬り",c:22,cd:2.2,k:"dash",dmg:[80,116],w:1.15,len:4.4},
       {n:"大地砕き",c:34,cd:5.0,k:"slam",dmg:[150,215],r:4.6,stun:1.4}]},
   mage:{name:"魔術師",desc:"範囲殲滅。打たれ弱く、MP管理と位置取りが要る。",
     hp:88,mp:150,defMul:.62,atk:[12,17],range:6.2,arc:.5,proj:{sp:12,col:"#9ac8ff",r:.2},
-    atkStat:"mag",str:4,mag:18,def:6,agi:10,spi:16,luk:8,col:"#5b9bf0",
+    atkStat:"mag",atkName:"特殊攻撃力",mpRegMul:.7,dodgeMul:1,msMul:.8,
+    str:4,mag:18,def:6,agi:10,spi:16,luk:8,col:"#5b9bf0",
     skills:[
       {n:"火球",c:14,cd:.7,k:"ball",dmg:[62,88],sp:11,r:2.2,col:"#ff8a3a"},
       {n:"氷結新星",c:26,cd:3.0,k:"nova",dmg:[54,78],r:3.4,freeze:2.2,col:"#8ad8ff"},
@@ -494,14 +496,19 @@ const SLOTS=[
   {k:"armor", n:"鎧",  main:"armor",lo:7,hi:13},
   {k:"glove", n:"手袋",main:"armor",lo:4,hi:8},
   {k:"boot",  n:"靴",  main:"agiF", lo:2,hi:5},
-  {k:"ring",  n:"指輪",main:"mpF",  lo:5,hi:10},
+  {k:"ring",  n:"指輪",main:"mpF",  lo:2,hi:4},
   {k:"amulet",n:"首飾り",main:"lukF",lo:2,hi:4},
 ];
 const SLOTK=SLOTS.map(s=>s.k);
 const SLOTN=k=>(SLOTS.find(s=>s.k===k)||{n:"?"}).n;
-const BASEN={weapon:null,helm:["兜","フード","額冠"],
-  armor:["鎧","胸当て","外套"],glove:["手甲","篭手"],boot:["靴","脛当て"],
+const ACLS=["warrior","mage"];
+const BASEN={weapon:null,
+  helm:{warrior:["兜","面頬"],mage:["フード","額冠"]},
+  armor:{warrior:["鎧","胸当て"],mage:["法衣","外套"]},
+  glove:{warrior:["手甲","篭手"],mage:["布手袋","指抜き"]},
+  boot:{warrior:["鉄靴","脛当て"],mage:["軽靴","沓"]},
   ring:["指輪","印章"],amulet:["首飾り","護符"]};
+const ACSLOT=k=>["helm","armor","glove","boot"].includes(k);
 const WEAPN={sword:["剣","斧","戦鎚","槍"],staff:["杖","錫杖","魔典"]};
 const WCLS={sword:"warrior",staff:"mage"};   // 剣は戦士専用 / 杖は魔術師専用
 const ICONP={
@@ -533,7 +540,7 @@ const AFF=[
   {id:"cdr",n:"クールダウン短縮",f:il=>ri(2,4+(il*.4|0)),p:1},
   {id:"dr",n:"ダメージ軽減",f:il=>ri(1,2+(il*.28|0)),p:1},
   {id:"mf",n:"アイテム発見率",f:il=>ri(4,8+(il*1.2|0)),p:1},
-  {id:"mreg",n:"MP回復",f:il=>ri(4,8+(il*1.1|0)),p:1},
+  {id:"mreg",n:"MP回復",f:il=>ri(3,5+(il*.5|0)),p:1},
   {id:"luk",n:"運",f:il=>ri(1,2+(il*.3|0))},
   {id:"rng",n:"攻撃範囲",f:il=>ri(3,5+(il*.5|0)),p:1},
   {id:"matk",n:"特殊攻撃力",f:il=>ri(2,4+(il*.8|0))},
@@ -677,6 +684,7 @@ function makeItem(fl,mf,luk,forceRar){
   const sd=pick(SLOTS),il=Math.max(1,Math.round(fl));
   const it={rar,slot:sd.k,ilvl:il,lv:1,xp:0,affs:[],pw:null};
   if(sd.k==="weapon"){it.wt=rnd()<.5?"sword":"staff";it.base=pick(WEAPN[it.wt]);}
+  else if(ACSLOT(sd.k)){it.ac=pick(ACLS);it.base=pick(BASEN[sd.k][it.ac]);}
   else it.base=pick(BASEN[sd.k]);
   const m=Math.pow(il,.62);
   const mainId=sd.k==="weapon"?(it.wt==="staff"?"matk":"atk"):sd.main;
@@ -694,7 +702,8 @@ function makeItem(fl,mf,luk,forceRar){
     :rar===3?(pick(PRE)+it.base+pick(SUF))
     :"《"+pick(PRE)+pick(SUF)+"》"+it.base;
   it.score=iScore(it);return it;}
-const mainV=it=>Math.round(it.main.v*(1+(it.lv-1)*.14));   // 合成でレベルを上げると主ステが伸びる
+// 職業に合わない防具は主ステが6割しか出ない
+const mainV=it=>Math.round(it.main.v*(1+(it.lv-1)*.14)*((it.ac&&it.ac!==S.cls)?.6:1));   // 合成でレベルを上げると主ステが伸びる
 const fuseNeed=it=>Math.round(60*Math.pow(1.35,it.lv-1));
 const fuseGold=it=>Math.round((25+it.ilvl*7)*[1,1.4,2.2,3.6,7][it.rar]);
 const fuseXP=f=>Math.round(18+f.ilvl*1.6+[0,8,22,55,140][f.rar]+(f.lv-1)*14);
@@ -745,34 +754,51 @@ function derive(){
     rng:1+t.rng/100,
     crit:.05+agi*.0022+t.crit/100, cdmg:1.8+t.cdmg/100,
     as:1+agi*.0022+t.as/100,
-    ms:(1+Math.min(.28,agi*.0016))*(1+t.ms/100),
+    ms:(1+Math.min(.28,agi*.0016))*(1+t.ms/100)*(C.msMul||1),
     ls:Math.min(.03,t.ls/100), cdr:Math.min(.5,t.cdr/100),
     dr:Math.min(.7,(t.dr/100+armorDR(armor))*(C.defMul||1)),
     stRes:Math.min(.72,def/(def+150)),
     agiD:agi, mf:t.mf/100,
     mpMax:Math.round((C.mp+spi*3.2+t.mpF)*manaPw),
-    mpReg:(CFG.MP_REGEN+spi*.075)*(1+t.mreg/100)*manaPw};
+    mpReg:(CFG.MP_REGEN+spi*.075)*(1+t.mreg/100)*manaPw*(C.mpRegMul||1)};
 }
 /* 回避: 自分と階層の力量差で決まる。格上相手にはほとんど効かない。 */
 function dodgeRate(){const d=S.p.d;
   const gap=(S.base.lv*.5+4)-S.floor;
-  return clamp(.02+d.agiD*.0020+gap*.010,0,.30);}
+  return clamp((.02+d.agiD*.0020+gap*.010)*(d.C.dodgeMul||1),0,.30);}
 function deriveWith(slot,item){
   const bak=S.gear[slot];S.gear[slot]=item;
   const d=derive();S.gear[slot]=bak;return d;}
 const DSHOW=[["max","最大HP",0],["atkFlat","攻撃力",0],["armor","防御力",0],
   ["crit","クリティカル率",1],["as","攻撃速度",1],["ms","移動速度",1],
   ["dr","ダメージ軽減",1],["rng","攻撃範囲",1],["mpMax","MP",0],["luk","運",0]];
+function optTotals(over,overSlot){
+  const t={};
+  for(const k of SLOTK){
+    const it=(overSlot===k)?over:S.gear[k];
+    if(!it)continue;
+    if(it.main)t[it.main.id]=(t[it.main.id]||0)+mainV(it);
+    for(const a of it.affs)t[a.id]=(t[a.id]||0)+a.v;}
+  return t;}
+function rowHTML(nm,vb,d,pct){
+  const c=d>0?"up":"dn";
+  return `<div class="row" style="font-size:11px;padding:2px 0">
+    <span style="color:#8e86a2">${nm}</span>
+    <span><b>${vb.toFixed(pct?1:0)}${pct?"%":""}</b>`+
+    (Math.abs(d)>=(pct?.05:.5)?` <span class="${c}">(${d>0?"+":""}${d.toFixed(pct?1:0)})</span>`:"")+
+    `</span></div>`;}
 function deltaHTML(slot,item){
   const a=derive(),b=deriveWith(slot,item);
-  const rows=DSHOW.map(([k,nm,pct])=>{
-    const va=pct?a[k]*100:a[k],vb=pct?b[k]*100:b[k];
-    const d=vb-va;if(Math.abs(d)<.05)return "";
-    const c=d>0?"up":"dn";
-    return `<div class="row" style="font-size:11px;padding:2px 0">
-      <span style="color:#8e86a2">${nm}</span>
-      <span><b>${vb.toFixed(pct?1:0)}${pct?"%":""}</b>
-      <span class="${c}">(${d>0?"+":""}${d.toFixed(pct?1:0)})</span></span></div>`;}).join("");
+  let rows=DSHOW.map(([k,nm,pct])=>{
+    const va=pct?a[k]*100:a[k],vb=pct?b[k]*100:b[k],d=vb-va;
+    if(Math.abs(d)<(pct?.05:.5))return "";
+    return rowHTML(nm==="攻撃力"?(a.C.atkName||nm):nm,vb,d,pct);}).join("");
+  // オプション合計の増減も出す（どのオプションが増減するか分からないと判断できない）
+  const oa=optTotals(null,null),ob=optTotals(item,slot);
+  const keys=[...new Set([...Object.keys(oa),...Object.keys(ob)])];
+  const orow=keys.map(k=>{const va=oa[k]||0,vb=ob[k]||0,d=vb-va;
+    if(!d)return "";return rowHTML(AFN(k),vb,d,AFP(k));}).join("");
+  if(orow)rows+=`<div class="ty" style="margin:8px 0 4px">オプション合計</div>`+orow;
   return rows||'<div class="st">変化なし</div>';}
 function newPlayer(){const d=derive();
   return {x:0,y:0,r:CFG.P_RADIUS,face:0,d,hp:d.max,max:d.max,mp:d.mpMax,
@@ -1777,7 +1803,7 @@ function statBlock(host){
   const d=derive(),c=document.createElement("div");c.className="card";
   c.innerHTML=`<div class="stat"><span>最大HP</span><b>${d.max}</b></div>
     <div class="stat"><span>MP</span><b>${d.mpMax} (+${d.mpReg.toFixed(1)}/s)</b></div>
-    <div class="stat"><span>攻撃力</span><b>+${Math.round(d.atkFlat)} ×${d.atkMul.toFixed(2)}</b></div>
+    <div class="stat"><span>${d.C.atkName||"攻撃力"}</span><b>+${Math.round(d.atkFlat)} ×${d.atkMul.toFixed(2)}</b></div>
     <div class="stat"><span>クリティカル</span><b>${(d.crit*100).toFixed(1)}% / ×${d.cdmg.toFixed(2)}</b></div>
     <div class="stat"><span>攻撃速度</span><b>${(d.as*100).toFixed(0)}%</b></div>
     <div class="stat"><span>移動速度</span><b>${(d.ms*100).toFixed(0)}%</b></div>
@@ -1814,9 +1840,13 @@ function repeatBtn(el,fn){
   addEventListener("mouseup",stop);}
 function allocBlock(host,after){
   const b2=S.base,C=CLASSES[S.cls];
-  if(!S.alloc)S.alloc={pts:b2.pts,add:{str:0,mag:0,def:0,agi:0,spi:0,luk:0}};
+  if(!S.alloc)S.alloc={add:{str:0,mag:0,def:0,agi:0,spi:0,luk:0}};
   const A=S.alloc;
-  const dirty=Object.values(A.add).some(v=>v);
+  // 残りは常に「現在の所持 − 仮置き分」で出す。絶対値を保持すると
+  // 潜行中に得たポイントが確定時に上書きされて消える。
+  const spent=Object.values(A.add).reduce((a,v)=>a+v,0);
+  A.pts=b2.pts-spent;
+  const dirty=spent>0;
   const c=document.createElement("div");c.className="card";
   c.innerHTML=`<div class="st">残りポイント <b style="color:#a8e07a">${A.pts}</b>`+
     (dirty?' <span style="color:var(--gold)">— 未確定</span>':"")+`</div>`;
@@ -1835,8 +1865,8 @@ function allocBlock(host,after){
     box.insertBefore(mi,box.firstChild);box.appendChild(pl);host.appendChild(d);}
   const ok=document.createElement("div");ok.className="btn"+(dirty?" pri":" no");ok.textContent="確定する";
   tapEl(ok,()=>{if(!dirty)return;
-    for(const k in A.add)b2[k]+=A.add[k];
-    b2.pts=A.pts;S.alloc=null;S.p.d=derive();recalcHP(S.p);
+    for(const k in A.add){b2[k]+=A.add[k];b2.pts-=A.add[k];}
+    S.alloc=null;S.p.d=derive();recalcHP(S.p);
     SFX.ok();toast("割り振りを確定");save();after();});
   host.appendChild(ok);
   if(dirty){const cn=document.createElement("div");cn.className="btn gh";cn.textContent="やり直す";
@@ -1883,7 +1913,7 @@ function renderTown(){
     for(const k of CKEYS){
       const cur=k===S.cls,sv=S.chars[k];
       const d=document.createElement("div");d.className="btn"+(cur?" no":"");
-      d.textContent=CLASSES[k].name+(cur?"（使用中）":sv?` Lv${sv.base.lv} に切替`:" を新規作成");
+      d.textContent=CLASSES[k].name+(cur?"（使用中）":(sv&&sv.base)?` Lv${sv.base.lv} に切替`:" を新規作成");
       tapEl(d,()=>{if(!cur)switchClass(k);});b.appendChild(d);}
     add(`<h3>その他</h3>`);
     const inp=document.createElement("input");inp.placeholder="コード";
@@ -1921,9 +1951,9 @@ function renderTown(){
       tapEl(c,()=>{const t=w.querySelector("textarea");t.select();
         try{navigator.clipboard.writeText(t.value);}catch(e){document.execCommand("copy");}
         toast("コピーしました");});b.appendChild(c);});
-    btn("キャラクターを作り直す","gh",()=>{
-      if(!confirm("削除して最初からやり直しますか？"))return;
-      localStorage.removeItem(KEY);location.reload();});}}
+    btn("ゲームを最初からやり直す","gh",()=>{
+      ask("ゲームをリセット","すべての進行・装備・金貨が消えます。元に戻せません。",
+        ()=>{localStorage.removeItem(KEY);location.reload();});});}}
 
 /* ---------- 倉庫: アイコン格子 + フィルタ/並べ替え + 固定売却バー ---------- */
 function renderInv(b){
@@ -2012,6 +2042,16 @@ function openFuse(target){
   const need=fuseNeed(target),gold=fuseGold(target);
   c.innerHTML=`<div style="font-size:15px;font-weight:800">${target.name} を強化</div>
     <div class="sub" style="margin:4px 0 12px">Lv${target.lv} — 経験値 ${target.xp}/${need} ／ 費用 ${gold}G</div>`;
+  {// 1レベル上がると自分のステータスがどう動くか
+   const nxt=Object.assign({},target,{lv:target.lv+1,affs:target.affs,main:target.main});
+   const eq=Object.values(S.gear).includes(target);
+   const box=document.createElement("div");box.className="card";
+   box.innerHTML=`<div class="ty" style="margin:0 0 6px">Lv${target.lv+1} になると</div>`+
+     `<div class="row" style="font-size:11px;padding:2px 0">
+        <span style="color:#8e86a2">${AFN(target.main.id)}（基礎）</span>
+        <span><b>${mainV(nxt)}</b> <span class="up">(+${mainV(nxt)-mainV(target)})</span></span></div>`+
+     (eq?deltaHTML(target.slot,nxt):"");
+   c.appendChild(box);}
   if(!list.length){const d=document.createElement("div");d.className="card";
     d.innerHTML='<div class="st">素材にできる同部位の装備がない。</div>';c.appendChild(d);}
   for(const f of list){
@@ -2052,6 +2092,11 @@ function openPick(slotK,inDungeon){
   if(cur){const d=document.createElement("div");d.className="card";
     d.innerHTML=`<div class="ty">装備中</div><div class="nm ${RC[cur.rar]}">${cur.name}</div>
       <div class="st">${statsHTML(cur)}</div>`;
+    if(!inDungeon&&cur.lv<MAXLV){
+      const up=document.createElement("div");up.className="btn gold";
+      up.textContent=`強化する（Lv${cur.lv} / ${cur.xp}exp）`;
+      tapEl(up,()=>{$("itPop").classList.remove("on");openFuse(cur);});
+      d.appendChild(up);}
     const u=document.createElement("div");u.className="btn gh";u.textContent="外す";
     tapEl(u,()=>{S.stash.push(cur);S.gear[slotK]=null;S.p.d=derive();recalcHP(S.p);
       $("itPop").classList.remove("on");save();inDungeon?openPause():openTown();});
@@ -2074,16 +2119,18 @@ function openPick(slotK,inDungeon){
 
 /* ---------- ダンジョン内の一時停止 ---------- */
 /* 職業切替: レベル/ステータス/装備は職業ごと、金貨と倉庫は共有 */
+/* 職業切替: レベルとステータスは職業ごと。装備・金貨・倉庫は共有。 */
 function switchClass(k){
-  S.chars[S.cls]={base:S.base,gear:S.gear};
+  S.chars[S.cls]={base:S.base};
   const sv=S.chars[k];
-  if(sv){S.base=sv.base;S.gear=sv.gear;}
-  else{S.base={lv:1,xp:0,need:CFG.XP_BASE,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0};
-    S.gear={};for(const q of SLOTK)S.gear[q]=null;}
-  const w=S.gear.weapon;                       // 他職の武器は外す
-  if(w&&w.wt&&WCLS[w.wt]!==k){S.stash.push(w);S.gear.weapon=null;}
-  S.cls=k;S.alloc=null;S.p=newPlayer();
-  SFX.lvl();toast(CLASSES[k].name+" に切り替え");save();openTown();}
+  S.base=sv&&sv.base?sv.base
+    :{lv:1,xp:0,need:CFG.XP_BASE,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0};
+  S.cls=k;S.alloc=null;
+  const w=S.gear.weapon;                       // 装備できない武器だけ外す
+  if(w&&w.wt&&WCLS[w.wt]!==k){S.stash.push(w);S.gear.weapon=null;
+    toast(CLASSES[k].name+"は"+(w.wt==="sword"?"剣":"杖")+"を装備できないため外しました");}
+  S.p=newPlayer();
+  SFX.lvl();save();openTown();}
 function openPause(){
   S.paused=true;for(let i=0;i<4;i++)HELD[i]=false;IN.dx=IN.dy=0;
   $("scPause").classList.add("on");
