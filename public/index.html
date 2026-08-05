@@ -1344,8 +1344,8 @@ function doAction(){
   $("act").style.display="none";}
 
 /* ---------- 確認ダイアログ ---------- */
-let askFn=null;
-function ask(t,d,fn){S.paused=true;for(let i=0;i<4;i++)HELD[i]=false;
+let askFn=null,askPrevPaused=false;
+function ask(t,d,fn){askPrevPaused=S.paused;S.paused=true;for(let i=0;i<4;i++)HELD[i]=false;
   $("askT").textContent=t;$("askD").style.whiteSpace="pre-line";$("askD").textContent=d||"";askFn=fn;$("askPop").classList.add("on");}
 hookLater();
 function hookLater(){}
@@ -2192,11 +2192,15 @@ function openClass(){
       S.p=newPlayer();$("scClass").classList.remove("on");save();openTown();});
     c.appendChild(d);}
   $("scClass").classList.add("on");}
+function confirmDive(fl){
+  ask("ダンジョンに潜る",
+    "深度 "+fl+" から開始します。\n危険度: "+dangerOf(fl).n+"\n未鑑定品は帰還するまで確定しません。",
+    ()=>beginRun(fl));}
 function startDive(){
   // 最大到達 -10 を10階刻みで開始地点に選べる
   const st=CFG.SKIP_STEP;
   const maxSkip=Math.max(0,Math.floor((S.deepest-st)/st)*st);
-  if(maxSkip<st){beginRun(1);return;}
+  if(maxSkip<st){confirmDive(1);return;}
   const c=$("itC");
   c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:4px">開始する深度</div>
     <div class="sub" style="margin-bottom:12px">最大到達 ${S.deepest} — ${st}階刻みで選べる</div>`;
@@ -2204,7 +2208,7 @@ function startDive(){
     const fl=f;
     const d=document.createElement("div");d.className="btn"+(fl===1?" pri":"");
     d.textContent="深度 "+fl+" から — "+dangerOf(fl).n;
-    tapEl(d,()=>{$("itPop").classList.remove("on");beginRun(fl);});
+    tapEl(d,()=>{$("itPop").classList.remove("on");confirmDive(fl);});
     c.appendChild(d);}
   const x=document.createElement("div");x.className="btn gh";x.textContent="やめる";
   tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);
@@ -2268,8 +2272,8 @@ hook($("pauseB"),()=>{if(S.scene==="dungeon"&&!S.paused)openPause();});
 tapEl($("btnResume"),()=>{$("scPause").classList.remove("on");S.paused=false;updHUD();});
 tapEl($("btnDive"),startDive);
 tapEl($("btnBack"),()=>{$("scEnd").classList.remove("on");openTown();});
-tapEl($("askY"),()=>{$("askPop").classList.remove("on");S.paused=false;const f=askFn;askFn=null;if(f)f();});
-tapEl($("askN"),()=>{$("askPop").classList.remove("on");S.paused=false;});
+tapEl($("askY"),()=>{$("askPop").classList.remove("on");S.paused=askPrevPaused;const f=askFn;askFn=null;if(f)f();});
+tapEl($("askN"),()=>{$("askPop").classList.remove("on");S.paused=askPrevPaused;askFn=null;});
 hook($("lockHit"),lockHit);
 for(const t of document.querySelectorAll("#scTown .tab"))tapEl(t,()=>{S.tab=t.dataset.t;openTown();});
 for(const t of document.querySelectorAll("#scPause .tab"))tapEl(t,()=>{S.ptab=t.dataset.p;openPause();});
