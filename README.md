@@ -9,6 +9,16 @@
 ---
 
 
+## ブランチ統合メモ（PR #12 → 最新ベース）
+
+この作業は **最新の `claude/diablo-style-hackslash-game-khlbrr` 相当を取り込んだ現在の作業ブランチ** をベースに、
+前の PR #12 で整理した Codex ハンドオフ、公開設定、検証コマンドを衝突しやすい分割 PR にせず 1 本へまとめたもの。
+
+反映対象は `public/index.html` / `README.md` / `docs/` / `scripts/` / `package.json` に限定し、
+Cloudflare Workers の配信対象は引き続き `./public` のみ。
+
+---
+
 ## Codex で読む場所
 
 Codex の作業環境では `claude/diablo-style-hackslash-game-khlbrr` というブランチ名や
@@ -17,6 +27,7 @@ Codex の作業環境では `claude/diablo-style-hackslash-game-khlbrr` とい�
 読むべき本体は [`public/index.html`](public/index.html)。
 
 - ゲーム本体: `public/index.html`
+- PR #12 反映チェック: `npm run check:pr12`
 - 配信設定: `wrangler.jsonc`
 - 実プレイURL: https://hack-and-slash.luyinshele.workers.dev
 - 設計メモ: `docs/PLAN.md` / `docs/HYPOTHESES.md`
@@ -26,6 +37,7 @@ Codex の作業環境では `claude/diablo-style-hackslash-game-khlbrr` とい�
 
 ```bash
 npm run check
+npm run check:pr12
 npm run serve
 ```
 
