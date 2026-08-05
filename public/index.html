@@ -217,6 +217,12 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 .pip.ok{background:#6ae86a}.pip.ng{background:#d64550}
 textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);border-radius:3px;
   color:var(--ink3);font-size:10px;padding:8px;font-family:ui-monospace,monospace;margin-top:8px}
+
+.filterGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin:7px 0 10px}
+.filterGrid.rarity{grid-template-columns:repeat(5,1fr)}
+.fbtn{padding:10px 4px;border-radius:3px;border:1px solid var(--line);background:#100e18;color:var(--ink3);font-size:10px;font-weight:900;text-align:center}
+.fbtn.on{border-color:var(--gold);background:linear-gradient(180deg,#6e5418,#2c2108);color:#ffeab4}
+.popClose{background:linear-gradient(180deg,#3a3348,#171320)!important;border-color:#746886!important;color:#efe8ff!important}
 </style>
 </head>
 <body>
@@ -725,7 +731,7 @@ function makeItem(fl,mf,luk,forceRar){
 const mainV=it=>Math.round(it.main.v*(1+(it.lv-1)*.14)*((it.ac&&it.ac!==S.cls)?.6:1));   // 合成でレベルを上げると主ステが伸びる
 const fuseNeed=it=>Math.round(60*Math.pow(1.35,it.lv-1));
 const fuseGold=it=>Math.round((25+it.ilvl*7)*[1,1.4,2.2,3.6,7][it.rar]);
-const fuseXP=f=>Math.round(18+f.ilvl*1.6+[0,8,22,55,140][f.rar]+(f.lv-1)*14);
+const fuseXP=f=>Math.round((14+f.ilvl*2.4)*(1+f.rar*.55)*(1+(f.lv-1)*.32));
 const MAXLV=10;
 function statsHTML(it,cmp){
   let h="";
@@ -1561,21 +1567,22 @@ function draw(){
   g.addColorStop(.8,`rgba(0,0,0,${CFG.DARKNESS*.76})`);
   g.addColorStop(1,`rgba(0,0,0,${CFG.DARKNESS})`);
   ctx.fillStyle=g;ctx.fillRect(-VW*2,-VH*2,VW*4,VH*4);ctx.restore();
-  guide(ox,oy,S.stairs,"rgba(230,150,70,",".7)");
-  guide(ox,oy,S.portal,"rgba(90,170,255,",".7)");
+  guide(ox,oy,S.portal,"rgba(90,170,255,",".82)",0,"帰還");
+  guide(ox,oy,S.stairs,"rgba(230,150,70,",".82)",1,"階段");
   if(S.flash>0){ctx.fillStyle=`rgba(190,30,40,${S.flash*.9})`;ctx.fillRect(0,0,VW,VH);}
   drawMM();}
-function guide(ox,oy,tg,col,al){
-  const p=S.p,s=iso(tg.x,tg.y),sx=s.sx+ox,sy=s.sy+oy;
-  if(sx>44&&sx<VW-44&&sy>150&&sy<VH-220)return;
-  const cx=VW/2,cy=VH*CFG.CAM_Y,a=Math.atan2(sy-cy,sx-cx);
-  const Rr=Math.min(VW*.4,VH*.22),px=cx+Math.cos(a)*Rr,py=cy+Math.sin(a)*Rr;
-  ctx.save();ctx.globalCompositeOperation="lighter";ctx.translate(px,py);ctx.rotate(a);
-  ctx.fillStyle=col+al;
-  ctx.beginPath();ctx.moveTo(12,0);ctx.lineTo(-7,6);ctx.lineTo(-7,-6);ctx.closePath();ctx.fill();
+function guide(ox,oy,tg,col,al,idx,label){
+  const p=S.p,s=iso(tg.x,tg.y),pc=iso(p.x,p.y);
+  const a=Math.atan2((s.sy+oy)-(pc.sy+oy),(s.sx+ox)-(pc.sx+ox));
+  const px=VW-48,py=Math.max(178,Math.min(VH-286,178+idx*58));
+  ctx.save();ctx.globalCompositeOperation="source-over";
+  ctx.fillStyle="rgba(8,7,14,.66)";ctx.strokeStyle=col+".45)";ctx.lineWidth=1;
+  ctx.beginPath();ctx.roundRect(px-31,py-24,62,48,6);ctx.fill();ctx.stroke();
+  ctx.globalCompositeOperation="lighter";ctx.translate(px,py-6);ctx.rotate(a);ctx.fillStyle=col+al;
+  ctx.beginPath();ctx.moveTo(15,0);ctx.lineTo(-9,8);ctx.lineTo(-5,0);ctx.lineTo(-9,-8);ctx.closePath();ctx.fill();
   ctx.restore();
-  ctx.fillStyle=col+".6)";ctx.font="600 10px sans-serif";ctx.textAlign="center";
-  ctx.fillText(Math.round(Math.hypot(tg.x-p.x,tg.y-p.y))+"m",px,py+20);}
+  ctx.fillStyle=col+".82)";ctx.font="800 10px sans-serif";ctx.textAlign="center";
+  ctx.fillText(label+" "+Math.round(Math.hypot(tg.x-p.x,tg.y-p.y))+"m",px,py+18);}
 function shadow(sx,sy,w){ctx.fillStyle="rgba(0,0,0,.42)";
   ctx.beginPath();ctx.ellipse(sx,sy,w,w*.5,0,0,TAU);ctx.fill();}
 function dPlayer(){
@@ -2007,15 +2014,17 @@ function invFiltered(){
     :F.sort==="ilvl"?(c.ilvl-a.ilvl||c.score-a.score):(c.score-a.score));
   return list;}
 function invMenu(title,build){const c=$("itC");c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:10px">${title}</div>`;build(c);
-  const x=document.createElement("div");x.className="btn gh";x.textContent="閉じる";tapEl(x,()=>{$("itPop").classList.remove("on");openTown();});c.appendChild(x);$("itPop").classList.add("on");}
+  const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";tapEl(x,()=>{$("itPop").classList.remove("on");openTown();});c.appendChild(x);$("itPop").classList.add("on");}
 function openInvFilter(){const F=S.inv;F.filters=F.filters||[];
-  invMenu("フィルタ（複数選択）",c=>{
-    const add=(key,label)=>{const on=F.filters.includes(key),d=document.createElement("div");d.className="btn"+(on?" gold":" gh");d.textContent=(on?"✓ ":"")+label;
-      tapEl(d,()=>{const i=F.filters.indexOf(key);if(i>=0)F.filters.splice(i,1);else F.filters.push(key);openInvFilter();});c.appendChild(d);};
-    const all=document.createElement("div");all.className="btn"+(!F.filters.length?" gold":" gh");all.textContent="全部表示";
+  invMenu("フィルタ",c=>{
+    const add=(host,key,label)=>{const on=F.filters.includes(key),d=document.createElement("div");d.className="fbtn"+(on?" on":"");d.textContent=(on?"✓ ":"")+label;
+      tapEl(d,()=>{const i=F.filters.indexOf(key);if(i>=0)F.filters.splice(i,1);else F.filters.push(key);openInvFilter();});host.appendChild(d);};
+    const all=document.createElement("div");all.className="btn"+(!F.filters.length?" gold":" gh");all.style.marginTop="0";all.textContent="全部表示";
     tapEl(all,()=>{F.filters=[];openInvFilter();});c.appendChild(all);
-    for(let r=0;r<5;r++)add("r"+r,CFG.RARITY[r][0]);
-    for(const sl of ["weapon","helm","armor","glove","boot","ring","amulet"])add(sl,SLOTN(sl));});}
+    const h1=document.createElement("div");h1.className="ty";h1.style.margin="10px 0 4px";h1.textContent="レア度";c.appendChild(h1);
+    const rg=document.createElement("div");rg.className="filterGrid rarity";c.appendChild(rg);for(let r=0;r<5;r++)add(rg,"r"+r,CFG.RARITY[r][0]);
+    const h2=document.createElement("div");h2.className="ty";h2.style.margin="8px 0 4px";h2.textContent="部位";c.appendChild(h2);
+    const sg=document.createElement("div");sg.className="filterGrid";c.appendChild(sg);for(const sl of ["weapon","helm","armor","glove","boot","ring","amulet"])add(sg,sl,SLOTN(sl));});}
 function openInvSort(){const F=S.inv;
   invMenu("並び替え",c=>{
     for(const [k,n] of [["score","強さ順"],["rar","レア順"],["ilvl","深度順"]]){const d=document.createElement("div");d.className="btn"+(F.sort===k?" gold":" gh");d.textContent=n;
@@ -2086,45 +2095,47 @@ function showItem(it,inDungeon){
       SFX.gold();$("itPop").classList.remove("on");save();openTown();});}
   mk("閉じる","gh",()=>$("itPop").classList.remove("on"));
   $("itPop").classList.add("on");}
-/* 合成: 同部位の装備を食わせてレベルを上げる */
+/* 合成: 同部位の装備をまとめて食わせてレベルを上げる */
+let fuseTarget=null,fuseSel=[];
+function fusePreview(target,xp){let lv=target.lv,cur=target.xp+xp,up=0;
+  while(lv<MAXLV&&cur>=fuseNeed({lv})){cur-=fuseNeed({lv});lv++;up++;}
+  return {lv,xp:cur,up};}
 function openFuse(target){
+  if(fuseTarget!==target){fuseTarget=target;fuseSel=[];}
+  fuseSel=fuseSel.filter(i=>S.stash.includes(i)&&i!==target&&!Object.values(S.gear).includes(i));
   const list=S.stash.filter(i=>i!==target&&i.slot===target.slot&&!Object.values(S.gear).includes(i))
     .sort((a,b)=>fuseXP(b)-fuseXP(a));
-  const c=$("itC");
-  const need=fuseNeed(target),gold=fuseGold(target);
+  const c=$("itC"),need=fuseNeed(target),perGold=fuseGold(target);
+  const totalXP=fuseSel.reduce((a,i)=>a+fuseXP(i),0),cost=perGold*fuseSel.length,prev=fusePreview(target,totalXP);
   c.innerHTML=`<div style="font-size:15px;font-weight:800">${target.name} を強化</div>
-    <div class="sub" style="margin:4px 0 12px">Lv${target.lv} — 経験値 ${target.xp}/${need} ／ 費用 ${gold}G</div>`;
-  {// 1レベル上がると自分のステータスがどう動くか
-   const nxt=Object.assign({},target,{lv:target.lv+1,affs:target.affs,main:target.main});
-   const eq=Object.values(S.gear).includes(target);
-   const box=document.createElement("div");box.className="card";
-   box.innerHTML=`<div class="ty" style="margin:0 0 6px">Lv${target.lv+1} になると</div>`+
-     `<div class="row" style="font-size:11px;padding:2px 0">
-        <span style="color:#8e86a2">${AFN(target.main.id)}（基礎）</span>
-        <span><b>${mainV(nxt)}</b> <span class="up">(+${mainV(nxt)-mainV(target)})</span></span></div>`+
-     (eq?deltaHTML(target.slot,nxt):"");
-   c.appendChild(box);}
-  if(!list.length){const d=document.createElement("div");d.className="card";
-    d.innerHTML='<div class="st">素材にできる同部位の装備がない。</div>';c.appendChild(d);}
-  for(const f of list){
-    const d=document.createElement("div");d.className="card tap";
+    <div class="sub" style="margin:4px 0 10px">Lv${target.lv} — 経験値 ${target.xp}/${need}</div>`;
+  const box=document.createElement("div");box.className="card";
+  const nxt=Object.assign({},target,{lv:Math.min(MAXLV,target.lv+1),affs:target.affs,main:target.main});
+  const eq=Object.values(S.gear).includes(target);
+  box.innerHTML=`<div class="ty" style="margin:0 0 6px">選択中 ${fuseSel.length}個 / +${totalXP}exp / 費用 ${cost}G</div>
+    <div class="stat"><span>強化後予測</span><b>Lv${prev.lv}${prev.up?` <span class="up">(+${prev.up})</span>`:""}</b></div>
+    <div class="stat"><span>${AFN(target.main.id)}（次Lv基礎）</span><b>${mainV(nxt)} <span class="up">(+${mainV(nxt)-mainV(target)})</span></b></div>`+
+    (eq?deltaHTML(target.slot,nxt):"");
+  c.appendChild(box);
+  const go=document.createElement("div");go.className="btn gold"+(fuseSel.length&&S.gold>=cost?"":" no");
+  go.textContent=`選択素材をまとめて合成 (${fuseSel.length}個)`;
+  tapEl(go,()=>{if(!fuseSel.length)return;if(S.gold<cost){toast("金貨が足りない");return;}
+    S.gold-=cost;target.xp+=totalXP;
+    for(const f of fuseSel){const k=S.stash.indexOf(f);if(k>=0)S.stash.splice(k,1);}
+    let up=0;while(target.lv<MAXLV&&target.xp>=fuseNeed(target)){target.xp-=fuseNeed(target);target.lv++;up++;}
+    fuseSel=[];target.score=iScore(target);S.p.d=derive();recalcHP(S.p);up?SFX.lvl():SFX.ok();toast(up?`強化成功 Lv${target.lv}`:`経験値 +${totalXP}`);save();openFuse(target);});
+  c.appendChild(go);
+  if(!list.length){const d=document.createElement("div");d.className="card";d.innerHTML='<div class="st">素材にできる同部位の装備がない。</div>';c.appendChild(d);}
+  for(const f of list){const on=fuseSel.includes(f),d=document.createElement("div");d.className="card tap"+(on?" sel":"");d.style.borderColor=on?"var(--gold)":"";
     d.innerHTML=`<div class="row"><div class="${RC[f.rar]}">${icon(iconKey(f),22)}</div>
-      <div style="flex:1"><div class="nm ${RC[f.rar]}">${f.name}</div>
-      <div class="ty">深度${f.ilvl} / Lv${f.lv} — 経験値 +${fuseXP(f)}</div></div></div>`;
-    tapEl(d,()=>{
-      if(S.gold<gold){toast("金貨が足りない");return;}
-      S.gold-=gold;target.xp+=fuseXP(f);
-      const k=S.stash.indexOf(f);if(k>=0)S.stash.splice(k,1);
-      let up=0;
-      while(target.lv<MAXLV&&target.xp>=fuseNeed(target)){target.xp-=fuseNeed(target);target.lv++;up++;}
-      target.score=iScore(target);S.p.d=derive();recalcHP(S.p);
-      up?SFX.lvl():SFX.ok();
-      toast(up?`強化成功 Lv${target.lv}`:`経験値 +${fuseXP(f)}`);
-      save();openFuse(target);});
-    c.appendChild(d);}
-  const x=document.createElement("div");x.className="btn gh";x.textContent="閉じる";
-  tapEl(x,()=>{$("itPop").classList.remove("on");openTown();});c.appendChild(x);
+      <div style="flex:1"><div class="nm ${RC[f.rar]}">${on?"✓ ":""}${f.name}</div>
+      <div class="ty">${CFG.RARITY[f.rar][0]} / 深度${f.ilvl} / Lv${f.lv} — +${fuseXP(f)}exp</div></div></div>`;
+    tapEl(d,()=>{const i=fuseSel.indexOf(f);if(i>=0)fuseSel.splice(i,1);else fuseSel.push(f);openFuse(target);});c.appendChild(d);}
+  const clear=document.createElement("div");clear.className="btn gh";clear.textContent="選択解除";tapEl(clear,()=>{fuseSel=[];openFuse(target);});c.appendChild(clear);
+  const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";
+  tapEl(x,()=>{$("itPop").classList.remove("on");fuseSel=[];openTown();});c.appendChild(x);
   $("itPop").classList.add("on");}
+
 function equip(it){
   if(it.wt&&WCLS[it.wt]!==S.cls){toast(WCLS[it.wt]==="warrior"?"剣は戦士専用":"杖は魔術師専用");return;}
   const old=S.gear[it.slot];
@@ -2165,7 +2176,7 @@ function openPick(slotK,inDungeon){
     tapEl(d,()=>{equip(it);$("itPop").classList.remove("on");
       inDungeon?openPause():openTown();});
     c.appendChild(d);}
-  const x=document.createElement("div");x.className="btn gh";x.textContent="閉じる";
+  const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";
   tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);
   $("itPop").classList.add("on");}
 
