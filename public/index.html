@@ -30,11 +30,12 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
 #mpF{background:linear-gradient(180deg,#6ab4f0,#1a3e70);color:#4f8fe0}
 #xpF{background:linear-gradient(180deg,#9ae05a,#3d6a24);color:#7cd44c}
 .hrow{display:flex;align-items:center;gap:8px;margin-bottom:4px}
-.hrow .bar{flex:1}
+.hrow .bar{flex:0 0 80%;max-width:80%}
 .hval{font-size:10px;font-weight:700;min-width:66px;text-align:right;color:var(--ink2)}
 #meta{margin-top:5px;display:flex;justify-content:space-between;font-size:10px;
   color:var(--ink3);font-weight:600;letter-spacing:.03em;align-items:center}
 #meta b{color:var(--ink);font-weight:800}
+#lvT{position:absolute;left:11px;top:calc(env(safe-area-inset-top) + 82px);min-width:0;text-align:left;color:#c8bcf0;background:rgba(8,7,14,.62);border:1px solid var(--line);padding:3px 7px;border-radius:2px}
 #goldT{color:var(--gold)}
 #loot{margin-top:4px;font-size:10px;font-weight:800;display:flex;gap:7px}
 #pauseB{position:absolute;right:9px;top:calc(env(safe-area-inset-top) + 6px);z-index:14;
@@ -42,7 +43,7 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
   display:none;align-items:center;justify-content:center;pointer-events:auto;color:var(--ink2)}
 #pauseB.show{display:flex}
 #pauseB span{width:3px;height:13px;background:currentColor;margin:0 2px;border-radius:1px}
-#mmW{position:absolute;right:9px;top:calc(env(safe-area-inset-top) + 112px);z-index:11;
+#mmW{position:absolute;right:9px;top:calc(env(safe-area-inset-top) + 86px);z-index:11;
   width:88px;height:88px;border-radius:3px;overflow:hidden;border:1px solid var(--line);
   background:rgba(8,7,14,.72);pointer-events:none}
 #mm{width:100%;height:100%;display:block}
@@ -1574,7 +1575,7 @@ function draw(){
 function guide(ox,oy,tg,col,al,idx,label){
   const p=S.p,s=iso(tg.x,tg.y),pc=iso(p.x,p.y);
   const a=Math.atan2((s.sy+oy)-(pc.sy+oy),(s.sx+ox)-(pc.sx+ox));
-  const px=VW-48,py=Math.max(178,Math.min(VH-286,178+idx*58));
+  const px=VW-48,py=Math.max(214,Math.min(VH-286,214+idx*62));
   ctx.save();ctx.globalCompositeOperation="source-over";
   ctx.fillStyle="rgba(8,7,14,.66)";ctx.strokeStyle=col+".45)";ctx.lineWidth=1;
   ctx.beginPath();ctx.roundRect(px-31,py-24,62,48,6);ctx.fill();ctx.stroke();
@@ -1868,7 +1869,10 @@ function statBlock(host){
     <div class="stat"><span>ダメージ軽減</span><b>${(d.dr*100).toFixed(0)}%</b></div>
     <div class="stat"><span>回避率</span><b>${(dodgeRate()*100).toFixed(1)}%</b></div>
     <div class="stat"><span>状態異常耐性</span><b>${(d.stRes*100).toFixed(0)}%</b></div>
-    <div class="stat"><span>運</span><b>${d.luk}</b></div>`;
+    <div class="stat"><span>運</span><b>${d.luk}</b></div>`+
+    (()=>{const keys=Object.keys(opt).filter(k=>opt[k]);
+      return keys.length?`<div class="ty" style="margin:10px 0 6px">装備オプション合計</div>`+
+        keys.map(k=>`<div class="stat"><span>${AFN(k)}</span><b>${opt[k]}${AFP(k)?"%":""}</b></div>`).join(""):"";})();
   host.appendChild(c);
   if(d.pw.length){const h=document.createElement("h3");h.textContent="装備中の固有効果";host.appendChild(h);
     for(const id of d.pw){const P=POWER(id);if(!P)continue;
