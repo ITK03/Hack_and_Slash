@@ -11,12 +11,30 @@ Codex で作業するときは、`claude/diablo-style-hackslash-game-khlbrr` と
 3. `docs/PLAN.md` — 長期設計。
 4. `docs/HYPOTHESES.md` — プロトタイプで検証する仮説。
 
+
+## PR #12 反映範囲
+
+このハンドオフは、最新の `claude/diablo-style-hackslash-game-khlbrr` 相当を取り込んだ現在の作業ブランチをベースに、
+前の PR #12 の変更内容を衝突しにくい形で 1 本の PR にまとめるための入口。
+
+反映・確認対象は以下に固定する。
+
+- `public/index.html`: プロトタイプ本体とベースブランチ識別メタデータ。
+- `README.md`: 読む場所、起動方法、PR #12 統合メモ。
+- `docs/`: 設計メモ、仮説、AI 間ハンドオフ。
+- `scripts/`: プロトタイプ読み取り確認と PR #12 統合確認。
+- `package.json`: `npm run check` / `npm run check:pr12` / `npm run serve`。
+
+マージコンフリクトを避けるため、公開設定は `wrangler.jsonc` の `./public` 配信を維持し、
+`docs/` を配信対象に含めない。
+
 ## ローカル起動
 
 依存を入れなくても、静的ファイルとして確認できる。
 
 ```bash
 npm run check
+npm run check:pr12
 npm run serve
 ```
 

@@ -29,6 +29,20 @@
 
 ## 直近の作業ログ
 
+
+### Codex: 2026-08-05 / PR #12 統合
+
+- 最新の `claude/diablo-style-hackslash-game-khlbrr` 相当を取り込んだ現在の作業ブランチをベースとして扱う前提を README とハンドオフに明記。
+- PR #12 のハンドオフ内容を `public/index.html` / `README.md` / `docs/` / `scripts/` / `package.json` へ集約し、分割 PR によるマージコンフリクトを避ける方針にした。
+- `npm run check:pr12` を追加し、統合メタデータとコンフリクトマーカーの残存を自動確認できるようにした。
+
+確認済み:
+
+```bash
+npm run check
+npm run check:pr12
+```
+
 ### Codex: 2026-08-05
 
 - README に Codex で読む場所を追加し、ゲーム本体が `public/index.html` であることを明記。
