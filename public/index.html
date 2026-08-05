@@ -43,10 +43,14 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
   display:none;align-items:center;justify-content:center;pointer-events:auto;color:var(--ink2)}
 #pauseB.show{display:flex}
 #pauseB span{width:3px;height:13px;background:currentColor;margin:0 2px;border-radius:1px}
-#mmW{position:absolute;right:9px;top:calc(env(safe-area-inset-top) + 112px);z-index:11;
-  width:88px;height:88px;border-radius:3px;overflow:hidden;border:1px solid var(--line);
+#mmW{position:absolute;right:9px;top:calc(env(safe-area-inset-top) + 74px);z-index:11;
+  width:88px;border-radius:3px;overflow:hidden;border:1px solid var(--line);
   background:rgba(8,7,14,.72);pointer-events:none}
-#mm{width:100%;height:100%;display:block}
+#mm{width:88px;height:88px;display:block}
+#mmGuide{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid rgba(80,70,105,.7)}
+.mmDist{height:22px;display:flex;align-items:center;justify-content:center;gap:3px;font-size:9px;font-weight:900;background:rgba(10,8,16,.82)}
+.mmDist i{display:block;width:6px;height:6px;border-radius:50%;box-shadow:0 0 6px currentColor}
+#mmStair{color:#e08830}#mmPortal{color:#5aa0ff}
 #buffs{position:absolute;left:11px;top:calc(env(safe-area-inset-top) + 108px);z-index:11;
   display:flex;flex-direction:column;gap:4px;pointer-events:none}
 .buff{font-size:10px;font-weight:700;padding:4px 9px;border-radius:2px;background:rgba(10,8,16,.85);
@@ -210,7 +214,7 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 #lockBar{height:44px;border:1px solid var(--line2);border-radius:3px;position:relative;
   background:#0b0912;overflow:hidden;margin:14px 0}
 #lockZone{position:absolute;top:0;bottom:0;background:linear-gradient(180deg,#2a6a30,#12401a);
-  border-left:1px solid #6ae86a;border-right:1px solid #6ae86a}
+  border-left:1px solid #6ae86a;border-right:1px solid #6ae86a;transition:left .16s,width .16s}
 #lockPin{position:absolute;top:-2px;bottom:-2px;width:3px;background:#ffe08a;
   box-shadow:0 0 10px #ffd24a}
 #lockPips{display:flex;gap:6px;justify-content:center;margin-bottom:6px}
@@ -224,6 +228,11 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
 .fbtn{padding:10px 4px;border-radius:3px;border:1px solid var(--line);background:#100e18;color:var(--ink3);font-size:10px;font-weight:900;text-align:center}
 .fbtn.on{border-color:var(--gold);background:linear-gradient(180deg,#6e5418,#2c2108);color:#ffeab4}
 .popClose{background:linear-gradient(180deg,#3a3348,#171320)!important;border-color:#746886!important;color:#efe8ff!important}
+.quickDelta{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin:10px 0}
+.qd{border:1px solid var(--line);background:#100d18;border-radius:3px;padding:7px 8px;font-size:10px}
+.qd b{display:block;font-size:13px;color:#efe8ff}.qd .up{color:#6ae86a}.qd .dn{color:#ff7070}
+.optBox{max-height:180px;overflow-y:auto;touch-action:pan-y;border-top:1px solid var(--line);margin-top:8px;padding-top:8px}
+.bagList{display:flex;flex-direction:column;gap:7px}.bagRow{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);background:#100e18;border-radius:3px;padding:9px 10px;font-size:11px;font-weight:800}
 </style>
 </head>
 <body>
@@ -240,7 +249,7 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
   <div id="loot"></div>
 </div>
 <div id="pauseB"><span></span><span></span></div>
-<div id="mmW"><canvas id="mm" width="88" height="88"></canvas></div>
+<div id="mmW"><canvas id="mm" width="88" height="88"></canvas><div id="mmGuide"><div class="mmDist" id="mmStair"><i></i><span>--m</span></div><div class="mmDist" id="mmPortal"><i></i><span>--m</span></div></div></div>
 <div id="buffs"></div>
 <div id="combo"></div>
 <div id="bossBar"><div class="bn" id="bossN"></div><div class="bar"><i id="bossF"></i></div></div>
@@ -280,7 +289,8 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
   <div class="shead">
     <div class="row"><h2>一時停止</h2><div class="sub" id="pauseS"></div></div>
     <div class="tabs">
-      <div class="tab on" data-p="gear">装備</div>
+      <div class="tab on" data-p="drops">戦利品</div>
+      <div class="tab" data-p="gear">装備</div>
       <div class="tab" data-p="char">能力</div>
       <div class="tab" data-p="conf">設定</div>
     </div>
@@ -510,9 +520,9 @@ const CLASSES={
     atkStat:"mag",atkName:"特殊攻撃力",mpRegMul:.7,dodgeMul:1,msMul:.8,
     str:4,mag:18,def:6,agi:10,spi:16,luk:8,col:"#5b9bf0",
     skills:[
-      {n:"火球",c:14,cd:.7,k:"ball",dmg:[62,88],sp:11,r:2.2,col:"#ff8a3a"},
-      {n:"氷結新星",c:26,cd:3.0,k:"nova",dmg:[54,78],r:3.4,freeze:2.2,blink:4.4,col:"#8ad8ff"},
-      {n:"連鎖雷撃",c:32,cd:2.6,k:"chain",dmg:[70,100],jumps:6,range:4.6}]},
+      {n:"火球",c:24,cd:.7,k:"ball",dmg:[37,53],sp:11,r:2.2,col:"#ff8a3a"},
+      {n:"氷結新星",c:40,cd:3.0,k:"nova",dmg:[54,78],r:3.4,freeze:2.2,blink:4.4,col:"#8ad8ff"},
+      {n:"連鎖雷撃",c:70,cd:2.6,k:"chain",dmg:[70,100],jumps:6,range:4.6}]},
 };
 const CKEYS=["warrior","mage"];
 
@@ -753,7 +763,7 @@ const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   portal:null,stairs:null,boss:null,
   bag:[],stash:[],gear:{},
   runT:0,hitstop:0,shake:0,shakeT:0,flash:0,paused:true,
-  log:{runs:[]},tab:"gear",ptab:"gear",pots:CFG.POTION_BASE,lvlQ:0,
+  log:{runs:[]},tab:"gear",ptab:"drops",pots:CFG.POTION_BASE,lvlQ:0,
   settings:{map:1,dmg:1,shake:1},admin:false,chars:{},
   combo:0,comboT:0,dmgLog:[],dps:0,startFloor:1,
   inv:{filters:[],sort:"score",sellSel:[],sellRar:1},
@@ -827,12 +837,20 @@ function deltaHTML(slot,item){
     if(!d)return "";return rowHTML(AFN(k),vb,d,AFP(k));}).join("");
   if(orow)rows+=`<div class="ty" style="margin:8px 0 4px">オプション合計</div>`+orow;
   return rows||'<div class="st">変化なし</div>';}
+function quickDeltaHTML(slot,item){
+  const a=derive(),b=deriveWith(slot,item);
+  const keys=["max","atkFlat","armor","mpMax","luk","dr"];
+  return `<div class="quickDelta">`+keys.map(k=>{
+    const meta=DSHOW.find(x=>x[0]===k)||[k,k,0],pct=meta[2],va=pct?a[k]*100:a[k],vb=pct?b[k]*100:b[k],d=vb-va;
+    const cls=d>0?"up":d<0?"dn":"";
+    return `<div class="qd"><span>${k==="atkFlat"?(a.C.atkName||meta[1]):meta[1]}</span><b>${vb.toFixed(pct?1:0)}${pct?"%":""}</b><small class="${cls}">${Math.abs(d)<(pct?.05:.5)?"±0":(d>0?"+":"")+d.toFixed(pct?1:0)}${pct?"%":""}</small></div>`;
+  }).join("")+`</div>`;}
 function newPlayer(){const d=derive();
   return {x:0,y:0,r:CFG.P_RADIUS,face:0,d,hp:d.max,max:d.max,mp:d.mpMax,
     cd:0,cds:[0,0,0],hurtT:0,dashT:0,dashX:0,dashY:0,dashHit:null,
     mAtk:1,mAs:1,mMs:1,mCrit:0,mCdmg:0,mRange:1,mCd:1,mDrop:1,mLs:0,mDr:0,mHp:0,
     sAtk:1,sDr:0,sMs:1,sAs:1,sDrop:1,shrineT:0,shrine:null,
-    buffT:0,buffAtk:1,buffDr:0,guardS:0,guardT:0,atkN:0,ups:[],kills:0};}
+    buffT:0,buffAtk:1,buffDr:0,guardS:0,guardT:0,atkN:0,comboStep:0,comboT:0,ups:[],kills:0};}
 const recalcHP=p=>{p.max=Math.round(p.d.max*(1+p.mHp));p.hp=Math.min(p.hp,p.max);};
 const UPS=[
   {t:"鋭刃",d:"攻撃力 +16%",f:p=>p.mAtk*=1.16},
@@ -1035,27 +1053,33 @@ function basicAttack(){
     while(a>Math.PI)a-=TAU;while(a<-Math.PI)a+=TAU;
     if(Math.abs(a)>CONE)continue;
     if(d<bd){bd=d;best=e;}}
-  if(!C.proj&&!best)return false;
   if(best)p.face=Math.atan2(best.y-p.y,best.x-p.x);
   p.atkN++;
+  if(S.cls==="warrior")p.comboStep=p.comboT>0?(p.comboStep%3)+1:1;
+  else p.comboStep=1;
+  p.comboT=S.cls==="warrior"?.78:0;
   const crit=rnd()<(p.d.crit+p.mCrit);
-  const mk=()=>{let v=pDmg(C.atk,CFG.ATK_MUL);if(crit)v*=(p.d.cdmg+p.mCdmg);return v;};
+  const cm=S.cls==="warrior"?[1,1.16,1.34][p.comboStep-1]:1;
+  const mk=()=>{let v=pDmg(C.atk,CFG.ATK_MUL)*cm;if(crit)v*=(p.d.cdmg+p.mCdmg);return v;};
   if(C.proj){
     S.bullets.push({x:p.x,y:p.y,vx:Math.cos(p.face)*C.proj.sp,vy:Math.sin(p.face)*C.proj.sp,
       dmg:mk(),crit,mine:1,col:C.proj.col,r:C.proj.r,t:0,
       boom:(hasPw("burst")&&p.atkN%4===0)?1.6:0});
     SFX.cast(S.cls==="mage"?420:640);
   }else{
+    const slashCol=["#fff0c8","#ffd06a","#ff8a3a"][p.comboStep-1]||"#fff0c8";
+    S.fx.push({t:"slash",x:p.x,y:p.y,tm:0,R:range,a:p.face,arc:C.arc,step:p.comboStep,col:slashCol});
     for(const e of S.enemies.slice()){
       const d=Math.hypot(e.x-p.x,e.y-p.y);if(d>range+e.r)continue;
       let a=Math.atan2(e.y-p.y,e.x-p.x)-p.face;
       while(a>Math.PI)a-=TAU;while(a<-Math.PI)a+=TAU;
       if(Math.abs(a)>C.arc)continue;
       hurtE(e,mk(),crit,Math.cos(p.face),Math.sin(p.face));}
-    for(let i=0;i<6;i++){const a=p.face+rr(-C.arc,C.arc);
+    for(let i=0;i<6+p.comboStep*3;i++){const a=p.face+rr(-C.arc,C.arc);
       S.parts.push({x:p.x+Math.cos(a)*range*.7,y:p.y+Math.sin(a)*range*.7,
-        vx:Math.cos(a)*2.2,vy:Math.sin(a)*2.2,t:0,life:.13,col:"#fff3d0",sz:2});}
-    shk(1.2);}
+        vx:Math.cos(a)*2.2,vy:Math.sin(a)*2.2,t:0,life:.13,col:slashCol,sz:2+p.comboStep*.4});}
+    S.nums.push({x:p.x+Math.cos(p.face)*1.3,y:p.y+Math.sin(p.face)*1.3,v:0,txt:`${p.comboStep}段`,t:0,c:slashCol});
+    shk(1.0+p.comboStep*.55);}
   if(hasPw("chainL")&&best&&best.hp>0){
     let n2=null,nd=1e9;
     for(const e of S.enemies){if(e===best)continue;const d=d2(best.x,best.y,e.x,e.y);
@@ -1103,7 +1127,7 @@ function useSkill(i){
         vx:Math.cos(ang)*4,vy:Math.sin(ang)*4,t:0,life:.16,col:"#ffd9a0",sz:3});}
     SFX.cast(300);if(h)shk(3.2);break;}
   case "dash":{
-    p.dashT=.20;const spd=sk.len/.20;
+    p.dashT=.30;p.hurtT=Math.max(p.hurtT,.42);const spd=sk.len/.30;
     p.dashX=Math.cos(a)*spd;p.dashY=Math.sin(a)*spd;
     const hs=new Set();
     p.dashHit=()=>{for(const e of S.enemies.slice()){if(hs.has(e))continue;
@@ -1163,6 +1187,7 @@ function update(dt){
   if(p.hurtT>0)p.hurtT-=dt;
   if(p.buffT>0){p.buffT-=dt;if(p.buffT<=0){p.buffAtk=1;p.buffDr=0;}}
   if(p.guardT>0){p.guardT-=dt;if(p.guardT<=0)p.guardS=0;}
+  if(p.comboT>0){p.comboT-=dt;if(p.comboT<=0)p.comboStep=0;}
   if(p.shrineT>0){p.shrineT-=dt;
     if(p.shrineT<=0){p.sAtk=1;p.sDr=0;p.sMs=1;p.sAs=1;p.sDrop=1;p.shrine=null;updBuffs();}}
   p.st=p.st||{};tickST(p,dt,true);if(p.hp<=0)return;
@@ -1274,7 +1299,7 @@ function update(dt){
     else if(f.t==="pool"){f.tick-=dt;
       if(f.tick<=0){f.tick=.4;if(d2(f.x,f.y,p.x,p.y)<f.R*f.R){hurtP(f.dmg*.4);applyST(p,"brn",2.5,true);}}
       if(f.tm>f.dur)S.fx.splice(i,1);}
-    else if(f.tm>(f.t==="line"?.16:.42))S.fx.splice(i,1);}
+    else if(f.tm>(f.t==="line"?.16:f.t==="slash"?.22:.42))S.fx.splice(i,1);}
 
   for(let i=S.drops.length-1;i>=0;i--){
     const d=S.drops[i];d.t+=dt;
@@ -1378,18 +1403,30 @@ function hookLater(){}
 
 /* ---------- 宝箱の錠前（運に依存するミニゲーム） ---------- */
 let LK=null;
+function chestRarity(){
+  const early=S.floor<4,roll=rnd(),mf=S.p.d.mf+S.p.mDrop+S.p.sDrop-2;
+  const bonus=clamp(mf*.04,0,.10);
+  if(early)return roll<.72?0:roll<.94?1:2;
+  if(roll<.50-bonus)return 0;
+  if(roll<.82-bonus*.5)return 1;
+  if(roll<.95)return 2;
+  return roll<.992?3:4;}
+function nextLockTarget(){
+  const rar=LK.rar,round=LK.round,luk=S.p.d.luk;
+  LK.center=rr(.18,.82);
+  const earlyEase=clamp((6-S.floor)*.025,0,.12);
+  LK.zone=clamp(.30+earlyEase+luk*.006-rar*.035-round*.045,.09,.50);
+  LK.speed=.62+S.floor*.012+rar*.18+round*.22+rnd()*.28;}
 function openLock(q){
   S.paused=true;for(let i=0;i<4;i++)HELD[i]=false;
-  const luk=S.p.d.luk;
-  LK={q,round:0,ok:0,pos:0,dir:1,
-      speed:.85+S.floor*.02,
-      zone:clamp(.34-S.floor*.004+luk*.008,.10,.55),
-      done:false};
-  $("lockD").textContent=`運 ${luk} — 3回中の成功数で中身が変わる`;
+  const luk=S.p.d.luk,rar=q.rar??chestRarity();q.rar=rar;
+  LK={q,rar,round:0,ok:0,pos:rnd(),dir:rnd()<.5?1:-1,center:.5,zone:.3,speed:.8,done:false};
+  nextLockTarget();
+  $("lockD").textContent=`中身 ${CFG.RARITY[rar][0]} / 運 ${luk} — 成功数で中身は変わらない。判定位置は毎回変化し、3回目ほど難しい`;
   renderLock();$("lockPop").classList.add("on");}
 function renderLock(){
   const z=$("lockZone"),w=LK.zone*100;
-  z.style.left=(50-w/2)+"%";z.style.width=w+"%";
+  z.style.left=((LK.center-LK.zone/2)*100)+"%";z.style.width=w+"%";
   $("lockPin").style.left=(LK.pos*100)+"%";
   const ps=$("lockPips");ps.innerHTML="";
   for(let i=0;i<3;i++){const d=document.createElement("div");
@@ -1402,9 +1439,9 @@ function lockTick(dt){
 function lockHit(){
   if(!LK||LK.done)return;
   LK.res=LK.res||[];
-  const hit=Math.abs(LK.pos-.5)<LK.zone/2;
+  const hit=Math.abs(LK.pos-LK.center)<LK.zone/2;
   LK.res[LK.round]=hit;if(hit){LK.ok++;SFX.ok();buzz(20);}else{SFX.ng();buzz(60);}
-  LK.round++;LK.speed*=1.28;
+  LK.round++;if(LK.round<3)nextLockTarget();
   renderLock();
   if(LK.round>=3){
     LK.done=true;
@@ -1412,10 +1449,9 @@ function lockHit(){
       $("lockPop").classList.remove("on");
       const q=LK.q;q.open=1;S.paused=false;
       SFX.chest();
-      const n=[0,1,2,3][LK.ok];
-      for(let i=0;i<n;i++)dropItem(q.x+rr(-1,1),q.y+rr(-1,1),LK.ok>=3?2:LK.ok>=2?1:null);
-      dropGold(q.x,q.y,Math.round((30+S.floor*14)*(1+LK.ok*.6)));
-      toast(LK.ok===3?"完全解錠":LK.ok?LK.ok+"/3 解錠":"こじ開けた（空振り）");
+      dropItem(q.x+rr(-1,1),q.y+rr(-1,1),LK.rar);
+      dropGold(q.x,q.y,Math.round((35+S.floor*15)*(1+LK.rar*.35)));
+      toast(`${CFG.RARITY[LK.rar][0]}の宝箱 ${LK.ok}/3`);
       LK=null;},520);}}
 
 /* ---------- 描画 ---------- */
@@ -1570,8 +1606,6 @@ function draw(){
   g.addColorStop(.8,`rgba(0,0,0,${CFG.DARKNESS*.76})`);
   g.addColorStop(1,`rgba(0,0,0,${CFG.DARKNESS})`);
   ctx.fillStyle=g;ctx.fillRect(-VW*2,-VH*2,VW*4,VH*4);ctx.restore();
-  guide(ox,oy,S.portal,"rgba(90,170,255,",".82)",0,"帰還");
-  guide(ox,oy,S.stairs,"rgba(230,150,70,",".82)",1,"階段");
   if(S.flash>0){ctx.fillStyle=`rgba(190,30,40,${S.flash*.9})`;ctx.fillRect(0,0,VW,VH);}
   drawMM();}
 function guide(ox,oy,tg,col,al,idx,label){
@@ -1704,6 +1738,15 @@ function dFx(f){
   else if(f.t==="line"){const t=iso(f.x2,f.y2);
     ctx.globalAlpha=1-f.tm/.16;ctx.strokeStyle=f.col;ctx.lineWidth=3;
     ctx.beginPath();ctx.moveTo(s.sx,s.sy-14);ctx.lineTo(t.sx,t.sy-14);ctx.stroke();ctx.globalAlpha=1;}
+  else if(f.t==="slash"){
+    const k=Math.min(1,f.tm/.22),r=f.R*(CFG.TILE_W/2)*(1+.08*f.step);
+    ctx.globalAlpha=(1-k)*(.55+.12*f.step);ctx.strokeStyle=f.col;ctx.lineWidth=2+f.step*1.4;
+    ctx.beginPath();
+    for(let i=0;i<=12;i++){
+      const t=-f.arc+(f.arc*2*i/12),a=f.a+t,rrr=r*(.55+.45*i/12);
+      const x=s.sx+Math.cos(a)*rrr,y=s.sy+Math.sin(a)*rrr*.5-9;
+      if(i)ctx.lineTo(x,y);else ctx.moveTo(x,y);}
+    ctx.stroke();ctx.globalAlpha=1;}
   else if(f.t==="pool"){
     ctx.globalAlpha=.28+Math.sin(f.tm*6)*.1;ctx.fillStyle=f.col;
     ctx.beginPath();ctx.ellipse(s.sx,s.sy,f.R*(CFG.TILE_W/2),f.R*(CFG.TILE_H/2),0,0,TAU);ctx.fill();
@@ -1732,6 +1775,8 @@ function drawMM(){
   const p=S.p,sc=88/MW;
   $("mmW").style.display=S.settings.map?"block":"none";
   if(!S.settings.map)return;
+  $("mmStair").querySelector("span").textContent=Math.round(Math.hypot(S.stairs.x-p.x,S.stairs.y-p.y))+"m";
+  $("mmPortal").querySelector("span").textContent=Math.round(Math.hypot(S.portal.x-p.x,S.portal.y-p.y))+"m";
   if(++mmSkip%3)return;
   if(!MMBG){MMBG=document.createElement("canvas");MMBG.width=MMBG.height=88;}
   let cnt=0;for(let i=0;i<MW*MH;i++)if(seen[i])cnt++;
@@ -2073,13 +2118,19 @@ function showItem(it,inDungeon){
   c.innerHTML=`<div class="${RC[it.rar]}" style="margin-bottom:8px">${icon(iconKey(it),34)}</div>
     <div style="font-size:18px;font-weight:900;text-align:center" class="${RC[it.rar]}">${it.name}</div>
     <div class="sub" style="text-align:center;margin:5px 0 14px">
-      ${CFG.RARITY[it.rar][0]} / ${SLOTN(it.slot)} / 深度${it.ilvl}</div>
-    <div class="st" style="text-align:center;font-size:13px;line-height:1.9">${statsHTML(it)}</div>`;
-  if(!equipped){const h=document.createElement("div");h.className="card";h.style.marginTop="12px";
-    h.innerHTML=`<div class="ty" style="margin:0 0 6px">装備した場合の変化</div>`+deltaHTML(it.slot,it);
-    c.appendChild(h);}
-  const mk=(t,cls,fn)=>{const d=document.createElement("div");d.className="btn "+cls;d.textContent=t;
+      ${CFG.RARITY[it.rar][0]} / ${SLOTN(it.slot)} / 深度${it.ilvl}</div>`;
+  const mk=(t,cls,fn,host=c)=>{const d=document.createElement("div");d.className="btn "+cls;d.textContent=t;
     tapEl(d,fn);c.appendChild(d);};
+  if(!equipped){
+    mk("装備する",(!cur||it.score>cur.score)?"pri":"",()=>{equip(it);
+      $("itPop").classList.remove("on");inDungeon?openPause():openTown();});
+    const h=document.createElement("div");h.className="card";h.style.marginTop="12px";
+    h.innerHTML=`<div class="ty" style="margin:0 0 6px">主要変化</div>`+quickDeltaHTML(it.slot,it)+
+      `<div class="ty" style="margin:8px 0 6px">詳細変化</div><div class="optBox">${deltaHTML(it.slot,it)}</div>`;
+    c.appendChild(h);
+  }
+  const st=document.createElement("div");st.className="st optBox";st.style.textAlign="center";st.style.fontSize="13px";st.style.lineHeight="1.9";
+  st.innerHTML=statsHTML(it);c.appendChild(st);
   if(!inDungeon&&it.lv<MAXLV){
     const need=fuseNeed(it),gold=fuseGold(it);
     const info=document.createElement("div");info.className="card";info.style.marginTop="12px";
@@ -2092,8 +2143,6 @@ function showItem(it,inDungeon){
   if(equipped)mk("外す","gh",()=>{S.gear[it.slot]=null;S.p.d=derive();recalcHP(S.p);
     $("itPop").classList.remove("on");save();inDungeon?openPause():openTown();});
   else{
-    mk("装備する",(!cur||it.score>cur.score)?"pri":"",()=>{equip(it);
-      $("itPop").classList.remove("on");inDungeon?openPause():openTown();});
     if(!inDungeon)mk("売却 "+sellV(it)+"G","gh",()=>{
       S.gold+=sellV(it);const k=S.stash.indexOf(it);if(k>=0)S.stash.splice(k,1);
       SFX.gold();$("itPop").classList.remove("on");save();openTown();});}
@@ -2206,7 +2255,26 @@ function openPause(){
   $("pauseS").textContent=`深度 ${S.floor} / 未帰還 ${S.bag.length}個`;
   for(const t of document.querySelectorAll("#scPause .tab"))t.classList.toggle("on",t.dataset.p===S.ptab);
   const b=$("pauseBody");b.innerHTML="";
-  if(S.ptab==="gear"){
+  const addGiveUp=()=>{
+    const gv=document.createElement("div");gv.className="btn gh";gv.style.marginTop="8px";
+    gv.textContent="ここで力尽きる（戦利品は失う）";
+    tapEl(gv,()=>{$("scPause").classList.remove("on");
+      ask("ここで力尽きる",`今回拾った ${S.bag.length} 個を失って拠点に戻ります。`,()=>endRun(false));});
+    b.appendChild(gv);};
+  if(S.ptab==="drops"){
+    addGiveUp();
+    const h=document.createElement("h3");h.textContent="今回拾った未鑑定装備";b.appendChild(h);
+    if(!S.bag.length){const d=document.createElement("div");d.className="card";d.innerHTML='<div class="st">まだ装備を拾っていない。</div>';b.appendChild(d);}
+    else{
+      const list=document.createElement("div");list.className="bagList";
+      for(const it of S.bag){const r=document.createElement("div");r.className=`bagRow ${RC[it.rar]}`;
+        r.innerHTML=`<span>${SLOTN(it.slot)} / ${CFG.RARITY[it.rar][0]}</span><span>深度 ${it.ilvl}</span>`;
+        list.appendChild(r);}
+      b.appendChild(list);}
+    const note=document.createElement("div");note.className="st";note.style.marginTop="10px";
+    note.textContent="未帰還の装備は種類・レア度・深度だけ確認できる。オプションは帰還後に鑑定される。";
+    b.appendChild(note);
+  }else if(S.ptab==="gear"){
     const h=document.createElement("div");h.className="card";
     h.innerHTML=`<div class="st">ここで装備できるのは<b>持ち帰り済み</b>のものだけ。
       今回拾った ${S.bag.length} 個は帰還するまで使えない。</div>`;
@@ -2219,11 +2287,7 @@ function openPause(){
       tapEl(d,()=>{S.settings[k]=S.settings[k]?0:1;save();openPause();});b.appendChild(d);};
     const h=document.createElement("h3");h.textContent="設定";b.appendChild(h);
     addToggle("map","ミニマップ");addToggle("dmg","ダメージ数字");addToggle("shake","画面揺れ");}
-  const gv=document.createElement("div");gv.className="btn gh";gv.style.marginTop="20px";
-  gv.textContent="ここで力尽きる（戦利品は失う）";
-  tapEl(gv,()=>{$("scPause").classList.remove("on");
-    ask("ここで力尽きる",`今回拾った ${S.bag.length} 個を失って拠点に戻ります。`,()=>endRun(false));});
-  b.appendChild(gv);}
+  if(S.ptab!=="drops")addGiveUp();}
 
 /* ---------- クラス選択 / 潜行 ---------- */
 function openClass(){
@@ -2323,7 +2387,7 @@ resize();
 for(let i=0;i<4;i++)holdBtn($("s"+i),i);
 hook($("pot"),()=>{if(S.scene==="dungeon"&&!S.paused)usePotion();});
 hook($("act"),()=>{if(S.scene==="dungeon"&&!S.paused)doAction();});
-hook($("pauseB"),()=>{if(S.scene==="dungeon"&&!S.paused)openPause();});
+hook($("pauseB"),()=>{if(S.scene==="dungeon"&&!S.paused){S.ptab="drops";openPause();}});
 tapEl($("btnResume"),()=>{$("scPause").classList.remove("on");S.paused=false;updHUD();});
 tapEl($("btnDive"),startDive);
 tapEl($("btnBack"),()=>{$("scEnd").classList.remove("on");openTown();});
