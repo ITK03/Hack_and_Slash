@@ -21,7 +21,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-famil
   overscroll-behavior:none;font-variant-numeric:tabular-nums}
 canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
 
-#hud{position:absolute;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top) + 7px) 11px 8px;
+#hud{position:absolute;top:0;left:0;right:56px;padding:calc(env(safe-area-inset-top) + 7px) 8px 8px 11px;
   pointer-events:none;z-index:10;background:linear-gradient(180deg,rgba(6,5,10,.94),rgba(6,5,10,0))}
 .bar{height:9px;border-radius:2px;background:#0c0a12;overflow:hidden;
   box-shadow:inset 0 0 0 1px var(--line),inset 0 2px 5px rgba(0,0,0,.8)}
@@ -31,7 +31,7 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
 #xpF{background:linear-gradient(180deg,#9ae05a,#3d6a24);color:#7cd44c}
 .hrow{display:flex;align-items:center;gap:8px;margin-bottom:4px}
 .hrow .bar{flex:1}
-.hval{font-size:10px;font-weight:700;min-width:66px;text-align:right;color:var(--ink2)}
+.hval{font-size:10px;font-weight:700;min-width:48px;text-align:right;color:var(--ink2)}
 #meta{margin-top:5px;display:flex;justify-content:space-between;font-size:10px;
   color:var(--ink3);font-weight:600;letter-spacing:.03em;align-items:center}
 #meta b{color:var(--ink);font-weight:800}
@@ -42,7 +42,7 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
   display:none;align-items:center;justify-content:center;pointer-events:auto;color:var(--ink2)}
 #pauseB.show{display:flex}
 #pauseB span{width:3px;height:13px;background:currentColor;margin:0 2px;border-radius:1px}
-#mmW{position:absolute;right:9px;top:calc(env(safe-area-inset-top) + 112px);z-index:11;
+#mmW{position:absolute;right:9px;top:calc(env(safe-area-inset-top) + 88px);z-index:11;
   width:88px;height:88px;border-radius:3px;overflow:hidden;border:1px solid var(--line);
   background:rgba(8,7,14,.72);pointer-events:none}
 #mm{width:100%;height:100%;display:block}
@@ -65,7 +65,7 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
 #stickZone{position:absolute;left:0;bottom:0;width:50%;height:46%;z-index:20}
 #stick{position:absolute;width:114px;height:114px;border-radius:50%;
   border:1px solid rgba(200,190,220,.14);background:rgba(18,15,26,.3);
-  transform:translate(-50%,-50%);opacity:0;transition:opacity .1s;pointer-events:none}
+  transform:translate(-50%,-50%);opacity:.16;transition:opacity .1s;pointer-events:none}
 #stick>i{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;
   border-radius:50%;background:rgba(222,215,236,.26);
   box-shadow:0 0 16px rgba(255,240,210,.22),inset 0 0 0 1px rgba(255,255,255,.14)}
@@ -217,6 +217,12 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 .pip.ok{background:#6ae86a}.pip.ng{background:#d64550}
 textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);border-radius:3px;
   color:var(--ink3);font-size:10px;padding:8px;font-family:ui-monospace,monospace;margin-top:8px}
+
+.filterGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin:7px 0 10px}
+.filterGrid.rarity{grid-template-columns:repeat(5,1fr)}
+.fbtn{padding:10px 4px;border-radius:3px;border:1px solid var(--line);background:#100e18;color:var(--ink3);font-size:10px;font-weight:900;text-align:center}
+.fbtn.on{border-color:var(--gold);background:linear-gradient(180deg,#6e5418,#2c2108);color:#ffeab4}
+.popClose{background:linear-gradient(180deg,#3a3348,#171320)!important;border-color:#746886!important;color:#efe8ff!important}
 </style>
 </head>
 <body>
@@ -275,6 +281,7 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
     <div class="tabs">
       <div class="tab on" data-p="gear">装備</div>
       <div class="tab" data-p="char">能力</div>
+      <div class="tab" data-p="conf">設定</div>
     </div>
   </div>
   <div class="sbody" id="pauseBody"></div>
@@ -340,7 +347,7 @@ const CFG={
 
   /* --- ドロップ --- */
   DROP_CHANCE:.048,      // 旧 .24 の 2割
-  GOLD_CHANCE:.42, POTION_DROP:.035,
+  GOLD_CHANCE:.42, POTION_DROP:.070,
   CHEST_CHANCE:.035,     // 旧 .34 の 1割
   RARITY:[
     ["並",  1000,-26,"#c8c4bc"],
@@ -359,7 +366,7 @@ const CFG={
   XP_TAIL:1.1128,   // Lv40 以降は1レベルごとにこの倍率
   SKIP_STEP:5,        // 何層ごとにスキップ開始地点を選べるか
   SHRINE_CHANCE:.30,  // フロアに祭壇が出る確率
-  POTION_HEAL:.20, POTION_MAX:3, POTION_COST:140,
+  POTION_HEAL:.20, POTION_BASE:3, POTION_MAX:6, POTION_POT_DROP:.01,
   SHARD_DROP:.13, SHARD_HEAL:.045,   // 拾った瞬間に少し回復する欠片
   MP_REGEN:3.4,          // 毎秒。遅め
   SELL_DIV:50,
@@ -458,7 +465,7 @@ function sMove(x,y){
   dx=dx/raw*cl; dy=dy/raw*cl;
   stick.firstElementChild.style.transform=`translate(${dx}px,${dy}px)`;
   if(cl<7){IN.dx=0;IN.dy=0;}else{IN.dx=dx/STICK_MAX;IN.dy=dy/STICK_MAX;}}
-function sEnd(){IN.id=-1;IN.dx=0;IN.dy=0;stick.style.opacity="0";}
+function sEnd(){IN.id=-1;IN.dx=0;IN.dy=0;stick.style.opacity=".16";}
 zone.addEventListener("touchstart",e=>{e.preventDefault();if(IN.id!==-1)return;
   const t=e.changedTouches[0];sStart(t.clientX,t.clientY,t.identifier);},{passive:false});
 zone.addEventListener("touchmove",e=>{e.preventDefault();
@@ -502,9 +509,9 @@ const CLASSES={
     atkStat:"mag",atkName:"特殊攻撃力",mpRegMul:.7,dodgeMul:1,msMul:.8,
     str:4,mag:18,def:6,agi:10,spi:16,luk:8,col:"#5b9bf0",
     skills:[
-      {n:"火球",c:14,cd:.7,k:"ball",dmg:[62,88],sp:11,r:2.2,col:"#ff8a3a"},
-      {n:"氷結新星",c:26,cd:3.0,k:"nova",dmg:[54,78],r:3.4,freeze:2.2,col:"#8ad8ff"},
-      {n:"連鎖雷撃",c:32,cd:2.6,k:"chain",dmg:[70,100],jumps:6,range:4.6}]},
+      {n:"火球",c:24,cd:.7,k:"ball",dmg:[37,53],sp:11,r:2.2,col:"#ff8a3a"},
+      {n:"氷結新星",c:40,cd:3.0,k:"nova",dmg:[54,78],r:3.4,freeze:2.2,blink:4.4,col:"#8ad8ff"},
+      {n:"連鎖雷撃",c:70,cd:2.6,k:"chain",dmg:[70,100],jumps:6,range:4.6}]},
 };
 const CKEYS=["warrior","mage"];
 
@@ -547,7 +554,7 @@ const icon=(k,sz)=>`<svg viewBox="0 0 24 24" width="${sz||20}" height="${sz||20}
   style="display:block;margin:0 auto"><path d="${ICONP[k]||""}"/></svg>`;
 
 const AFF=[
-  {id:"atk",n:"攻撃力",f:il=>ri(2,4+(il*.8|0))},
+  {id:"atk",n:"物理攻撃力",f:il=>ri(2,4+(il*.8|0))},
   {id:"atkP",n:"攻撃力",f:il=>ri(3,6+(il*.6|0)),p:1},
   {id:"hp",n:"最大HP",f:il=>ri(8,15+(il*2.4|0))},
   {id:"armor",n:"防御力",f:il=>ri(4,8+(il*1.5|0))},
@@ -725,7 +732,7 @@ function makeItem(fl,mf,luk,forceRar){
 const mainV=it=>Math.round(it.main.v*(1+(it.lv-1)*.14)*((it.ac&&it.ac!==S.cls)?.6:1));   // 合成でレベルを上げると主ステが伸びる
 const fuseNeed=it=>Math.round(60*Math.pow(1.35,it.lv-1));
 const fuseGold=it=>Math.round((25+it.ilvl*7)*[1,1.4,2.2,3.6,7][it.rar]);
-const fuseXP=f=>Math.round(18+f.ilvl*1.6+[0,8,22,55,140][f.rar]+(f.lv-1)*14);
+const fuseXP=f=>Math.round((14+f.ilvl*2.4)*(1+f.rar*.55)*(1+(f.lv-1)*.32));
 const MAXLV=10;
 function statsHTML(it,cmp){
   let h="";
@@ -745,10 +752,10 @@ const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   portal:null,stairs:null,boss:null,
   bag:[],stash:[],gear:{},
   runT:0,hitstop:0,shake:0,shakeT:0,flash:0,paused:true,
-  log:{runs:[]},tab:"gear",ptab:"gear",pots:CFG.POTION_MAX,lvlQ:0,
+  log:{runs:[]},tab:"gear",ptab:"gear",pots:CFG.POTION_BASE,lvlQ:0,
   settings:{map:1,dmg:1,shake:1},admin:false,chars:{},
   combo:0,comboT:0,dmgLog:[],dps:0,startFloor:1,
-  inv:{f:"all",sort:"score",sel:null},
+  inv:{filters:[],sort:"score",sellSel:[],sellRar:1},
   alloc:null,
   base:{lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0}};
 
@@ -766,10 +773,11 @@ function derive(){
         agi=C.agi+b.agi+t.agiF,spi=C.spi+b.spi,luk=C.luk+b.luk+t.luk+t.lukF,lv=b.lv;
   const armor=t.armor+def*1.1;
   const manaPw=pw.includes("mana")?1.5:1;
+  const physAtk=t.atk+str*.92+lv*2.1,specAtk=t.matk+mag*.92+lv*2.1;
   const atkS=C.atkStat==="mag"?mag:str;   // 戦士=筋力 / 魔術師=魔力
-  return {C,pw,str,mag,def,agi,spi,luk,
+  return {C,pw,opt:t,str,mag,def,agi,spi,luk,physAtk,specAtk,
     max:Math.round(C.hp+def*2.6+lv*17+t.hp),
-    atkFlat:(C.atkStat==="mag"?t.matk:t.atk)+atkS*.92+lv*2.1, atkMul:1+t.atkP/100, armor,
+    atkFlat:(C.atkStat==="mag"?specAtk:physAtk), atkMul:1+t.atkP/100, armor,
     rng:1+t.rng/100,
     crit:.05+agi*.0022+t.crit/100, cdmg:1.8+t.cdmg/100,
     as:1+agi*.0022+t.as/100,
@@ -788,7 +796,7 @@ function dodgeRate(){const d=S.p.d;
 function deriveWith(slot,item){
   const bak=S.gear[slot];S.gear[slot]=item;
   const d=derive();S.gear[slot]=bak;return d;}
-const DSHOW=[["max","最大HP",0],["atkFlat","攻撃力",0],["armor","防御力",0],
+const DSHOW=[["max","最大HP",0],["physAtk","物理攻撃力",0],["specAtk","特殊攻撃力",0],["atkFlat","主攻撃力",0],["armor","防御力",0],
   ["crit","クリティカル率",1],["as","攻撃速度",1],["ms","移動速度",1],
   ["dr","ダメージ軽減",1],["rng","攻撃範囲",1],["mpMax","MP",0],["luk","運",0]];
 function optTotals(over,overSlot){
@@ -808,9 +816,8 @@ function rowHTML(nm,vb,d,pct){
     `</span></div>`;}
 function deltaHTML(slot,item){
   const a=derive(),b=deriveWith(slot,item);
-  let rows=DSHOW.map(([k,nm,pct])=>{
+  let rows=`<div class="ty" style="margin:0 0 4px">全ステータス</div>`+DSHOW.map(([k,nm,pct])=>{
     const va=pct?a[k]*100:a[k],vb=pct?b[k]*100:b[k],d=vb-va;
-    if(Math.abs(d)<(pct?.05:.5))return "";
     return rowHTML(nm==="攻撃力"?(a.C.atkName||nm):nm,vb,d,pct);}).join("");
   // オプション合計の増減も出す（どのオプションが増減するか分からないと判断できない）
   const oa=optTotals(null,null),ob=optTotals(item,slot);
@@ -821,10 +828,10 @@ function deltaHTML(slot,item){
   return rows||'<div class="st">変化なし</div>';}
 function newPlayer(){const d=derive();
   return {x:0,y:0,r:CFG.P_RADIUS,face:0,d,hp:d.max,max:d.max,mp:d.mpMax,
-    cd:0,cds:[0,0,0],hurtT:0,dashT:0,dashX:0,dashY:0,dashHit:null,
+    cd:0,cds:[0,0,0],hurtT:0,dashT:0,dashInv:0,dashX:0,dashY:0,dashHit:null,
     mAtk:1,mAs:1,mMs:1,mCrit:0,mCdmg:0,mRange:1,mCd:1,mDrop:1,mLs:0,mDr:0,mHp:0,
     sAtk:1,sDr:0,sMs:1,sAs:1,sDrop:1,shrineT:0,shrine:null,
-    buffT:0,buffAtk:1,buffDr:0,guardS:0,guardT:0,atkN:0,ups:[],kills:0};}
+    buffT:0,buffAtk:1,buffDr:0,guardS:0,guardT:0,atkN:0,atkCombo:0,atkComboT:0,ups:[],kills:0};}
 const recalcHP=p=>{p.max=Math.round(p.d.max*(1+p.mHp));p.hp=Math.min(p.hp,p.max);};
 const UPS=[
   {t:"鋭刃",d:"攻撃力 +16%",f:p=>p.mAtk*=1.16},
@@ -842,7 +849,7 @@ const UPS=[
 /* ---------- 敵生成 ---------- */
 const eSpeedMul=fl=>Math.min(CFG.E_SPEED_MAX,CFG.E_SPEED_BASE+CFG.E_SPEED_PER*(fl-1));
 function spawnE(k,x,y,fl,elite){
-  const t=ET[k],hs=1+CFG.HP_SCALE*(fl-1),ds=1+CFG.DMG_SCALE*(fl-1);
+  const t=ET[k],soft=(fl>=6&&fl<=10?.90:1),hs=(1+CFG.HP_SCALE*(fl-1))*soft,ds=(1+CFG.DMG_SCALE*(fl-1))*soft;
   const e={k,n:t.n,x,y,r:t.r,sp:t.sp,aR:t.aR,cd:t.cd,cdT:rr(0,t.cd),xp:t.xp,col:t.col,sz:t.sz,
     ai:t.ai,rng:!!t.rng,keep:t.keep||0,slow:!!t.slow,boom:!!t.boom,heavy:!!t.heavy,
     hp:t.hp*hs,max:t.hp*hs,dmg:t.dmg*ds,hopT:rr(0,1),st:{},touch:t.touch||0,touchT:0,
@@ -857,7 +864,7 @@ function spawnE(k,x,y,fl,elite){
   S.enemies.push(e);return e;}
 function spawnBoss(fl){
   const b=BOSSES[((fl/CFG.BOSS_EVERY|0)-1)%BOSSES.length];
-  const hs=1+CFG.HP_SCALE*(fl-1)*1.15,rl=rooms[rooms.stairIdx];
+  const soft=(fl>=6&&fl<=10?.90:1),hs=(1+CFG.HP_SCALE*(fl-1)*1.15)*soft,rl=rooms[rooms.stairIdx];
   const bm=CFG.BOSS_MUL[fl]==null?1:CFG.BOSS_MUL[fl];
   const rate=CFG.BOSS_RATE[fl]==null?1:CFG.BOSS_RATE[fl];
   const slow=fl<=CFG.BOSS_SLOW_TO;
@@ -865,7 +872,7 @@ function spawnBoss(fl){
     sp:b.sp*(slow?CFG.BOSS_SLOW_SP:1),aR:1.8,
     cd:1.6/rate,cdT:1.8/rate,telMul:(slow?CFG.BOSS_SLOW_TEL:1),
     xp:600+fl*60,col:b.col,sz:b.sz,boss:1,ai:"boss",rng:0,keep:0,touch:0,
-    hp:b.hp*hs*bm,max:b.hp*hs*bm,dmg:b.dmg*(1+CFG.DMG_SCALE*(fl-1))*bm,
+    hp:b.hp*hs*bm,max:b.hp*hs*bm,dmg:b.dmg*(1+CFG.DMG_SCALE*(fl-1))*bm*soft,
     flash:0,kbx:0,kby:0,agro:false,frz:0,stun:0,elite:null,shield:0,regen:0,dot:0,dotT:0,
     wind:0,tel:0,telK:null,telX:0,telY:0,telA:0,phase:1,sumT:8};
   S.enemies.push(e);S.boss=e;
@@ -875,6 +882,7 @@ function spawnBoss(fl){
 /* ---------- フロア ---------- */
 function enterFloor(fl){
   S.floor=fl;S.deepest=Math.max(S.deepest,fl);
+  if((fl-1)%CFG.SKIP_STEP===0)autoRefillPots();
   genFloor(fl);
   S.enemies.length=0;S.drops.length=0;S.bullets.length=0;S.parts.length=0;
   S.nums.length=0;S.props.length=0;S.fx.length=0;S.corpses.length=0;
@@ -976,8 +984,9 @@ function killE(e){
     if(e.elite.id==="blast")S.fx.push({t:"boom",x:e.x,y:e.y,tm:0,R:3,col:"#ff5040",dmg:e.dmg*2,en:1});}
   const luk=p.d.luk;
   if(e.boss){S.boss=null;$("bossBar").style.display="none";
+    S.deepest=Math.max(S.deepest,S.floor+1);save();
     for(let k=0;k<ri(1,2);k++)dropItem(e.x+rr(-1,1),e.y+rr(-1,1),2);
-    dropGold(e.x,e.y,300+S.floor*50);toast("ボス撃破");}
+    dropGold(e.x,e.y,300+S.floor*50);toast("ボス撃破 — 深度 "+(S.floor+1)+" 開始を解放");}
   else if(e.elite){if(rnd()<.5)dropItem(e.x,e.y,1);dropGold(e.x,e.y,50+S.floor*10);}
   else{const dm=p.mDrop*p.sDrop*(hasPw("greed")?1.8:1)*(1+p.d.mf);
     if(rnd()<CFG.DROP_CHANCE*dm)dropItem(e.x,e.y);
@@ -991,6 +1000,12 @@ function dropItem(x,y,forceRar){
   if(it.rar>=4){shk(7);buzz([0,50,60,140]);toast("★★ 伝説");}
   else if(it.rar===3){shk(3);buzz(30);toast("★ 秀逸");}}
 function dropGold(x,y,v){S.drops.push({x,y,gold:v,t:0});}
+function autoRefillPots(){if(S.pots<CFG.POTION_BASE){S.pots=CFG.POTION_BASE;toast("ポーション自動補充");}}
+function barrelDrop(x,y){
+  if(rnd()<CFG.POTION_POT_DROP){S.drops.push({x,y,pot:1,t:0});return;}
+  if(rnd()<CFG.SHARD_DROP*.5){S.drops.push({x,y,shard:1,t:0});return;}
+  if(rnd()<CFG.GOLD_CHANCE*.5)dropGold(x,y,Math.round((6+S.floor*3)*rr(.6,1.6)));
+  if(rnd()<CFG.DROP_CHANCE*.5)dropItem(x,y);}
 function gainXP(v){const b=S.base;
   if(b.lv>=CFG.LV_CAP){b.para++;return;}
   b.xp+=v;
@@ -998,7 +1013,7 @@ function gainXP(v){const b=S.base;
     b.xp-=xpNeed(b.lv);b.lv++;b.pts+=CFG.STAT_PER_LV;
     S.p.d=derive();recalcHP(S.p);SFX.lvl();save();}   // 即保存: 死んでもレベルは残る
   updHUD();}
-function hurtP(dm){const p=S.p;if(p.hurtT>0)return;
+function hurtP(dm){const p=S.p;if(p.dashInv>0)return;if(p.hurtT>0)return;
   if(rnd()<dodgeRate()){p.hurtT=.16;
     S.nums.push({x:p.x,y:p.y,v:0,txt:"回避",t:0,c:"#8ad8ff"});
     tone(900,.06,"sine",.06,1300);return;}
@@ -1019,11 +1034,12 @@ function basicAttack(){
     while(a>Math.PI)a-=TAU;while(a<-Math.PI)a+=TAU;
     if(Math.abs(a)>CONE)continue;
     if(d<bd){bd=d;best=e;}}
-  if(!C.proj&&!best)return false;
   if(best)p.face=Math.atan2(best.y-p.y,best.x-p.x);
   p.atkN++;
+  if(S.cls==="warrior"){p.atkCombo=p.atkComboT>0?Math.min(3,p.atkCombo+1):1;p.atkComboT=.9;}
+  const comboMul=S.cls==="warrior"?[1,1.15,1.3][Math.max(0,(p.atkCombo||1)-1)]:1;
   const crit=rnd()<(p.d.crit+p.mCrit);
-  const mk=()=>{let v=pDmg(C.atk,CFG.ATK_MUL);if(crit)v*=(p.d.cdmg+p.mCdmg);return v;};
+  const mk=()=>{let v=pDmg(C.atk,CFG.ATK_MUL)*comboMul;if(crit)v*=(p.d.cdmg+p.mCdmg);return v;};
   if(C.proj){
     S.bullets.push({x:p.x,y:p.y,vx:Math.cos(p.face)*C.proj.sp,vy:Math.sin(p.face)*C.proj.sp,
       dmg:mk(),crit,mine:1,col:C.proj.col,r:C.proj.r,t:0,
@@ -1036,10 +1052,13 @@ function basicAttack(){
       while(a>Math.PI)a-=TAU;while(a<-Math.PI)a+=TAU;
       if(Math.abs(a)>C.arc)continue;
       hurtE(e,mk(),crit,Math.cos(p.face),Math.sin(p.face));}
-    for(let i=0;i<6;i++){const a=p.face+rr(-C.arc,C.arc);
-      S.parts.push({x:p.x+Math.cos(a)*range*.7,y:p.y+Math.sin(a)*range*.7,
-        vx:Math.cos(a)*2.2,vy:Math.sin(a)*2.2,t:0,life:.13,col:"#fff3d0",sz:2});}
-    shk(1.2);}
+    const cc=["#fff3d0","#ffd080","#ff9a40"][Math.max(0,(p.atkCombo||1)-1)]||"#fff3d0";
+    const arc=C.arc*(.75+(p.atkCombo||1)*.12);
+    for(let i=0;i<10+(p.atkCombo||1)*3;i++){const a=p.face+rr(-arc,arc);
+      S.parts.push({x:p.x+Math.cos(a)*range*.62,y:p.y+Math.sin(a)*range*.62,
+        vx:Math.cos(a)*(2.4+(p.atkCombo||1)*.35),vy:Math.sin(a)*(2.4+(p.atkCombo||1)*.35),t:0,life:.16,col:cc,sz:2+(p.atkCombo||1)*.45});}
+    S.fx.push({t:"arc",x:p.x,y:p.y,a:p.face,R:range,arc,col:cc,tm:0});
+    shk(1.0+(p.atkCombo||1)*.55);}
   if(hasPw("chainL")&&best&&best.hp>0){
     let n2=null,nd=1e9;
     for(const e of S.enemies){if(e===best)continue;const d=d2(best.x,best.y,e.x,e.y);
@@ -1055,6 +1074,12 @@ function s2w(sx,sy){
           y:(ny/(CFG.TILE_H/2)-nx/(CFG.TILE_W/2))/2*ISO_K,
           mag:Math.min(1,l)};}
 
+function blinkForward(p,a,len){
+  const steps=8,ox=p.x,oy=p.y;let nx=ox,ny=oy;
+  for(let n=1;n<=steps;n++){const tx=ox+Math.cos(a)*len*n/steps,ty=oy+Math.sin(a)*len*n/steps;
+    if(walk(tx,ty,p.r)){nx=tx;ny=ty;}else break;}
+  p.x=nx;p.y=ny;
+  S.parts.push({x:p.x,y:p.y,vx:-Math.cos(a)*1.8,vy:-Math.sin(a)*1.8,t:0,life:.22,col:"#8ad8ff",sz:4});}
 function useSkill(i){
   const p=S.p,C=p.d.C,sk=C.skills[i];
   if(!sk||p.cds[i]>0||p.mp<sk.c)return;
@@ -1081,7 +1106,7 @@ function useSkill(i){
         vx:Math.cos(ang)*4,vy:Math.sin(ang)*4,t:0,life:.16,col:"#ffd9a0",sz:3});}
     SFX.cast(300);if(h)shk(3.2);break;}
   case "dash":{
-    p.dashT=.20;const spd=sk.len/.20;
+    p.dashT=.20;p.dashInv=.38;const spd=sk.len/.20;
     p.dashX=Math.cos(a)*spd;p.dashY=Math.sin(a)*spd;
     const hs=new Set();
     p.dashHit=()=>{for(const e of S.enemies.slice()){if(hs.has(e))continue;
@@ -1101,6 +1126,7 @@ function useSkill(i){
       dmg:dmg()[0],crit:false,mine:1,col:sk.col,r:.26,t:0,boom:sk.r*mul});
     SFX.cast(360);break;}
   case "nova":{
+    if(sk.blink)blinkForward(p,a,sk.blink);
     const R=sk.r*mul*p.mRange;
     for(const e of S.enemies.slice()){
       const d=Math.hypot(e.x-p.x,e.y-p.y);if(d>R+e.r)continue;
@@ -1145,6 +1171,8 @@ function update(dt){
   p.st=p.st||{};tickST(p,dt,true);if(p.hp<=0)return;
   p.mp=clamp(p.mp+p.d.mpReg*dt,0,p.d.mpMax);
 
+  if(p.dashInv>0)p.dashInv-=dt;
+  if(p.atkComboT>0){p.atkComboT-=dt;if(p.atkComboT<=0)p.atkCombo=0;}
   if(p.dashT>0){p.dashT-=dt;mv(p,p.dashX*dt,p.dashY*dt);
     if(p.dashHit)p.dashHit();
     S.parts.push({x:p.x,y:p.y,vx:rr(-.3,.3),vy:rr(-.3,.3),t:0,life:.2,col:"#cfe6ff",sz:2.2});}
@@ -1172,9 +1200,6 @@ function update(dt){
     if(e.frz>0||stActive(e,"frz")){e.frz=Math.max(0,e.frz-dt);continue;}
     if(e.stun>0){e.stun-=dt;continue;}
     const slowMul=stActive(e,"par")?.5:1;
-    if(e.ai==="tick"){e.fuse-=dt;      // 膨れ者: 攻撃せず時間で自爆
-      if(e.fuse<=0){S.fx.push({t:"boom",x:e.x,y:e.y,tm:0,R:3.4,col:"#c0d040",dmg:e.dmg,en:1});
-        killE(e);continue;}}
     if(e.regen)e.hp=Math.min(e.max,e.hp+e.regen*dt);
     e.x+=e.kbx;e.y+=e.kby;e.kbx*=.78;e.kby*=.78;
     if(!walk(e.x,e.y,e.r)){e.x-=e.kbx;e.y-=e.kby;e.kbx=e.kby=0;}
@@ -1196,7 +1221,13 @@ function update(dt){
         else if(d<e.aR+p.r+.4)hurtP(e.dmg);}
       continue;}
     let mx=0,my=0;
-    if(e.ai==="kite"){if(d>e.keep){mx=ux;my=uy;}else if(d<e.keep*.7){mx=-ux;my=-uy;}}
+    if(e.ai==="tick"){
+      if(d<3.4){e.fuseT=(e.fuseT==null?3:e.fuseT-dt);
+        if(e.fuseT<=0){S.fx.push({t:"boom",x:e.x,y:e.y,tm:0,R:3.4,col:"#c0d040",dmg:e.dmg,en:1});killE(e);continue;}
+        if(rnd()<dt*12)S.parts.push({x:e.x+rr(-.3,.3),y:e.y+rr(-.3,.3),vx:rr(-.4,.4),vy:rr(-.4,.4),t:0,life:.35,col:"#d8e060",sz:2.5});}
+      else if(e.fuseT==null){mx=ux;my=uy;}
+    }
+    else if(e.ai==="kite"){if(d>e.keep){mx=ux;my=uy;}else if(d<e.keep*.7){mx=-ux;my=-uy;}}
     else if(e.ai==="hop"){                      // 跳ね虫: 断続的に飛び込む
       e.hopT-=dt;
       if(e.hopT<=0){e.hopT=rr(.7,1.3);e.kbx=ux*.24;e.kby=uy*.24;}
@@ -1207,7 +1238,7 @@ function update(dt){
       mx*=.5;my*=.5;}
     mv(e,(mx+sx*.5)*e.sp*esp*slowMul*dt,(my+sy*.5)*e.sp*esp*slowMul*dt);
     if(e.touch&&d<e.r+p.r+.15){e.touchT-=dt;    // 接触ダメージ(スキル動作中は無敵)
-      if(e.touchT<=0){e.touchT=e.touch;if(p.dashT<=0)hurtP(e.dmg*.75);}}
+      if(e.touchT<=0){e.touchT=e.touch;if(p.dashInv<=0)hurtP(e.dmg*.75);}}
     if(e.elite&&e.elite.id==="fire"&&rnd()<dt*2.5)
       S.fx.push({t:"pool",x:e.x,y:e.y,tm:0,dur:2.4,R:.9,col:"#ff7a3a",dmg:e.dmg*.5,en:1,tick:0});
     e.cdT-=dt;
@@ -1264,7 +1295,7 @@ function update(dt){
   for(const q of S.props){
     if(q.t==="barrel"&&q.hp>0&&d2(q.x,q.y,p.x,p.y)<.7){
       q.hp=0;burst(q.x,q.y,"#8a6a3a",12,1.4);SFX.chest();
-      dropGold(q.x,q.y,Math.round((5+S.floor*2)*rr(.6,1.6)));}
+      barrelDrop(q.x,q.y);}
     if(q.t==="shrine")q.tm+=dt;}
 
   for(let i=S.parts.length-1;i>=0;i--){const q=S.parts[i];q.t+=dt;
@@ -1344,26 +1375,30 @@ function doAction(){
   $("act").style.display="none";}
 
 /* ---------- 確認ダイアログ ---------- */
-let askFn=null;
-function ask(t,d,fn){S.paused=true;for(let i=0;i<4;i++)HELD[i]=false;
+let askFn=null,askPrevPaused=false;
+function ask(t,d,fn){askPrevPaused=S.paused;S.paused=true;for(let i=0;i<4;i++)HELD[i]=false;
   $("askT").textContent=t;$("askD").style.whiteSpace="pre-line";$("askD").textContent=d||"";askFn=fn;$("askPop").classList.add("on");}
 hookLater();
 function hookLater(){}
 
 /* ---------- 宝箱の錠前（運に依存するミニゲーム） ---------- */
 let LK=null;
+function lockNextZone(){
+  const luk=S.p.d.luk,rar=LK.rar||0;
+  LK.center=rr(.18,.82);
+  LK.zone=clamp(.46-rar*.045-S.floor*.002-LK.round*.065+luk*.006,.10,.62);
+  LK.speed=(.55+rar*.10+S.floor*.008)*(1+LK.round*.18);
+}
 function openLock(q){
   S.paused=true;for(let i=0;i<4;i++)HELD[i]=false;
-  const luk=S.p.d.luk;
-  LK={q,round:0,ok:0,pos:0,dir:1,
-      speed:.85+S.floor*.02,
-      zone:clamp(.34-S.floor*.004+luk*.008,.10,.55),
-      done:false};
-  $("lockD").textContent=`運 ${luk} — 3回中の成功数で中身が変わる`;
+  q.rar=q.rar==null?rarRoll(S.floor,S.p.d.mf,S.p.d.luk):q.rar;
+  LK={q,rar:q.rar,round:0,ok:0,pos:rnd(),dir:rnd()<.5?1:-1,done:false,res:[]};
+  lockNextZone();
+  $("lockD").textContent=`${CFG.RARITY[LK.rar][0]}の宝箱 — 成功回数で中身は変わらない / 運で成功エリア拡大`;
   renderLock();$("lockPop").classList.add("on");}
 function renderLock(){
-  const z=$("lockZone"),w=LK.zone*100;
-  z.style.left=(50-w/2)+"%";z.style.width=w+"%";
+  const z=$("lockZone"),w=LK.zone*100,c=LK.center*100;
+  z.style.left=clamp(c-w/2,0,100-w)+"%";z.style.width=w+"%";
   $("lockPin").style.left=(LK.pos*100)+"%";
   const ps=$("lockPips");ps.innerHTML="";
   for(let i=0;i<3;i++){const d=document.createElement("div");
@@ -1375,22 +1410,19 @@ function lockTick(dt){
   $("lockPin").style.left=(LK.pos*100)+"%";}
 function lockHit(){
   if(!LK||LK.done)return;
-  LK.res=LK.res||[];
-  const hit=Math.abs(LK.pos-.5)<LK.zone/2;
+  const hit=Math.abs(LK.pos-LK.center)<LK.zone/2;
   LK.res[LK.round]=hit;if(hit){LK.ok++;SFX.ok();buzz(20);}else{SFX.ng();buzz(60);}
-  LK.round++;LK.speed*=1.28;
-  renderLock();
-  if(LK.round>=3){
-    LK.done=true;
-    setTimeout(()=>{
-      $("lockPop").classList.remove("on");
-      const q=LK.q;q.open=1;S.paused=false;
-      SFX.chest();
-      const n=[0,1,2,3][LK.ok];
-      for(let i=0;i<n;i++)dropItem(q.x+rr(-1,1),q.y+rr(-1,1),LK.ok>=3?2:LK.ok>=2?1:null);
-      dropGold(q.x,q.y,Math.round((30+S.floor*14)*(1+LK.ok*.6)));
-      toast(LK.ok===3?"完全解錠":LK.ok?LK.ok+"/3 解錠":"こじ開けた（空振り）");
-      LK=null;},520);}}
+  LK.round++;
+  if(LK.round<3){lockNextZone();renderLock();return;}
+  renderLock();LK.done=true;
+  setTimeout(()=>{
+    $("lockPop").classList.remove("on");
+    const q=LK.q;q.open=1;S.paused=false;SFX.chest();
+    const n=LK.rar>=3?2:1;
+    for(let i=0;i<n;i++)dropItem(q.x+rr(-1,1),q.y+rr(-1,1),LK.rar>=2?LK.rar:null);
+    dropGold(q.x,q.y,Math.round(30+S.floor*14));
+    toast("宝箱を開けた");LK=null;},520);}
+
 
 /* ---------- 描画 ---------- */
 let camX=0,camY=0;
@@ -1544,21 +1576,22 @@ function draw(){
   g.addColorStop(.8,`rgba(0,0,0,${CFG.DARKNESS*.76})`);
   g.addColorStop(1,`rgba(0,0,0,${CFG.DARKNESS})`);
   ctx.fillStyle=g;ctx.fillRect(-VW*2,-VH*2,VW*4,VH*4);ctx.restore();
-  guide(ox,oy,S.stairs,"rgba(230,150,70,",".7)");
-  guide(ox,oy,S.portal,"rgba(90,170,255,",".7)");
+  guide(ox,oy,S.portal,"rgba(90,170,255,",".82)",0,"帰還");
+  guide(ox,oy,S.stairs,"rgba(230,150,70,",".82)",1,"階段");
   if(S.flash>0){ctx.fillStyle=`rgba(190,30,40,${S.flash*.9})`;ctx.fillRect(0,0,VW,VH);}
   drawMM();}
-function guide(ox,oy,tg,col,al){
-  const p=S.p,s=iso(tg.x,tg.y),sx=s.sx+ox,sy=s.sy+oy;
-  if(sx>44&&sx<VW-44&&sy>150&&sy<VH-220)return;
-  const cx=VW/2,cy=VH*CFG.CAM_Y,a=Math.atan2(sy-cy,sx-cx);
-  const Rr=Math.min(VW*.4,VH*.22),px=cx+Math.cos(a)*Rr,py=cy+Math.sin(a)*Rr;
-  ctx.save();ctx.globalCompositeOperation="lighter";ctx.translate(px,py);ctx.rotate(a);
-  ctx.fillStyle=col+al;
-  ctx.beginPath();ctx.moveTo(12,0);ctx.lineTo(-7,6);ctx.lineTo(-7,-6);ctx.closePath();ctx.fill();
-  ctx.restore();
-  ctx.fillStyle=col+".6)";ctx.font="600 10px sans-serif";ctx.textAlign="center";
-  ctx.fillText(Math.round(Math.hypot(tg.x-p.x,tg.y-p.y))+"m",px,py+20);}
+function calcSafeTop(){return parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--sat"))||0;}
+function guide(ox,oy,tg,col,al,idx,label){
+  const p=S.p,s=iso(tg.x,tg.y),pc=iso(p.x,p.y);
+  const a=Math.atan2((s.sy+oy)-(pc.sy+oy),(s.sx+ox)-(pc.sx+ox));
+  const px=VW-70+idx*44,py=Math.max(186,Math.min(VH-286,calcSafeTop()+198));
+  ctx.save();ctx.globalCompositeOperation="source-over";
+  ctx.fillStyle="rgba(8,7,14,.62)";ctx.strokeStyle=col+".42)";ctx.lineWidth=1;
+  ctx.beginPath();ctx.roundRect(px-18,py-14,36,28,5);ctx.fill();ctx.stroke();
+  ctx.globalCompositeOperation="lighter";ctx.translate(px,py-4);ctx.rotate(a);ctx.fillStyle=col+al;
+  ctx.beginPath();ctx.moveTo(8,0);ctx.lineTo(-5,4);ctx.lineTo(-3,0);ctx.lineTo(-5,-4);ctx.closePath();ctx.fill();
+  ctx.restore();ctx.fillStyle=col+".78)";ctx.font="800 8px sans-serif";ctx.textAlign="center";
+  ctx.fillText(Math.round(Math.hypot(tg.x-p.x,tg.y-p.y))+"m",px,py+10);}
 function shadow(sx,sy,w){ctx.fillStyle="rgba(0,0,0,.42)";
   ctx.beginPath();ctx.ellipse(sx,sy,w,w*.5,0,0,TAU);ctx.fill();}
 function dPlayer(){
@@ -1751,7 +1784,7 @@ function updHUD(){
     el.querySelector(".cd").style.transform="scaleY("+(full>0?p.cds[i-1]/full:0)+")";
     el.classList.toggle("no",p.mp<sk.c);}
   $("potN").textContent=S.pots;
-  $("pot").classList.toggle("no",S.pots<=0);
+  $("pot").classList.toggle("no",S.pots<=0||p.hp>=p.max);
   const cb=$("combo");
   if(S.combo>=4){cb.classList.add("on");cb.innerHTML=S.combo+'<small>COMBO</small>';
     cb.style.fontSize=Math.min(46,24+S.combo*.6)+"px";}
@@ -1781,6 +1814,7 @@ function endRun(alive){
   S.paused=true;
   const got=S.bag.slice();
   if(alive){S.stash.push(...got);SFX.extract();}else SFX.death();
+  S.pots=CFG.POTION_BASE;
   S.log.runs.push({t:Math.round(S.runT),floor:S.floor,start:S.startFloor,alive,
     items:got.length,kills:S.p.kills,lv:S.base.lv,gold:S.gold,ups:S.p.ups.slice()});
   save();
@@ -1824,28 +1858,28 @@ function gearGrid(host,inDungeon){
       <div class="si ${it?RC[it.rar]:""}">${it?it.name:"—"}</div>`;
     tapEl(d,()=>openPick(s.k,inDungeon));gg.appendChild(d);}
   host.appendChild(gg);}
+function statLine(nm,total,opt,pct){
+  const base=total-opt;
+  return `<div class="stat"><span>${nm}</span><b>${pct?total.toFixed(1)+"%":Math.round(total)}${Math.abs(opt)>0.01?` <small style="color:var(--gold)">+${pct?opt.toFixed(1):Math.round(opt)}</small>`:""}</b></div>`;}
 function statBlock(host){
   const d=derive(),c=document.createElement("div");c.className="card";
-  c.innerHTML=`<div class="stat"><span>最大HP</span><b>${d.max}</b></div>
-    <div class="stat"><span>MP</span><b>${d.mpMax} (+${d.mpReg.toFixed(1)}/s)</b></div>
-    <div class="stat"><span>${d.C.atkName||"攻撃力"}</span><b>+${Math.round(d.atkFlat)} ×${d.atkMul.toFixed(2)}</b></div>
-    <div class="stat"><span>クリティカル</span><b>${(d.crit*100).toFixed(1)}% / ×${d.cdmg.toFixed(2)}</b></div>
-    <div class="stat"><span>攻撃速度</span><b>${(d.as*100).toFixed(0)}%</b></div>
-    <div class="stat"><span>移動速度</span><b>${(d.ms*100).toFixed(0)}%</b></div>
-    <div class="stat"><span>ダメージ軽減</span><b>${(d.dr*100).toFixed(0)}%</b></div>
+  const o=d.opt||{};
+  c.innerHTML=`<div class="ty" style="margin-bottom:6px">戦闘ステータス（白=合計 / 金=装備オプション分）</div>
+    ${statLine("最大HP",d.max,o.hp||0,0)}
+    ${statLine("MP",d.mpMax,o.mpF||0,0)}
+    <div class="stat"><span>MP回復</span><b>${d.mpReg.toFixed(1)}/s${o.mreg?` <small style="color:var(--gold)">+${o.mreg}%</small>`:""}</b></div>
+    ${statLine("物理攻撃力",d.physAtk,o.atk||0,0)}
+    ${statLine("特殊攻撃力",d.specAtk,o.matk||0,0)}
+    <div class="stat"><span>攻撃倍率</span><b>×${d.atkMul.toFixed(2)}${o.atkP?` <small style="color:var(--gold)">+${o.atkP}%</small>`:""}</b></div>
+    ${statLine("防御力",d.armor,o.armor||0,0)}
+    ${statLine("クリティカル率",d.crit*100,o.crit||0,1)}
+    ${statLine("攻撃速度",d.as*100,o.as||0,1)}
+    ${statLine("移動速度",d.ms*100,o.ms||0,1)}
+    ${statLine("ダメージ軽減",d.dr*100,o.dr||0,1)}
     <div class="stat"><span>回避率</span><b>${(dodgeRate()*100).toFixed(1)}%</b></div>
     <div class="stat"><span>状態異常耐性</span><b>${(d.stRes*100).toFixed(0)}%</b></div>
-    <div class="stat"><span>運</span><b>${d.luk}</b></div>`;
+    ${statLine("運",d.luk,(o.luk||0)+(o.lukF||0),0)}`;
   host.appendChild(c);
-  // 装備オプションの合計（どこから来ているか分からないと調整できない）
-  const t={};for(const k of SLOTK){const it=S.gear[k];if(!it)continue;
-    if(it.main)t[it.main.id]=(t[it.main.id]||0)+mainV(it);
-    for(const a of it.affs)t[a.id]=(t[a.id]||0)+a.v;}
-  const keys=Object.keys(t).filter(k=>t[k]);
-  if(keys.length){const h=document.createElement("h3");h.textContent="装備オプション合計";host.appendChild(h);
-    const e=document.createElement("div");e.className="card";
-    e.innerHTML=keys.map(k=>`<div class="stat"><span>${AFN(k)}</span><b>+${t[k]}${AFP(k)?"%":""}</b></div>`).join("");
-    host.appendChild(e);}
   if(d.pw.length){const h=document.createElement("h3");h.textContent="装備中の固有効果";host.appendChild(h);
     for(const id of d.pw){const P=POWER(id);if(!P)continue;
       const e=document.createElement("div");e.className="card";
@@ -1918,14 +1952,10 @@ function renderTown(){
       <div class="st">深度 ${S.deepest} 相当の装備を1つ買う。</div></div>`);
     btn("買う — "+gc+" G",S.gold>=gc?"gold":"no",()=>{
       if(S.gold<gc)return;S.gold-=gc;
-      S.stash.push(makeItem(Math.max(1,S.deepest),.3,S.p.d.luk));
-      SFX.chest();toast("装備を1つ入手");save();openTown();});
+      const it=makeItem(Math.max(1,S.deepest),.3,S.p.d.luk);S.stash.push(it);
+      SFX.chest();toast(it.name+"を入手");save();showItem(it,false);});
     add(`<div class="card" style="margin-top:12px"><div class="nm">ポーション</div>
-      <div class="st">最大HPの${Math.round(CFG.POTION_HEAL*100)}%を回復。${CFG.POTION_MAX}個まで。</div></div>`);
-    btn(`補充 (${S.pots}/${CFG.POTION_MAX}) — ${CFG.POTION_COST} G`,
-      (S.gold>=CFG.POTION_COST&&S.pots<CFG.POTION_MAX)?"gold":"no",()=>{
-      if(S.gold<CFG.POTION_COST||S.pots>=CFG.POTION_MAX)return;
-      S.gold-=CFG.POTION_COST;S.pots++;SFX.pot();save();openTown();});}
+      <div class="st">ポーション購入は撤廃。5層ごとに自動で${CFG.POTION_BASE}個まで補充されます。壺から出た分だけ最大${CFG.POTION_MAX}個まで持てます。</div></div>`);}
   if(S.tab==="conf"){
     add(`<h3>表示</h3>`);
     const tg=(k,lbl)=>{const d=document.createElement("div");
@@ -1982,51 +2012,66 @@ function renderTown(){
         ()=>{localStorage.removeItem(KEY);location.reload();});});}}
 
 /* ---------- 倉庫: アイコン格子 + フィルタ/並べ替え + 固定売却バー ---------- */
-function renderInv(b){
-  const F=S.inv;
-  const bar=document.createElement("div");bar.id="invBar";
-  const mkChip=(lbl,on,fn)=>{const c=document.createElement("div");
-    c.className="chip"+(on?" on":"");c.textContent=lbl;tapEl(c,fn);bar.appendChild(c);};
-  mkChip("全部",F.f==="all",()=>{F.f="all";openTown();});
-  for(let r=0;r<5;r++)mkChip(CFG.RARITY[r][0],F.f==="r"+r,()=>{F.f="r"+r;openTown();});
-  for(const s of ["weapon","armor","ring1"])
-    mkChip(SLOTN(s),F.f===s,()=>{F.f=s;openTown();});
-  mkChip(F.sort==="score"?"強さ順":F.sort==="rar"?"レア順":"深度順",true,()=>{
-    F.sort=F.sort==="score"?"rar":F.sort==="rar"?"ilvl":"score";openTown();});
-  b.appendChild(bar);
-
+function invFiltered(){
+  const F=S.inv;F.filters=F.filters||[];
   let list=S.stash.slice();
-  if(F.f!=="all"){
-    if(F.f[0]==="r")list=list.filter(i=>i.rar===+F.f[1]);
-    else if(F.f==="ring1")list=list.filter(i=>i.slot==="ring1"||i.slot==="ring2");
-    else list=list.filter(i=>i.slot===F.f);}
+  const fs=F.filters;
+  if(fs.length){list=list.filter(i=>fs.some(f=>{
+    if(f[0]==="r")return i.rar===+f[1];
+    if(f==="ring")return i.slot==="ring1"||i.slot==="ring2";
+    return i.slot===f;}));}
   list.sort((a,c)=>F.sort==="rar"?(c.rar-a.rar||c.score-a.score)
     :F.sort==="ilvl"?(c.ilvl-a.ilvl||c.score-a.score):(c.score-a.score));
+  return list;}
+function invMenu(title,build){const c=$("itC");c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:10px">${title}</div>`;build(c);
+  const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";tapEl(x,()=>{$("itPop").classList.remove("on");openTown();});c.appendChild(x);$("itPop").classList.add("on");}
+function openInvFilter(){const F=S.inv;F.filters=F.filters||[];
+  invMenu("フィルタ",c=>{
+    const add=(host,key,label)=>{const on=F.filters.includes(key),d=document.createElement("div");d.className="fbtn"+(on?" on":"");d.textContent=(on?"✓ ":"")+label;
+      tapEl(d,()=>{const i=F.filters.indexOf(key);if(i>=0)F.filters.splice(i,1);else F.filters.push(key);openInvFilter();});host.appendChild(d);};
+    const all=document.createElement("div");all.className="btn"+(!F.filters.length?" gold":" gh");all.style.marginTop="0";all.textContent="全部表示";
+    tapEl(all,()=>{F.filters=[];openInvFilter();});c.appendChild(all);
+    const h1=document.createElement("div");h1.className="ty";h1.style.margin="10px 0 4px";h1.textContent="レア度";c.appendChild(h1);
+    const rg=document.createElement("div");rg.className="filterGrid rarity";c.appendChild(rg);for(let r=0;r<5;r++)add(rg,"r"+r,CFG.RARITY[r][0]);
+    const h2=document.createElement("div");h2.className="ty";h2.style.margin="8px 0 4px";h2.textContent="部位";c.appendChild(h2);
+    const sg=document.createElement("div");sg.className="filterGrid";c.appendChild(sg);for(const sl of ["weapon","helm","armor","glove","boot","ring","amulet"])add(sg,sl,SLOTN(sl));});}
+function openInvSort(){const F=S.inv;
+  invMenu("並び替え",c=>{
+    for(const [k,n] of [["score","強さ順"],["rar","レア順"],["ilvl","深度順"]]){const d=document.createElement("div");d.className="btn"+(F.sort===k?" gold":" gh");d.textContent=n;
+      tapEl(d,()=>{F.sort=k;$("itPop").classList.remove("on");openTown();});c.appendChild(d);}});}
+function openInvSell(){const F=S.inv;F.sellSel=F.sellSel||[];F.sellMode=true;if(F.sellRar==null)F.sellRar=1;
+  invMenu("売却",c=>{
+    const selected=F.sellSel.filter(i=>S.stash.includes(i)&&!Object.values(S.gear).includes(i));
+    const val=selected.reduce((a,i)=>a+sellV(i),0);
+    const s=document.createElement("div");s.className="btn gold"+(selected.length?"":" no");s.textContent=`選択中を売却 (${selected.length}個 / +${val}G)`;
+    tapEl(s,()=>{if(!selected.length)return;for(const it of selected){const k=S.stash.indexOf(it);if(k>=0)S.stash.splice(k,1);}S.gold+=val;F.sellSel=[];SFX.gold();toast("+"+val+" G");save();$("itPop").classList.remove("on");openTown();});c.appendChild(s);
+    for(let r=0;r<5;r++){const junk=S.stash.filter(i=>!Object.values(S.gear).includes(i)&&i.rar<=r),tot=junk.reduce((a,i)=>a+sellV(i),0);
+      const d=document.createElement("div");d.className="btn gh"+(junk.length?"":" no");d.textContent=`${CFG.RARITY[r][0]}以下を売却 (${junk.length}個 / +${tot}G)`;
+      tapEl(d,()=>{if(!junk.length)return;for(const it of junk){const k=S.stash.indexOf(it);if(k>=0)S.stash.splice(k,1);}S.gold+=tot;SFX.gold();toast("+"+tot+" G");save();$("itPop").classList.remove("on");openTown();});c.appendChild(d);}
+    const clear=document.createElement("div");clear.className="btn gh";clear.textContent="選択を解除";tapEl(clear,()=>{F.sellSel=[];openInvSell();});c.appendChild(clear);
+    const mode=document.createElement("div");mode.className="btn gh";mode.textContent="売却選択モードを終了";tapEl(mode,()=>{F.sellMode=false;F.sellSel=[];$("itPop").classList.remove("on");openTown();});c.appendChild(mode);});}
 
-  if(!list.length){const d=document.createElement("div");d.className="card";
-    d.innerHTML=`<div class="st">該当する装備がない。</div>`;b.appendChild(d);return;}
+/* ---------- 倉庫: アイコン格子 + フィルタ/並べ替え/売却 ---------- */
+function renderInv(b){
+  const F=S.inv;F.filters=F.filters||[];F.sellSel=F.sellSel||[];
+  const bar=document.createElement("div");bar.id="invBar";
+  const mk=(lbl,fn,on)=>{const d=document.createElement("div");d.className="btn gh"+(on?" gold":"");d.style.marginTop="0";d.textContent=lbl;tapEl(d,fn);bar.appendChild(d);};
+  mk("フィルタ"+(F.filters.length?` (${F.filters.length})`:""),openInvFilter,F.filters.length);
+  mk(F.sort==="score"?"並び替え:強さ":F.sort==="rar"?"並び替え:レア":"並び替え:深度",openInvSort,0);
+  mk((F.sellMode?"売却選択中":"売却")+(F.sellSel.length?` (${F.sellSel.length})`:""),openInvSell,F.sellMode||F.sellSel.length);
+  b.appendChild(bar);
+  const list=invFiltered();
+  if(!list.length){const d=document.createElement("div");d.className="card";d.innerHTML=`<div class="st">該当する装備がない。</div>`;b.appendChild(d);return;}
   const g=document.createElement("div");g.className="grid";
   for(const it of list){
-    const cur=S.gear[it.slot],better=!cur||it.score>cur.score;
-    const c=document.createElement("div");
-    c.className="cell "+RC[it.rar]+(F.sel===it?" sel":"");
-    c.style.borderColor=it.rar===4?"#ff8adf":CFG.RARITY[it.rar][3];
-    c.innerHTML=icon(iconKey(it),26)+
-      (Object.values(S.gear).includes(it)?'<div class="eq">E</div>':"")+
-      (better?'<div class="eq" style="color:#7ad04e">▲</div>':"")+
-      `<div class="lvl">${it.ilvl}</div>`;
-    tapEl(c,()=>showItem(it,false));g.appendChild(c);}
-  b.appendChild(g);
-
-  const sb=document.createElement("div");sb.id="sellBar";
-  const junk=list.filter(i=>!Object.values(S.gear).includes(i)&&i.rar<=1);
-  const tot=junk.reduce((a,i)=>a+sellV(i),0);
-  const s1=document.createElement("div");s1.className="btn gold"+(junk.length?"":" no");
-  s1.style.marginTop="0";s1.textContent=`上質以下をまとめて売る (${junk.length}個 / +${tot}G)`;
-  tapEl(s1,()=>{if(!junk.length)return;
-    for(const i of junk){const k=S.stash.indexOf(i);if(k>=0)S.stash.splice(k,1);}
-    S.gold+=tot;SFX.gold();toast("+"+tot+" G");save();openTown();});
-  sb.appendChild(s1);b.appendChild(sb);}
+    const cur=S.gear[it.slot],better=!cur||it.score>cur.score,equipped=Object.values(S.gear).includes(it),sel=F.sellSel.includes(it);
+    const c=document.createElement("div");c.className="cell "+RC[it.rar]+(sel?" sel":"");c.style.borderColor=it.rar===4?"#ff8adf":CFG.RARITY[it.rar][3];
+    c.innerHTML=icon(iconKey(it),26)+(equipped?'<div class="eq">E</div>':"")+(better?'<div class="eq" style="color:#7ad04e">▲</div>':"")+(sel?'<div class="eq" style="left:3px;right:auto;color:#ffd24a">売</div>':"")+`<div class="lvl">${it.ilvl}</div>`;
+    tapEl(c,()=>{if(!equipped&&F.sellMode){const i=F.sellSel.indexOf(it);if(i>=0)F.sellSel.splice(i,1);else F.sellSel.push(it);openTown();}else showItem(it,false);});
+    c.addEventListener("touchstart",()=>{}, {passive:true});
+    c.addEventListener("contextmenu",e=>{e.preventDefault();if(equipped)return;const i=F.sellSel.indexOf(it);if(i>=0)F.sellSel.splice(i,1);else F.sellSel.push(it);openTown();});
+    g.appendChild(c);}
+  b.appendChild(g);}
 
 function showItem(it,inDungeon){
   const cur=S.gear[it.slot],equipped=Object.values(S.gear).includes(it);
@@ -2060,45 +2105,47 @@ function showItem(it,inDungeon){
       SFX.gold();$("itPop").classList.remove("on");save();openTown();});}
   mk("閉じる","gh",()=>$("itPop").classList.remove("on"));
   $("itPop").classList.add("on");}
-/* 合成: 同部位の装備を食わせてレベルを上げる */
+/* 合成: 同部位の装備をまとめて食わせてレベルを上げる */
+let fuseTarget=null,fuseSel=[];
+function fusePreview(target,xp){let lv=target.lv,cur=target.xp+xp,up=0;
+  while(lv<MAXLV&&cur>=fuseNeed({lv})){cur-=fuseNeed({lv});lv++;up++;}
+  return {lv,xp:cur,up};}
 function openFuse(target){
+  if(fuseTarget!==target){fuseTarget=target;fuseSel=[];}
+  fuseSel=fuseSel.filter(i=>S.stash.includes(i)&&i!==target&&!Object.values(S.gear).includes(i));
   const list=S.stash.filter(i=>i!==target&&i.slot===target.slot&&!Object.values(S.gear).includes(i))
     .sort((a,b)=>fuseXP(b)-fuseXP(a));
-  const c=$("itC");
-  const need=fuseNeed(target),gold=fuseGold(target);
+  const c=$("itC"),need=fuseNeed(target),perGold=fuseGold(target);
+  const totalXP=fuseSel.reduce((a,i)=>a+fuseXP(i),0),cost=perGold*fuseSel.length,prev=fusePreview(target,totalXP);
   c.innerHTML=`<div style="font-size:15px;font-weight:800">${target.name} を強化</div>
-    <div class="sub" style="margin:4px 0 12px">Lv${target.lv} — 経験値 ${target.xp}/${need} ／ 費用 ${gold}G</div>`;
-  {// 1レベル上がると自分のステータスがどう動くか
-   const nxt=Object.assign({},target,{lv:target.lv+1,affs:target.affs,main:target.main});
-   const eq=Object.values(S.gear).includes(target);
-   const box=document.createElement("div");box.className="card";
-   box.innerHTML=`<div class="ty" style="margin:0 0 6px">Lv${target.lv+1} になると</div>`+
-     `<div class="row" style="font-size:11px;padding:2px 0">
-        <span style="color:#8e86a2">${AFN(target.main.id)}（基礎）</span>
-        <span><b>${mainV(nxt)}</b> <span class="up">(+${mainV(nxt)-mainV(target)})</span></span></div>`+
-     (eq?deltaHTML(target.slot,nxt):"");
-   c.appendChild(box);}
-  if(!list.length){const d=document.createElement("div");d.className="card";
-    d.innerHTML='<div class="st">素材にできる同部位の装備がない。</div>';c.appendChild(d);}
-  for(const f of list){
-    const d=document.createElement("div");d.className="card tap";
+    <div class="sub" style="margin:4px 0 10px">Lv${target.lv} — 経験値 ${target.xp}/${need}</div>`;
+  const box=document.createElement("div");box.className="card";
+  const nxt=Object.assign({},target,{lv:Math.min(MAXLV,target.lv+1),affs:target.affs,main:target.main});
+  const eq=Object.values(S.gear).includes(target);
+  box.innerHTML=`<div class="ty" style="margin:0 0 6px">選択中 ${fuseSel.length}個 / +${totalXP}exp / 費用 ${cost}G</div>
+    <div class="stat"><span>強化後予測</span><b>Lv${prev.lv}${prev.up?` <span class="up">(+${prev.up})</span>`:""}</b></div>
+    <div class="stat"><span>${AFN(target.main.id)}（次Lv基礎）</span><b>${mainV(nxt)} <span class="up">(+${mainV(nxt)-mainV(target)})</span></b></div>`+
+    (eq?deltaHTML(target.slot,nxt):"");
+  c.appendChild(box);
+  const go=document.createElement("div");go.className="btn gold"+(fuseSel.length&&S.gold>=cost?"":" no");
+  go.textContent=`選択素材をまとめて合成 (${fuseSel.length}個)`;
+  tapEl(go,()=>{if(!fuseSel.length)return;if(S.gold<cost){toast("金貨が足りない");return;}
+    S.gold-=cost;target.xp+=totalXP;
+    for(const f of fuseSel){const k=S.stash.indexOf(f);if(k>=0)S.stash.splice(k,1);}
+    let up=0;while(target.lv<MAXLV&&target.xp>=fuseNeed(target)){target.xp-=fuseNeed(target);target.lv++;up++;}
+    fuseSel=[];target.score=iScore(target);S.p.d=derive();recalcHP(S.p);up?SFX.lvl():SFX.ok();toast(up?`強化成功 Lv${target.lv}`:`経験値 +${totalXP}`);save();openFuse(target);});
+  c.appendChild(go);
+  if(!list.length){const d=document.createElement("div");d.className="card";d.innerHTML='<div class="st">素材にできる同部位の装備がない。</div>';c.appendChild(d);}
+  for(const f of list){const on=fuseSel.includes(f),d=document.createElement("div");d.className="card tap"+(on?" sel":"");d.style.borderColor=on?"var(--gold)":"";
     d.innerHTML=`<div class="row"><div class="${RC[f.rar]}">${icon(iconKey(f),22)}</div>
-      <div style="flex:1"><div class="nm ${RC[f.rar]}">${f.name}</div>
-      <div class="ty">深度${f.ilvl} / Lv${f.lv} — 経験値 +${fuseXP(f)}</div></div></div>`;
-    tapEl(d,()=>{
-      if(S.gold<gold){toast("金貨が足りない");return;}
-      S.gold-=gold;target.xp+=fuseXP(f);
-      const k=S.stash.indexOf(f);if(k>=0)S.stash.splice(k,1);
-      let up=0;
-      while(target.lv<MAXLV&&target.xp>=fuseNeed(target)){target.xp-=fuseNeed(target);target.lv++;up++;}
-      target.score=iScore(target);S.p.d=derive();recalcHP(S.p);
-      up?SFX.lvl():SFX.ok();
-      toast(up?`強化成功 Lv${target.lv}`:`経験値 +${fuseXP(f)}`);
-      save();openFuse(target);});
-    c.appendChild(d);}
-  const x=document.createElement("div");x.className="btn gh";x.textContent="閉じる";
-  tapEl(x,()=>{$("itPop").classList.remove("on");openTown();});c.appendChild(x);
+      <div style="flex:1"><div class="nm ${RC[f.rar]}">${on?"✓ ":""}${f.name}</div>
+      <div class="ty">${CFG.RARITY[f.rar][0]} / 深度${f.ilvl} / Lv${f.lv} — +${fuseXP(f)}exp</div></div></div>`;
+    tapEl(d,()=>{const i=fuseSel.indexOf(f);if(i>=0)fuseSel.splice(i,1);else fuseSel.push(f);openFuse(target);});c.appendChild(d);}
+  const clear=document.createElement("div");clear.className="btn gh";clear.textContent="選択解除";tapEl(clear,()=>{fuseSel=[];openFuse(target);});c.appendChild(clear);
+  const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";
+  tapEl(x,()=>{$("itPop").classList.remove("on");fuseSel=[];openTown();});c.appendChild(x);
   $("itPop").classList.add("on");}
+
 function equip(it){
   if(it.wt&&WCLS[it.wt]!==S.cls){toast(WCLS[it.wt]==="warrior"?"剣は戦士専用":"杖は魔術師専用");return;}
   const old=S.gear[it.slot];
@@ -2135,11 +2182,13 @@ function openPick(slotK,inDungeon){
     d.innerHTML=`<div class="nm ${RC[it.rar]}">${it.name}
       <span class="tag ${RC[it.rar]}">${CFG.RARITY[it.rar][0]}</span>
       ${better?'<span class="up" style="font-size:10px"> ▲</span>':""}</div>
-      <div class="st">${statsHTML(it,cur)}</div>`;
+      <div class="st">${statsHTML(it,cur)}</div>
+      <div class="ty" style="margin-top:8px">装備した場合の変化</div>
+      ${deltaHTML(it.slot,it)}`;
     tapEl(d,()=>{equip(it);$("itPop").classList.remove("on");
       inDungeon?openPause():openTown();});
     c.appendChild(d);}
-  const x=document.createElement("div");x.className="btn gh";x.textContent="閉じる";
+  const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";
   tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);
   $("itPop").classList.add("on");}
 
@@ -2157,12 +2206,21 @@ function switchClass(k){
     toast(CLASSES[k].name+"は"+(w.wt==="sword"?"剣":"杖")+"を装備できないため外しました");}
   S.p=newPlayer();
   SFX.lvl();save();openTown();}
+function renderRunSpoils(host){
+  const card=document.createElement("div");card.className="card";
+  const rows=S.bag.length?S.bag.slice(-8).reverse().map(it=>`<div class="stat"><span class="${RC[it.rar]}">${CFG.RARITY[it.rar][0]} ${SLOTN(it.slot)}</span><b>深度${it.ilvl}</b></div>`).join(""):'<div class="st">未帰還の装備はまだない。</div>';
+  card.innerHTML=`<div class="nm">未帰還の戦利品 ${S.bag.length}個</div><div class="ty" style="margin:6px 0">種類・レア度・深度のみ表示</div>${rows}`;
+  host.appendChild(card);
+  const gv=document.createElement("div");gv.className="btn pri";gv.textContent="ここで力尽きる（戦利品は失う）";
+  tapEl(gv,()=>{$("scPause").classList.remove("on");ask("ここで力尽きる",`今回拾った ${S.bag.length} 個を失って拠点に戻ります。`,()=>endRun(false));});
+  host.appendChild(gv);}
 function openPause(){
   S.paused=true;for(let i=0;i<4;i++)HELD[i]=false;IN.dx=IN.dy=0;
   $("scPause").classList.add("on");
   $("pauseS").textContent=`深度 ${S.floor} / 未帰還 ${S.bag.length}個`;
   for(const t of document.querySelectorAll("#scPause .tab"))t.classList.toggle("on",t.dataset.p===S.ptab);
   const b=$("pauseBody");b.innerHTML="";
+  renderRunSpoils(b);
   if(S.ptab==="gear"){
     const h=document.createElement("div");h.className="card";
     h.innerHTML=`<div class="st">ここで装備できるのは<b>持ち帰り済み</b>のものだけ。
@@ -2170,12 +2228,13 @@ function openPause(){
     b.appendChild(h);
     gearGrid(b,true);
     const h2=document.createElement("h3");h2.textContent="能力値";b.appendChild(h2);statBlock(b);
-  }else{allocBlock(b,openPause);}
-  const gv=document.createElement("div");gv.className="btn gh";gv.style.marginTop="20px";
-  gv.textContent="ここで力尽きる（戦利品は失う）";
-  tapEl(gv,()=>{$("scPause").classList.remove("on");
-    ask("ここで力尽きる",`今回拾った ${S.bag.length} 個を失って拠点に戻ります。`,()=>endRun(false));});
-  b.appendChild(gv);}
+  }else if(S.ptab==="char"){allocBlock(b,openPause);}
+  else{
+    const addToggle=(k,lbl)=>{const d=document.createElement("div");d.className="btn"+(S.settings[k]?" gold":" gh");d.textContent=lbl+"："+(S.settings[k]?"ON":"OFF");
+      tapEl(d,()=>{S.settings[k]=S.settings[k]?0:1;save();openPause();});b.appendChild(d);};
+    const h=document.createElement("h3");h.textContent="設定";b.appendChild(h);
+    addToggle("map","ミニマップ");addToggle("dmg","ダメージ数字");addToggle("shake","画面揺れ");}
+}
 
 /* ---------- クラス選択 / 潜行 ---------- */
 function openClass(){
@@ -2192,23 +2251,34 @@ function openClass(){
       S.p=newPlayer();$("scClass").classList.remove("on");save();openTown();});
     c.appendChild(d);}
   $("scClass").classList.add("on");}
+function confirmDive(fl){
+  ask("ダンジョンに潜る",
+    "深度 "+fl+" から開始します。\n危険度: "+dangerOf(fl).n+"\n未鑑定品は帰還するまで確定しません。",
+    ()=>beginRun(fl));}
 function startDive(){
-  // 最大到達 -10 を10階刻みで開始地点に選べる
+  // 階層が数百/数千になっても、ページ切り替えで開始地点を選ぶ
   const st=CFG.SKIP_STEP;
-  const maxSkip=Math.max(0,Math.floor((S.deepest-st)/st)*st);
-  if(maxSkip<st){beginRun(1);return;}
+  const maxStart=Math.max(1,Math.floor((S.deepest-1)/st)*st+1);
+  if(maxStart<=1){confirmDive(1);return;}
+  const starts=[];for(let f=1;f<=maxStart;f+=st)starts.push(f);
+  const pageSize=6,maxPage=Math.max(0,Math.ceil(starts.length/pageSize)-1);
+  S.startPage=clamp(S.startPage||0,0,maxPage);
+  const from=starts.length-(S.startPage+1)*pageSize,to=starts.length-S.startPage*pageSize;
+  const page=starts.slice(Math.max(0,from),to);
   const c=$("itC");
   c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:4px">開始する深度</div>
-    <div class="sub" style="margin-bottom:12px">最大到達 ${S.deepest} — ${st}階刻みで選べる</div>`;
-  for(let f=1;f<=maxSkip+1;f+=(f===1?st-1:st)){
-    const fl=f;
-    const d=document.createElement("div");d.className="btn"+(fl===1?" pri":"");
-    d.textContent="深度 "+fl+" から — "+dangerOf(fl).n;
-    tapEl(d,()=>{$("itPop").classList.remove("on");beginRun(fl);});
-    c.appendChild(d);}
-  const x=document.createElement("div");x.className="btn gh";x.textContent="やめる";
-  tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);
-  $("itPop").classList.add("on");}
+    <div class="sub" style="margin-bottom:10px">解放済み ${starts.length}地点 / 最大 ${maxStart}F</div>`;
+  const nav=document.createElement("div");nav.className="g2";
+  const newer=document.createElement("div");newer.className="btn gh"+(S.startPage<=0?" no":"");newer.textContent="より深い";
+  tapEl(newer,()=>{if(S.startPage<=0)return;S.startPage--;startDive();});nav.appendChild(newer);
+  const older=document.createElement("div");older.className="btn gh"+(S.startPage>=maxPage?" no":"");older.textContent="より浅い";
+  tapEl(older,()=>{if(S.startPage>=maxPage)return;S.startPage++;startDive();});nav.appendChild(older);c.appendChild(nav);
+  for(const fl of page.reverse()){
+    const d=document.createElement("div");d.className="btn"+(fl===maxStart?" pri":"");
+    d.textContent="深度 "+fl+" — "+dangerOf(fl).n;
+    tapEl(d,()=>{$("itPop").classList.remove("on");confirmDive(fl);});c.appendChild(d);}
+  const x=document.createElement("div");x.className="btn popClose";x.textContent="やめる";
+  tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);$("itPop").classList.add("on");}
 function beginRun(fl){
   $("scTown").classList.remove("on");
   S.scene="dungeon";S.paused=false;S.runT=0;S.startFloor=fl;
@@ -2247,7 +2317,7 @@ function load(){try{
   const ng={};for(const k of SLOTK)ng[k]=null;
   for(const k in S.gear){const it=fix(S.gear[k]);if(it&&!ng[it.slot])ng[it.slot]=it;}
   S.gear=ng;
-  S.pots=d.pots==null?CFG.POTION_MAX:d.pots;S.log=d.log||{runs:[]};
+  S.pots=d.pots==null?CFG.POTION_BASE:Math.min(CFG.POTION_MAX,d.pots);S.log=d.log||{runs:[]};
   S.settings=Object.assign({map:1,dmg:1,shake:1},d.settings||{});
   S.admin=!!d.admin;S.chars=d.chars||{};
   const nb=Object.assign({lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0},d.base||{});
@@ -2268,8 +2338,8 @@ hook($("pauseB"),()=>{if(S.scene==="dungeon"&&!S.paused)openPause();});
 tapEl($("btnResume"),()=>{$("scPause").classList.remove("on");S.paused=false;updHUD();});
 tapEl($("btnDive"),startDive);
 tapEl($("btnBack"),()=>{$("scEnd").classList.remove("on");openTown();});
-tapEl($("askY"),()=>{$("askPop").classList.remove("on");S.paused=false;const f=askFn;askFn=null;if(f)f();});
-tapEl($("askN"),()=>{$("askPop").classList.remove("on");S.paused=false;});
+tapEl($("askY"),()=>{$("askPop").classList.remove("on");S.paused=askPrevPaused;const f=askFn;askFn=null;if(f)f();});
+tapEl($("askN"),()=>{$("askPop").classList.remove("on");S.paused=askPrevPaused;askFn=null;});
 hook($("lockHit"),lockHit);
 for(const t of document.querySelectorAll("#scTown .tab"))tapEl(t,()=>{S.tab=t.dataset.t;openTown();});
 for(const t of document.querySelectorAll("#scPause .tab"))tapEl(t,()=>{S.ptab=t.dataset.p;openPause();});

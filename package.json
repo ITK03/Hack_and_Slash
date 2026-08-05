@@ -2,6 +2,8 @@
   "name": "hack-and-slash",
   "private": true,
   "scripts": {
+    "serve": "python3 -m http.server 8000 -d public",
+    "check": "node scripts/check-prototype.mjs",
     "deploy": "wrangler deploy"
   },
   "devDependencies": {
