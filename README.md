@@ -8,6 +8,29 @@
 
 ---
 
+
+## Codex で読む場所
+
+Codex の作業環境では `claude/diablo-style-hackslash-game-khlbrr` というブランチ名や
+`claude/` ディレクトリが見えない場合がある。
+このリポジトリでは、その簡易版プロトタイプを **現在の作業ブランチに取り込み済み**。
+読むべき本体は [`public/index.html`](public/index.html)。
+
+- ゲーム本体: `public/index.html`
+- 配信設定: `wrangler.jsonc`
+- 実プレイURL: https://hack-and-slash.luyinshele.workers.dev
+- 設計メモ: `docs/PLAN.md` / `docs/HYPOTHESES.md`
+- Claude / Codex 連携ログ: `docs/AI_COLLABORATION.md`
+
+ローカル確認は以下で行う。まず読み取りチェックを通してから、静的サーバーで開く。
+
+```bash
+npm run check
+npm run serve
+```
+
+依存を入れて Cloudflare Workers と同じ形で確認したい場合だけ、`npx wrangler dev` を使う。
+
 ## 遊び方
 
 拠点 →「潜る」→ ダンジョン。
@@ -113,11 +136,12 @@ Cloudflare 側の設定:
 | Build command | 空欄 |
 | Deploy command | `npx wrangler deploy` |
 | Root directory | `/` |
-| **Branch** | **`claude/diablo-style-hackslash-game-khlbrr`** |
+| **Branch** | **現在の作業ブランチ（Codex では通常 `work`）** |
 
-`main` を指したままだと README しか無いので中身が空になる。
+`main` や存在しない `claude/...` ブランチを指したままだと、Codex 側で読めない／配信対象が見つからないことがある。
 
-デプロイ後は `https://hack-and-slash.<サブドメイン>.workers.dev` で開ける。
+現在の実プレイURLは `https://hack-and-slash.luyinshele.workers.dev`。
+デプロイ後は `https://hack-and-slash.<サブドメイン>.workers.dev` 形式で開ける。
 以降は push するたびに自動更新される。
 
 URL を送るだけで友人が遊べる。インストールも登録も不要。
