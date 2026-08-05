@@ -2018,7 +2018,7 @@ function invFiltered(){
   const fs=F.filters;
   if(fs.length){list=list.filter(i=>fs.some(f=>{
     if(f[0]==="r")return i.rar===+f[1];
-    if(f==="ring")return i.slot==="ring1"||i.slot==="ring2";
+    if(f==="ring")return i.slot==="ring"||i.slot==="ring1"||i.slot==="ring2";
     return i.slot===f;}));}
   list.sort((a,c)=>F.sort==="rar"?(c.rar-a.rar||c.score-a.score)
     :F.sort==="ilvl"?(c.ilvl-a.ilvl||c.score-a.score):(c.score-a.score));
