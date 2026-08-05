@@ -340,7 +340,7 @@ const CFG={
 
   /* --- ドロップ --- */
   DROP_CHANCE:.048,      // 旧 .24 の 2割
-  GOLD_CHANCE:.42, POTION_DROP:.035,
+  GOLD_CHANCE:.42, POTION_DROP:.070,
   CHEST_CHANCE:.035,     // 旧 .34 の 1割
   RARITY:[
     ["並",  1000,-26,"#c8c4bc"],
@@ -359,7 +359,7 @@ const CFG={
   XP_TAIL:1.1128,   // Lv40 以降は1レベルごとにこの倍率
   SKIP_STEP:5,        // 何層ごとにスキップ開始地点を選べるか
   SHRINE_CHANCE:.30,  // フロアに祭壇が出る確率
-  POTION_HEAL:.20, POTION_MAX:3, POTION_COST:140,
+  POTION_HEAL:.20, POTION_BASE:3, POTION_MAX:6, POTION_POT_DROP:.01,
   SHARD_DROP:.13, SHARD_HEAL:.045,   // 拾った瞬間に少し回復する欠片
   MP_REGEN:3.4,          // 毎秒。遅め
   SELL_DIV:50,
@@ -503,7 +503,7 @@ const CLASSES={
     str:4,mag:18,def:6,agi:10,spi:16,luk:8,col:"#5b9bf0",
     skills:[
       {n:"火球",c:14,cd:.7,k:"ball",dmg:[62,88],sp:11,r:2.2,col:"#ff8a3a"},
-      {n:"氷結新星",c:26,cd:3.0,k:"nova",dmg:[54,78],r:3.4,freeze:2.2,col:"#8ad8ff"},
+      {n:"氷結新星",c:26,cd:3.0,k:"nova",dmg:[54,78],r:3.4,freeze:2.2,blink:4.4,col:"#8ad8ff"},
       {n:"連鎖雷撃",c:32,cd:2.6,k:"chain",dmg:[70,100],jumps:6,range:4.6}]},
 };
 const CKEYS=["warrior","mage"];
@@ -745,10 +745,10 @@ const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   portal:null,stairs:null,boss:null,
   bag:[],stash:[],gear:{},
   runT:0,hitstop:0,shake:0,shakeT:0,flash:0,paused:true,
-  log:{runs:[]},tab:"gear",ptab:"gear",pots:CFG.POTION_MAX,lvlQ:0,
+  log:{runs:[]},tab:"gear",ptab:"gear",pots:CFG.POTION_BASE,lvlQ:0,
   settings:{map:1,dmg:1,shake:1},admin:false,chars:{},
   combo:0,comboT:0,dmgLog:[],dps:0,startFloor:1,
-  inv:{f:"all",sort:"score",sel:null},
+  inv:{filters:[],sort:"score",sellSel:[],sellRar:1},
   alloc:null,
   base:{lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0}};
 
@@ -767,7 +767,7 @@ function derive(){
   const armor=t.armor+def*1.1;
   const manaPw=pw.includes("mana")?1.5:1;
   const atkS=C.atkStat==="mag"?mag:str;   // 戦士=筋力 / 魔術師=魔力
-  return {C,pw,str,mag,def,agi,spi,luk,
+  return {C,pw,opt:t,str,mag,def,agi,spi,luk,
     max:Math.round(C.hp+def*2.6+lv*17+t.hp),
     atkFlat:(C.atkStat==="mag"?t.matk:t.atk)+atkS*.92+lv*2.1, atkMul:1+t.atkP/100, armor,
     rng:1+t.rng/100,
@@ -808,9 +808,8 @@ function rowHTML(nm,vb,d,pct){
     `</span></div>`;}
 function deltaHTML(slot,item){
   const a=derive(),b=deriveWith(slot,item);
-  let rows=DSHOW.map(([k,nm,pct])=>{
+  let rows=`<div class="ty" style="margin:0 0 4px">全ステータス</div>`+DSHOW.map(([k,nm,pct])=>{
     const va=pct?a[k]*100:a[k],vb=pct?b[k]*100:b[k],d=vb-va;
-    if(Math.abs(d)<(pct?.05:.5))return "";
     return rowHTML(nm==="攻撃力"?(a.C.atkName||nm):nm,vb,d,pct);}).join("");
   // オプション合計の増減も出す（どのオプションが増減するか分からないと判断できない）
   const oa=optTotals(null,null),ob=optTotals(item,slot);
@@ -842,7 +841,7 @@ const UPS=[
 /* ---------- 敵生成 ---------- */
 const eSpeedMul=fl=>Math.min(CFG.E_SPEED_MAX,CFG.E_SPEED_BASE+CFG.E_SPEED_PER*(fl-1));
 function spawnE(k,x,y,fl,elite){
-  const t=ET[k],hs=1+CFG.HP_SCALE*(fl-1),ds=1+CFG.DMG_SCALE*(fl-1);
+  const t=ET[k],soft=(fl>=6&&fl<=10?.90:1),hs=(1+CFG.HP_SCALE*(fl-1))*soft,ds=(1+CFG.DMG_SCALE*(fl-1))*soft;
   const e={k,n:t.n,x,y,r:t.r,sp:t.sp,aR:t.aR,cd:t.cd,cdT:rr(0,t.cd),xp:t.xp,col:t.col,sz:t.sz,
     ai:t.ai,rng:!!t.rng,keep:t.keep||0,slow:!!t.slow,boom:!!t.boom,heavy:!!t.heavy,
     hp:t.hp*hs,max:t.hp*hs,dmg:t.dmg*ds,hopT:rr(0,1),st:{},touch:t.touch||0,touchT:0,
@@ -857,7 +856,7 @@ function spawnE(k,x,y,fl,elite){
   S.enemies.push(e);return e;}
 function spawnBoss(fl){
   const b=BOSSES[((fl/CFG.BOSS_EVERY|0)-1)%BOSSES.length];
-  const hs=1+CFG.HP_SCALE*(fl-1)*1.15,rl=rooms[rooms.stairIdx];
+  const soft=(fl>=6&&fl<=10?.90:1),hs=(1+CFG.HP_SCALE*(fl-1)*1.15)*soft,rl=rooms[rooms.stairIdx];
   const bm=CFG.BOSS_MUL[fl]==null?1:CFG.BOSS_MUL[fl];
   const rate=CFG.BOSS_RATE[fl]==null?1:CFG.BOSS_RATE[fl];
   const slow=fl<=CFG.BOSS_SLOW_TO;
@@ -865,7 +864,7 @@ function spawnBoss(fl){
     sp:b.sp*(slow?CFG.BOSS_SLOW_SP:1),aR:1.8,
     cd:1.6/rate,cdT:1.8/rate,telMul:(slow?CFG.BOSS_SLOW_TEL:1),
     xp:600+fl*60,col:b.col,sz:b.sz,boss:1,ai:"boss",rng:0,keep:0,touch:0,
-    hp:b.hp*hs*bm,max:b.hp*hs*bm,dmg:b.dmg*(1+CFG.DMG_SCALE*(fl-1))*bm,
+    hp:b.hp*hs*bm,max:b.hp*hs*bm,dmg:b.dmg*(1+CFG.DMG_SCALE*(fl-1))*bm*soft,
     flash:0,kbx:0,kby:0,agro:false,frz:0,stun:0,elite:null,shield:0,regen:0,dot:0,dotT:0,
     wind:0,tel:0,telK:null,telX:0,telY:0,telA:0,phase:1,sumT:8};
   S.enemies.push(e);S.boss=e;
@@ -875,6 +874,7 @@ function spawnBoss(fl){
 /* ---------- フロア ---------- */
 function enterFloor(fl){
   S.floor=fl;S.deepest=Math.max(S.deepest,fl);
+  if((fl-1)%CFG.SKIP_STEP===0)autoRefillPots();
   genFloor(fl);
   S.enemies.length=0;S.drops.length=0;S.bullets.length=0;S.parts.length=0;
   S.nums.length=0;S.props.length=0;S.fx.length=0;S.corpses.length=0;
@@ -976,8 +976,9 @@ function killE(e){
     if(e.elite.id==="blast")S.fx.push({t:"boom",x:e.x,y:e.y,tm:0,R:3,col:"#ff5040",dmg:e.dmg*2,en:1});}
   const luk=p.d.luk;
   if(e.boss){S.boss=null;$("bossBar").style.display="none";
+    S.deepest=Math.max(S.deepest,S.floor+1);save();
     for(let k=0;k<ri(1,2);k++)dropItem(e.x+rr(-1,1),e.y+rr(-1,1),2);
-    dropGold(e.x,e.y,300+S.floor*50);toast("ボス撃破");}
+    dropGold(e.x,e.y,300+S.floor*50);toast("ボス撃破 — 深度 "+(S.floor+1)+" 開始を解放");}
   else if(e.elite){if(rnd()<.5)dropItem(e.x,e.y,1);dropGold(e.x,e.y,50+S.floor*10);}
   else{const dm=p.mDrop*p.sDrop*(hasPw("greed")?1.8:1)*(1+p.d.mf);
     if(rnd()<CFG.DROP_CHANCE*dm)dropItem(e.x,e.y);
@@ -991,6 +992,12 @@ function dropItem(x,y,forceRar){
   if(it.rar>=4){shk(7);buzz([0,50,60,140]);toast("★★ 伝説");}
   else if(it.rar===3){shk(3);buzz(30);toast("★ 秀逸");}}
 function dropGold(x,y,v){S.drops.push({x,y,gold:v,t:0});}
+function autoRefillPots(){if(S.pots<CFG.POTION_BASE){S.pots=CFG.POTION_BASE;toast("ポーション自動補充");}}
+function barrelDrop(x,y){
+  if(rnd()<CFG.POTION_POT_DROP){S.drops.push({x,y,pot:1,t:0});return;}
+  if(rnd()<CFG.SHARD_DROP*.5){S.drops.push({x,y,shard:1,t:0});return;}
+  if(rnd()<CFG.GOLD_CHANCE*.5)dropGold(x,y,Math.round((6+S.floor*3)*rr(.6,1.6)));
+  if(rnd()<CFG.DROP_CHANCE*.5)dropItem(x,y);}
 function gainXP(v){const b=S.base;
   if(b.lv>=CFG.LV_CAP){b.para++;return;}
   b.xp+=v;
@@ -1055,6 +1062,12 @@ function s2w(sx,sy){
           y:(ny/(CFG.TILE_H/2)-nx/(CFG.TILE_W/2))/2*ISO_K,
           mag:Math.min(1,l)};}
 
+function blinkForward(p,a,len){
+  const steps=8,ox=p.x,oy=p.y;let nx=ox,ny=oy;
+  for(let n=1;n<=steps;n++){const tx=ox+Math.cos(a)*len*n/steps,ty=oy+Math.sin(a)*len*n/steps;
+    if(walk(tx,ty,p.r)){nx=tx;ny=ty;}else break;}
+  p.x=nx;p.y=ny;
+  S.parts.push({x:p.x,y:p.y,vx:-Math.cos(a)*1.8,vy:-Math.sin(a)*1.8,t:0,life:.22,col:"#8ad8ff",sz:4});}
 function useSkill(i){
   const p=S.p,C=p.d.C,sk=C.skills[i];
   if(!sk||p.cds[i]>0||p.mp<sk.c)return;
@@ -1101,6 +1114,7 @@ function useSkill(i){
       dmg:dmg()[0],crit:false,mine:1,col:sk.col,r:.26,t:0,boom:sk.r*mul});
     SFX.cast(360);break;}
   case "nova":{
+    if(sk.blink)blinkForward(p,a,sk.blink);
     const R=sk.r*mul*p.mRange;
     for(const e of S.enemies.slice()){
       const d=Math.hypot(e.x-p.x,e.y-p.y);if(d>R+e.r)continue;
@@ -1172,9 +1186,6 @@ function update(dt){
     if(e.frz>0||stActive(e,"frz")){e.frz=Math.max(0,e.frz-dt);continue;}
     if(e.stun>0){e.stun-=dt;continue;}
     const slowMul=stActive(e,"par")?.5:1;
-    if(e.ai==="tick"){e.fuse-=dt;      // 膨れ者: 攻撃せず時間で自爆
-      if(e.fuse<=0){S.fx.push({t:"boom",x:e.x,y:e.y,tm:0,R:3.4,col:"#c0d040",dmg:e.dmg,en:1});
-        killE(e);continue;}}
     if(e.regen)e.hp=Math.min(e.max,e.hp+e.regen*dt);
     e.x+=e.kbx;e.y+=e.kby;e.kbx*=.78;e.kby*=.78;
     if(!walk(e.x,e.y,e.r)){e.x-=e.kbx;e.y-=e.kby;e.kbx=e.kby=0;}
@@ -1196,7 +1207,13 @@ function update(dt){
         else if(d<e.aR+p.r+.4)hurtP(e.dmg);}
       continue;}
     let mx=0,my=0;
-    if(e.ai==="kite"){if(d>e.keep){mx=ux;my=uy;}else if(d<e.keep*.7){mx=-ux;my=-uy;}}
+    if(e.ai==="tick"){
+      if(d<3.4){e.fuseT=(e.fuseT==null?3:e.fuseT-dt);
+        if(e.fuseT<=0){S.fx.push({t:"boom",x:e.x,y:e.y,tm:0,R:3.4,col:"#c0d040",dmg:e.dmg,en:1});killE(e);continue;}
+        if(rnd()<dt*12)S.parts.push({x:e.x+rr(-.3,.3),y:e.y+rr(-.3,.3),vx:rr(-.4,.4),vy:rr(-.4,.4),t:0,life:.35,col:"#d8e060",sz:2.5});}
+      else if(e.fuseT==null){mx=ux;my=uy;}
+    }
+    else if(e.ai==="kite"){if(d>e.keep){mx=ux;my=uy;}else if(d<e.keep*.7){mx=-ux;my=-uy;}}
     else if(e.ai==="hop"){                      // 跳ね虫: 断続的に飛び込む
       e.hopT-=dt;
       if(e.hopT<=0){e.hopT=rr(.7,1.3);e.kbx=ux*.24;e.kby=uy*.24;}
@@ -1264,7 +1281,7 @@ function update(dt){
   for(const q of S.props){
     if(q.t==="barrel"&&q.hp>0&&d2(q.x,q.y,p.x,p.y)<.7){
       q.hp=0;burst(q.x,q.y,"#8a6a3a",12,1.4);SFX.chest();
-      dropGold(q.x,q.y,Math.round((5+S.floor*2)*rr(.6,1.6)));}
+      barrelDrop(q.x,q.y);}
     if(q.t==="shrine")q.tm+=dt;}
 
   for(let i=S.parts.length-1;i>=0;i--){const q=S.parts[i];q.t+=dt;
@@ -1751,7 +1768,7 @@ function updHUD(){
     el.querySelector(".cd").style.transform="scaleY("+(full>0?p.cds[i-1]/full:0)+")";
     el.classList.toggle("no",p.mp<sk.c);}
   $("potN").textContent=S.pots;
-  $("pot").classList.toggle("no",S.pots<=0);
+  $("pot").classList.toggle("no",S.pots<=0||p.hp>=p.max);
   const cb=$("combo");
   if(S.combo>=4){cb.classList.add("on");cb.innerHTML=S.combo+'<small>COMBO</small>';
     cb.style.fontSize=Math.min(46,24+S.combo*.6)+"px";}
@@ -1781,6 +1798,7 @@ function endRun(alive){
   S.paused=true;
   const got=S.bag.slice();
   if(alive){S.stash.push(...got);SFX.extract();}else SFX.death();
+  S.pots=CFG.POTION_BASE;
   S.log.runs.push({t:Math.round(S.runT),floor:S.floor,start:S.startFloor,alive,
     items:got.length,kills:S.p.kills,lv:S.base.lv,gold:S.gold,ups:S.p.ups.slice()});
   save();
@@ -1826,9 +1844,17 @@ function gearGrid(host,inDungeon){
   host.appendChild(gg);}
 function statBlock(host){
   const d=derive(),c=document.createElement("div");c.className="card";
-  c.innerHTML=`<div class="stat"><span>最大HP</span><b>${d.max}</b></div>
+  const opt=d.opt||{};
+  const baseRows=STATDEF.map(([k,nm])=>{
+    const classBase=d.C[k]||0,alloc=S.base[k]||0,gear=(k==="agi"?(opt.agiF||0):k==="luk"?((opt.luk||0)+(opt.lukF||0)):0);
+    return `<div class="stat"><span>${nm}</span><b>${classBase+alloc+gear} <small style="color:#6f6880">基本${classBase+alloc}${gear?` / 装備+${gear}`:""}</small></b></div>`;
+  }).join("");
+  c.innerHTML=`<div class="ty" style="margin-bottom:6px">基礎+装備の合計</div>${baseRows}
+    <div class="ty" style="margin:10px 0 6px">戦闘ステータス</div>
+    <div class="stat"><span>最大HP</span><b>${d.max}</b></div>
     <div class="stat"><span>MP</span><b>${d.mpMax} (+${d.mpReg.toFixed(1)}/s)</b></div>
-    <div class="stat"><span>${d.C.atkName||"攻撃力"}</span><b>+${Math.round(d.atkFlat)} ×${d.atkMul.toFixed(2)}</b></div>
+    <div class="stat"><span>${d.C.atkName||"攻撃力"}</span><b>${Math.round(d.atkFlat)} ×${d.atkMul.toFixed(2)}</b></div>
+    <div class="stat"><span>防御力</span><b>${Math.round(d.armor)}</b></div>
     <div class="stat"><span>クリティカル</span><b>${(d.crit*100).toFixed(1)}% / ×${d.cdmg.toFixed(2)}</b></div>
     <div class="stat"><span>攻撃速度</span><b>${(d.as*100).toFixed(0)}%</b></div>
     <div class="stat"><span>移動速度</span><b>${(d.ms*100).toFixed(0)}%</b></div>
@@ -1837,15 +1863,6 @@ function statBlock(host){
     <div class="stat"><span>状態異常耐性</span><b>${(d.stRes*100).toFixed(0)}%</b></div>
     <div class="stat"><span>運</span><b>${d.luk}</b></div>`;
   host.appendChild(c);
-  // 装備オプションの合計（どこから来ているか分からないと調整できない）
-  const t={};for(const k of SLOTK){const it=S.gear[k];if(!it)continue;
-    if(it.main)t[it.main.id]=(t[it.main.id]||0)+mainV(it);
-    for(const a of it.affs)t[a.id]=(t[a.id]||0)+a.v;}
-  const keys=Object.keys(t).filter(k=>t[k]);
-  if(keys.length){const h=document.createElement("h3");h.textContent="装備オプション合計";host.appendChild(h);
-    const e=document.createElement("div");e.className="card";
-    e.innerHTML=keys.map(k=>`<div class="stat"><span>${AFN(k)}</span><b>+${t[k]}${AFP(k)?"%":""}</b></div>`).join("");
-    host.appendChild(e);}
   if(d.pw.length){const h=document.createElement("h3");h.textContent="装備中の固有効果";host.appendChild(h);
     for(const id of d.pw){const P=POWER(id);if(!P)continue;
       const e=document.createElement("div");e.className="card";
@@ -1921,11 +1938,7 @@ function renderTown(){
       S.stash.push(makeItem(Math.max(1,S.deepest),.3,S.p.d.luk));
       SFX.chest();toast("装備を1つ入手");save();openTown();});
     add(`<div class="card" style="margin-top:12px"><div class="nm">ポーション</div>
-      <div class="st">最大HPの${Math.round(CFG.POTION_HEAL*100)}%を回復。${CFG.POTION_MAX}個まで。</div></div>`);
-    btn(`補充 (${S.pots}/${CFG.POTION_MAX}) — ${CFG.POTION_COST} G`,
-      (S.gold>=CFG.POTION_COST&&S.pots<CFG.POTION_MAX)?"gold":"no",()=>{
-      if(S.gold<CFG.POTION_COST||S.pots>=CFG.POTION_MAX)return;
-      S.gold-=CFG.POTION_COST;S.pots++;SFX.pot();save();openTown();});}
+      <div class="st">ポーション購入は撤廃。5層ごとに自動で${CFG.POTION_BASE}個まで補充されます。壺から出た分だけ最大${CFG.POTION_MAX}個まで持てます。</div></div>`);}
   if(S.tab==="conf"){
     add(`<h3>表示</h3>`);
     const tg=(k,lbl)=>{const d=document.createElement("div");
@@ -1982,51 +1995,64 @@ function renderTown(){
         ()=>{localStorage.removeItem(KEY);location.reload();});});}}
 
 /* ---------- 倉庫: アイコン格子 + フィルタ/並べ替え + 固定売却バー ---------- */
-function renderInv(b){
-  const F=S.inv;
-  const bar=document.createElement("div");bar.id="invBar";
-  const mkChip=(lbl,on,fn)=>{const c=document.createElement("div");
-    c.className="chip"+(on?" on":"");c.textContent=lbl;tapEl(c,fn);bar.appendChild(c);};
-  mkChip("全部",F.f==="all",()=>{F.f="all";openTown();});
-  for(let r=0;r<5;r++)mkChip(CFG.RARITY[r][0],F.f==="r"+r,()=>{F.f="r"+r;openTown();});
-  for(const s of ["weapon","armor","ring1"])
-    mkChip(SLOTN(s),F.f===s,()=>{F.f=s;openTown();});
-  mkChip(F.sort==="score"?"強さ順":F.sort==="rar"?"レア順":"深度順",true,()=>{
-    F.sort=F.sort==="score"?"rar":F.sort==="rar"?"ilvl":"score";openTown();});
-  b.appendChild(bar);
-
+function invFiltered(){
+  const F=S.inv;F.filters=F.filters||[];
   let list=S.stash.slice();
-  if(F.f!=="all"){
-    if(F.f[0]==="r")list=list.filter(i=>i.rar===+F.f[1]);
-    else if(F.f==="ring1")list=list.filter(i=>i.slot==="ring1"||i.slot==="ring2");
-    else list=list.filter(i=>i.slot===F.f);}
+  const fs=F.filters;
+  if(fs.length){list=list.filter(i=>fs.some(f=>{
+    if(f[0]==="r")return i.rar===+f[1];
+    if(f==="ring")return i.slot==="ring1"||i.slot==="ring2";
+    return i.slot===f;}));}
   list.sort((a,c)=>F.sort==="rar"?(c.rar-a.rar||c.score-a.score)
     :F.sort==="ilvl"?(c.ilvl-a.ilvl||c.score-a.score):(c.score-a.score));
+  return list;}
+function invMenu(title,build){const c=$("itC");c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:10px">${title}</div>`;build(c);
+  const x=document.createElement("div");x.className="btn gh";x.textContent="閉じる";tapEl(x,()=>{$("itPop").classList.remove("on");openTown();});c.appendChild(x);$("itPop").classList.add("on");}
+function openInvFilter(){const F=S.inv;F.filters=F.filters||[];
+  invMenu("フィルタ（複数選択）",c=>{
+    const add=(key,label)=>{const on=F.filters.includes(key),d=document.createElement("div");d.className="btn"+(on?" gold":" gh");d.textContent=(on?"✓ ":"")+label;
+      tapEl(d,()=>{const i=F.filters.indexOf(key);if(i>=0)F.filters.splice(i,1);else F.filters.push(key);openInvFilter();});c.appendChild(d);};
+    const all=document.createElement("div");all.className="btn"+(!F.filters.length?" gold":" gh");all.textContent="全部表示";
+    tapEl(all,()=>{F.filters=[];openInvFilter();});c.appendChild(all);
+    for(let r=0;r<5;r++)add("r"+r,CFG.RARITY[r][0]);
+    for(const sl of ["weapon","helm","armor","glove","boot","ring","amulet"])add(sl,SLOTN(sl));});}
+function openInvSort(){const F=S.inv;
+  invMenu("並び替え",c=>{
+    for(const [k,n] of [["score","強さ順"],["rar","レア順"],["ilvl","深度順"]]){const d=document.createElement("div");d.className="btn"+(F.sort===k?" gold":" gh");d.textContent=n;
+      tapEl(d,()=>{F.sort=k;$("itPop").classList.remove("on");openTown();});c.appendChild(d);}});}
+function openInvSell(){const F=S.inv;F.sellSel=F.sellSel||[];F.sellMode=true;if(F.sellRar==null)F.sellRar=1;
+  invMenu("売却",c=>{
+    const selected=F.sellSel.filter(i=>S.stash.includes(i)&&!Object.values(S.gear).includes(i));
+    const val=selected.reduce((a,i)=>a+sellV(i),0);
+    const s=document.createElement("div");s.className="btn gold"+(selected.length?"":" no");s.textContent=`選択中を売却 (${selected.length}個 / +${val}G)`;
+    tapEl(s,()=>{if(!selected.length)return;for(const it of selected){const k=S.stash.indexOf(it);if(k>=0)S.stash.splice(k,1);}S.gold+=val;F.sellSel=[];SFX.gold();toast("+"+val+" G");save();$("itPop").classList.remove("on");openTown();});c.appendChild(s);
+    for(let r=0;r<5;r++){const junk=S.stash.filter(i=>!Object.values(S.gear).includes(i)&&i.rar<=r),tot=junk.reduce((a,i)=>a+sellV(i),0);
+      const d=document.createElement("div");d.className="btn gh"+(junk.length?"":" no");d.textContent=`${CFG.RARITY[r][0]}以下を売却 (${junk.length}個 / +${tot}G)`;
+      tapEl(d,()=>{if(!junk.length)return;for(const it of junk){const k=S.stash.indexOf(it);if(k>=0)S.stash.splice(k,1);}S.gold+=tot;SFX.gold();toast("+"+tot+" G");save();$("itPop").classList.remove("on");openTown();});c.appendChild(d);}
+    const clear=document.createElement("div");clear.className="btn gh";clear.textContent="選択を解除";tapEl(clear,()=>{F.sellSel=[];openInvSell();});c.appendChild(clear);
+    const mode=document.createElement("div");mode.className="btn gh";mode.textContent="売却選択モードを終了";tapEl(mode,()=>{F.sellMode=false;F.sellSel=[];$("itPop").classList.remove("on");openTown();});c.appendChild(mode);});}
 
-  if(!list.length){const d=document.createElement("div");d.className="card";
-    d.innerHTML=`<div class="st">該当する装備がない。</div>`;b.appendChild(d);return;}
+/* ---------- 倉庫: アイコン格子 + フィルタ/並べ替え/売却 ---------- */
+function renderInv(b){
+  const F=S.inv;F.filters=F.filters||[];F.sellSel=F.sellSel||[];
+  const bar=document.createElement("div");bar.id="invBar";
+  const mk=(lbl,fn,on)=>{const d=document.createElement("div");d.className="btn gh"+(on?" gold":"");d.style.marginTop="0";d.textContent=lbl;tapEl(d,fn);bar.appendChild(d);};
+  mk("フィルタ"+(F.filters.length?` (${F.filters.length})`:""),openInvFilter,F.filters.length);
+  mk(F.sort==="score"?"並び替え:強さ":F.sort==="rar"?"並び替え:レア":"並び替え:深度",openInvSort,0);
+  mk((F.sellMode?"売却選択中":"売却")+(F.sellSel.length?` (${F.sellSel.length})`:""),openInvSell,F.sellMode||F.sellSel.length);
+  b.appendChild(bar);
+  const list=invFiltered();
+  if(!list.length){const d=document.createElement("div");d.className="card";d.innerHTML=`<div class="st">該当する装備がない。</div>`;b.appendChild(d);return;}
   const g=document.createElement("div");g.className="grid";
   for(const it of list){
-    const cur=S.gear[it.slot],better=!cur||it.score>cur.score;
-    const c=document.createElement("div");
-    c.className="cell "+RC[it.rar]+(F.sel===it?" sel":"");
-    c.style.borderColor=it.rar===4?"#ff8adf":CFG.RARITY[it.rar][3];
-    c.innerHTML=icon(iconKey(it),26)+
-      (Object.values(S.gear).includes(it)?'<div class="eq">E</div>':"")+
-      (better?'<div class="eq" style="color:#7ad04e">▲</div>':"")+
-      `<div class="lvl">${it.ilvl}</div>`;
-    tapEl(c,()=>showItem(it,false));g.appendChild(c);}
-  b.appendChild(g);
-
-  const sb=document.createElement("div");sb.id="sellBar";
-  const junk=list.filter(i=>!Object.values(S.gear).includes(i)&&i.rar<=1);
-  const tot=junk.reduce((a,i)=>a+sellV(i),0);
-  const s1=document.createElement("div");s1.className="btn gold"+(junk.length?"":" no");
-  s1.style.marginTop="0";s1.textContent=`上質以下をまとめて売る (${junk.length}個 / +${tot}G)`;
-  tapEl(s1,()=>{if(!junk.length)return;
-    for(const i of junk){const k=S.stash.indexOf(i);if(k>=0)S.stash.splice(k,1);}
-    S.gold+=tot;SFX.gold();toast("+"+tot+" G");save();openTown();});
-  sb.appendChild(s1);b.appendChild(sb);}
+    const cur=S.gear[it.slot],better=!cur||it.score>cur.score,equipped=Object.values(S.gear).includes(it),sel=F.sellSel.includes(it);
+    const c=document.createElement("div");c.className="cell "+RC[it.rar]+(sel?" sel":"");c.style.borderColor=it.rar===4?"#ff8adf":CFG.RARITY[it.rar][3];
+    c.innerHTML=icon(iconKey(it),26)+(equipped?'<div class="eq">E</div>':"")+(better?'<div class="eq" style="color:#7ad04e">▲</div>':"")+(sel?'<div class="eq" style="left:3px;right:auto;color:#ffd24a">売</div>':"")+`<div class="lvl">${it.ilvl}</div>`;
+    tapEl(c,()=>{if(!equipped&&F.sellMode){const i=F.sellSel.indexOf(it);if(i>=0)F.sellSel.splice(i,1);else F.sellSel.push(it);openTown();}else showItem(it,false);});
+    c.addEventListener("touchstart",()=>{}, {passive:true});
+    c.addEventListener("contextmenu",e=>{e.preventDefault();if(equipped)return;const i=F.sellSel.indexOf(it);if(i>=0)F.sellSel.splice(i,1);else F.sellSel.push(it);openTown();});
+    g.appendChild(c);}
+  b.appendChild(g);}
 
 function showItem(it,inDungeon){
   const cur=S.gear[it.slot],equipped=Object.values(S.gear).includes(it);
@@ -2197,14 +2223,14 @@ function confirmDive(fl){
     "深度 "+fl+" から開始します。\n危険度: "+dangerOf(fl).n+"\n未鑑定品は帰還するまで確定しません。",
     ()=>beginRun(fl));}
 function startDive(){
-  // 最大到達 -10 を10階刻みで開始地点に選べる
+  // ボス撃破で 1 / 6 / 11... の開始地点を解放する
   const st=CFG.SKIP_STEP;
-  const maxSkip=Math.max(0,Math.floor((S.deepest-st)/st)*st);
-  if(maxSkip<st){confirmDive(1);return;}
+  const maxStart=Math.max(1,Math.floor((S.deepest-1)/st)*st+1);
+  if(maxStart<=1){confirmDive(1);return;}
   const c=$("itC");
   c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:4px">開始する深度</div>
-    <div class="sub" style="margin-bottom:12px">最大到達 ${S.deepest} — ${st}階刻みで選べる</div>`;
-  for(let f=1;f<=maxSkip+1;f+=(f===1?st-1:st)){
+    <div class="sub" style="margin-bottom:12px">ボス撃破で解放 — 現在 ${maxStart}階まで選べる</div>`;
+  for(let f=1;f<=maxStart;f+=st){
     const fl=f;
     const d=document.createElement("div");d.className="btn"+(fl===1?" pri":"");
     d.textContent="深度 "+fl+" から — "+dangerOf(fl).n;
@@ -2251,7 +2277,7 @@ function load(){try{
   const ng={};for(const k of SLOTK)ng[k]=null;
   for(const k in S.gear){const it=fix(S.gear[k]);if(it&&!ng[it.slot])ng[it.slot]=it;}
   S.gear=ng;
-  S.pots=d.pots==null?CFG.POTION_MAX:d.pots;S.log=d.log||{runs:[]};
+  S.pots=d.pots==null?CFG.POTION_BASE:Math.min(CFG.POTION_MAX,d.pots);S.log=d.log||{runs:[]};
   S.settings=Object.assign({map:1,dmg:1,shake:1},d.settings||{});
   S.admin=!!d.admin;S.chars=d.chars||{};
   const nb=Object.assign({lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0},d.base||{});
