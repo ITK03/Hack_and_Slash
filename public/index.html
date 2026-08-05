@@ -2213,7 +2213,7 @@ function renderRunSpoils(host){
   card.innerHTML=`<div class="nm">未帰還の戦利品 ${S.bag.length}個</div><div class="ty" style="margin:6px 0">種類・レア度・深度のみ表示</div>${rows}`;
   host.appendChild(card);
   const gv=document.createElement("div");gv.className="btn pri";gv.textContent="ここで力尽きる（戦利品は失う）";
-  tapEl(gv,()=>{$("scPause").classList.remove("on");ask("ここで力尽きる",`今回拾った ${S.bag.length} 個を失って拠点に戻ります。`,()=>endRun(false));});
+  tapEl(gv,()=>{ask("ここで力尽きる",`今回拾った ${S.bag.length} 個を失って拠点に戻ります。`,()=>{$("scPause").classList.remove("on");endRun(false);});});
   host.appendChild(gv);}
 function openPause(){
   S.paused=true;for(let i=0;i<4;i++)HELD[i]=false;IN.dx=IN.dy=0;
