@@ -123,7 +123,7 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 .nm{font-size:13px;font-weight:800}
 .ty{font-size:10px;color:var(--ink3);margin-top:3px;font-weight:600}
 .st{font-size:11px;color:#a49cb8;margin-top:7px;line-height:1.7}
-.st .up{color:#7ad04e;font-weight:700}.st .dn{color:#d05a54;font-weight:700}
+.up{color:#7ad04e!important;font-weight:800}.dn{color:#d05a54!important;font-weight:800}
 .leg{color:#ff8adf;font-size:11px;margin-top:7px;line-height:1.55;font-weight:700;
   padding-top:7px;border-top:1px solid var(--line)}
 .c0{color:var(--c0)}.c1{color:var(--c1)}.c2{color:var(--c2)}.c3{color:var(--c3)}
@@ -735,7 +735,7 @@ const fuseGold=it=>Math.round((25+it.ilvl*7)*[1,1.4,2.2,3.6,7][it.rar]);
 const fuseXP=f=>Math.round((14+f.ilvl*2.4)*(1+f.rar*.55)*(1+(f.lv-1)*.32));
 const MAXLV=10;
 function statsHTML(it,cmp){
-  let h="";
+  let h=`<span style="color:#7a7488">深度${it.ilvl} / Lv${it.lv||1}</span><br>`;
   if(it.main)h+=`<b style="color:#f0e6d0">${AFN(it.main.id)} +${mainV(it)}</b>`+
     (it.lv>1?` <span style="color:var(--gold)">Lv${it.lv}</span>`:"")+"<br>";
   h+=it.affs.map(a=>{
@@ -796,9 +796,9 @@ function dodgeRate(){const d=S.p.d;
 function deriveWith(slot,item){
   const bak=S.gear[slot];S.gear[slot]=item;
   const d=derive();S.gear[slot]=bak;return d;}
-const DSHOW=[["max","最大HP",0],["physAtk","物理攻撃力",0],["specAtk","特殊攻撃力",0],["atkFlat","主攻撃力",0],["armor","防御力",0],
-  ["crit","クリティカル率",1],["as","攻撃速度",1],["ms","移動速度",1],
-  ["dr","ダメージ軽減",1],["rng","攻撃範囲",1],["mpMax","MP",0],["luk","運",0]];
+const DSHOW=[["max","最大HP",0],["mpMax","MP",0],["mpReg","MP回復",0],["physAtk","物理攻撃力",0],["specAtk","特殊攻撃力",0],["atkFlat","主攻撃力",0],["atkMul","攻撃倍率",1],["armor","防御力",0],
+  ["crit","クリティカル率",1],["cdmg","クリティカル倍率",0],["as","攻撃速度",1],["ms","移動速度",1],
+  ["dr","ダメージ軽減",1],["rng","攻撃範囲",1],["ls","ライフスティール",1],["cdr","クールダウン短縮",1],["mf","アイテム発見率",1],["stRes","状態異常耐性",1],["luk","運",0]];
 function optTotals(over,overSlot){
   const t={};
   for(const k of SLOTK){
@@ -1871,6 +1871,10 @@ function statBlock(host){
     ${statLine("ダメージ軽減",d.dr*100,o.dr||0,1)}
     <div class="stat"><span>回避率</span><b>${(dodgeRate()*100).toFixed(1)}%</b></div>
     <div class="stat"><span>状態異常耐性</span><b>${(d.stRes*100).toFixed(0)}%</b></div>
+    ${statLine("ライフスティール",d.ls*100,o.ls||0,1)}
+    ${statLine("クールダウン短縮",d.cdr*100,o.cdr||0,1)}
+    ${statLine("アイテム発見率",d.mf*100,o.mf||0,1)}
+    ${statLine("攻撃範囲",d.rng*100,o.rng||0,1)}
     ${statLine("運",d.luk,(o.luk||0)+(o.lukF||0),0)}`;
   host.appendChild(c);
   if(d.pw.length){const h=document.createElement("h3");h.textContent="装備中の固有効果";host.appendChild(h);
@@ -2149,40 +2153,37 @@ function equip(it){
   SFX.chest();save();}
 function openPick(slotK,inDungeon){
   // ダンジョン内では「持ち帰り済み」だけを装備できる。今回の戦利品(S.bag)は不可。
-  const list=S.stash.filter(i=>i.slot===slotK&&!Object.values(S.gear).includes(i))
-    .sort((a,b)=>b.score-a.score);
+  const cur=S.gear[slotK];
+  const list=S.stash.filter(i=>i.slot===slotK&&!Object.values(S.gear).includes(i)).sort((a,b)=>b.score-a.score);
+  if(S.pickSlot!==slotK){S.pickSlot=slotK;S.pickSel=cur||list[0]||null;}
+  const sel=S.pickSel&&((S.pickSel===cur)||list.includes(S.pickSel))?S.pickSel:(cur||list[0]||null);
+  S.pickSel=sel;
   const c=$("itC");
   c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:4px">${SLOTN(slotK)}</div>
-    <div class="sub" style="margin-bottom:12px">${inDungeon?"持ち帰り済みの装備のみ":"タップで装備"}</div>`;
-  const cur=S.gear[slotK];
-  if(cur){const d=document.createElement("div");d.className="card";
-    d.innerHTML=`<div class="ty">装備中</div><div class="nm ${RC[cur.rar]}">${cur.name}</div>
-      <div class="st">${statsHTML(cur)}</div>`;
-    if(!inDungeon&&cur.lv<MAXLV){
-      const up=document.createElement("div");up.className="btn gold";
-      up.textContent=`強化する（Lv${cur.lv} / ${cur.xp}exp）`;
-      tapEl(up,()=>{$("itPop").classList.remove("on");openFuse(cur);});
-      d.appendChild(up);}
-    const u=document.createElement("div");u.className="btn gh";u.textContent="外す";
-    tapEl(u,()=>{S.stash.push(cur);S.gear[slotK]=null;S.p.d=derive();recalcHP(S.p);
-      $("itPop").classList.remove("on");save();inDungeon?openPause():openTown();});
-    d.appendChild(u);c.appendChild(d);}
-  if(!list.length){const d=document.createElement("div");d.className="card";
-    d.innerHTML=`<div class="st">この枠に装備できるものがない。</div>`;c.appendChild(d);}
-  for(const it of list){
-    const d=document.createElement("div");d.className="card tap";
-    const better=!cur||it.score>cur.score;
-    d.innerHTML=`<div class="nm ${RC[it.rar]}">${it.name}
-      <span class="tag ${RC[it.rar]}">${CFG.RARITY[it.rar][0]}</span>
-      ${better?'<span class="up" style="font-size:10px"> ▲</span>':""}</div>
-      <div class="st">${statsHTML(it,cur)}</div>
-      <div class="ty" style="margin-top:8px">装備した場合の変化</div>
-      ${deltaHTML(it.slot,it)}`;
-    tapEl(d,()=>{equip(it);$("itPop").classList.remove("on");
-      inDungeon?openPause():openTown();});
-    c.appendChild(d);}
+    <div class="sub" style="margin-bottom:10px">${inDungeon?"持ち帰り済みの装備のみ":"候補を選ぶと上のステータス欄が変化"}</div>`;
+  const panel=document.createElement("div");panel.className="card";
+  if(sel){
+    const isCur=sel===cur;
+    panel.innerHTML=`<div class="ty">${isCur?"装備中":"選択中"}</div>
+      <div class="nm ${RC[sel.rar]}">${sel.name}<span class="tag ${RC[sel.rar]}">${CFG.RARITY[sel.rar][0]}</span></div>
+      <div class="st">深度${sel.ilvl} / Lv${sel.lv||1} / ${AFN(sel.main.id)} +${mainV(sel)}</div>
+      <div class="ty" style="margin-top:8px">ステータス変化</div>${isCur?'<div class="st">現在装備中</div>':deltaHTML(slotK,sel)}`;
+    if(!isCur){const eq=document.createElement("div");eq.className="btn pri";eq.textContent="この装備に付け替える";
+      tapEl(eq,()=>{equip(sel);S.pickSel=null;$("itPop").classList.remove("on");inDungeon?openPause():openTown();});panel.appendChild(eq);}
+    if(cur){const u=document.createElement("div");u.className="btn gh";u.textContent="装備を外す";
+      tapEl(u,()=>{S.stash.push(cur);S.gear[slotK]=null;S.pickSel=null;S.p.d=derive();recalcHP(S.p);$("itPop").classList.remove("on");save();inDungeon?openPause():openTown();});panel.appendChild(u);}
+  }else panel.innerHTML='<div class="st">この枠に装備できるものがない。</div>';
+  c.appendChild(panel);
+  if(cur&&!inDungeon&&cur.lv<MAXLV){const up=document.createElement("div");up.className="btn gold";up.textContent=`装備中を強化（Lv${cur.lv} / ${cur.xp}exp）`;
+    tapEl(up,()=>{$("itPop").classList.remove("on");openFuse(cur);});c.appendChild(up);}
+  const all=[cur,...list].filter(Boolean);
+  for(const it of all){const d=document.createElement("div");d.className="card tap"+(it===sel?" sel":"");d.style.borderColor=it===sel?"var(--gold)":"";
+    d.innerHTML=`<div class="row"><div class="${RC[it.rar]}">${icon(iconKey(it),22)}</div>
+      <div style="flex:1"><div class="nm ${RC[it.rar]}">${it===cur?"E ":""}${it.name}</div>
+      <div class="ty">${CFG.RARITY[it.rar][0]} / 深度${it.ilvl} / Lv${it.lv||1} / ${AFN(it.main.id)} +${mainV(it)}</div></div></div>`;
+    tapEl(d,()=>{S.pickSel=it;openPick(slotK,inDungeon);});c.appendChild(d);}
   const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";
-  tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);
+  tapEl(x,()=>{$("itPop").classList.remove("on");S.pickSel=null;});c.appendChild(x);
   $("itPop").classList.add("on");}
 
 /* ---------- ダンジョン内の一時停止 ---------- */
