@@ -1279,7 +1279,7 @@ function update(dt){
     else if(f.t==="pool"){f.tick-=dt;
       if(f.tick<=0){f.tick=.4;if(d2(f.x,f.y,p.x,p.y)<f.R*f.R){hurtP(f.dmg*.4);applyST(p,"brn",2.5,true);}}
       if(f.tm>f.dur)S.fx.splice(i,1);}
-    else if(f.tm>(f.t==="line"?.16:.42))S.fx.splice(i,1);}
+    else if(f.tm>(f.t==="line"?.16:f.t==="arc"?.22:.42))S.fx.splice(i,1);}
 
   for(let i=S.drops.length-1;i>=0;i--){
     const d=S.drops[i];d.t+=dt;
@@ -1710,6 +1710,9 @@ function dFx(f){
   else if(f.t==="line"){const t=iso(f.x2,f.y2);
     ctx.globalAlpha=1-f.tm/.16;ctx.strokeStyle=f.col;ctx.lineWidth=3;
     ctx.beginPath();ctx.moveTo(s.sx,s.sy-14);ctx.lineTo(t.sx,t.sy-14);ctx.stroke();ctx.globalAlpha=1;}
+  else if(f.t==="arc"){const k=Math.min(1,f.tm/.22);
+    ctx.globalAlpha=(1-k)*.85;ctx.strokeStyle=f.col;ctx.lineWidth=4*(1-k)+1;
+    ctx.beginPath();ctx.ellipse(s.sx,s.sy,f.R*(CFG.TILE_W/2),f.R*(CFG.TILE_H/2),0,f.a-f.arc,f.a+f.arc);ctx.stroke();ctx.globalAlpha=1;}
   else if(f.t==="pool"){
     ctx.globalAlpha=.28+Math.sin(f.tm*6)*.1;ctx.fillStyle=f.col;
     ctx.beginPath();ctx.ellipse(s.sx,s.sy,f.R*(CFG.TILE_W/2),f.R*(CFG.TILE_H/2),0,0,TAU);ctx.fill();
