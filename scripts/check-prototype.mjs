@@ -26,6 +26,29 @@ if (missing.length) {
   throw new Error(`public/index.html is missing expected game hooks: ${missing.join(', ')}`);
 }
 
+const shopConfirmationSnippets = [
+  'ask("掘り出し物を購入する"',
+  '購入後の所持金: ${S.gold-gc} G',
+];
+const missingShopConfirmation = shopConfirmationSnippets.filter((snippet) => !index.includes(snippet));
+if (missingShopConfirmation.length) {
+  throw new Error(`The bargain purchase confirmation is incomplete: ${missingShopConfirmation.join(', ')}`);
+}
+
+const gameplayQualitySnippets = [
+  'ECO_DPR:1.25',
+  'settings:{map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,eco:1}',
+  'S.runGold+=d.gold',
+  '今回獲得したゴールド',
+  'const CHARACTERS=',
+  'grid-template-columns:repeat(4,1fr)',
+  'toast("成功: "+q.s.n,"ok")',
+];
+const missingGameplayQuality = gameplayQualitySnippets.filter((snippet) => !index.includes(snippet));
+if (missingGameplayQuality.length) {
+  throw new Error(`The gameplay quality improvements are incomplete: ${missingGameplayQuality.join(', ')}`);
+}
+
 const wrangler = await readFile('wrangler.jsonc', 'utf8');
 if (!wrangler.includes('"directory": "./public"')) {
   throw new Error('wrangler.jsonc must keep assets.directory set to ./public');
