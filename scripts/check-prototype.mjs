@@ -26,6 +26,15 @@ if (missing.length) {
   throw new Error(`public/index.html is missing expected game hooks: ${missing.join(', ')}`);
 }
 
+const shopConfirmationSnippets = [
+  'ask("掘り出し物を購入する"',
+  '購入後の所持金: ${S.gold-gc} G',
+];
+const missingShopConfirmation = shopConfirmationSnippets.filter((snippet) => !index.includes(snippet));
+if (missingShopConfirmation.length) {
+  throw new Error(`The bargain purchase confirmation is incomplete: ${missingShopConfirmation.join(', ')}`);
+}
+
 const wrangler = await readFile('wrangler.jsonc', 'utf8');
 if (!wrangler.includes('"directory": "./public"')) {
   throw new Error('wrangler.jsonc must keep assets.directory set to ./public');

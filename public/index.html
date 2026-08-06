@@ -2051,9 +2051,12 @@ function renderTown(){
     add(`<h3>商店</h3><div class="card"><div class="nm">掘り出し物</div>
       <div class="st">深度 ${S.deepest} 相当の装備を1つ買う。</div></div>`);
     btn("買う — "+gc+" G",S.gold>=gc?"gold":"no",()=>{
-      if(S.gold<gc)return;S.gold-=gc;
-      const it=makeItem(Math.max(1,S.deepest),.3,S.p.d.luk);S.stash.push(it);
-      SFX.chest();toast(it.name+"を入手");save();showItem(it,false);});
+      if(S.gold<gc)return;
+      ask("掘り出し物を購入する",`${gc} G を支払って、深度 ${S.deepest} 相当の装備を1つ購入します。\n購入後の所持金: ${S.gold-gc} G`,()=>{
+        if(S.gold<gc)return;
+        S.gold-=gc;
+        const it=makeItem(Math.max(1,S.deepest),.3,S.p.d.luk);S.stash.push(it);
+        SFX.chest();toast(it.name+"を入手");save();showItem(it,false);});});
     add(`<div class="card" style="margin-top:12px"><div class="nm">ポーション</div>
       <div class="st">ポーション購入は撤廃。5層ごとに自動で${CFG.POTION_BASE}個まで補充されます。壺から出た分だけ最大${CFG.POTION_MAX}個まで持てます。</div></div>`);}
   if(S.tab==="conf"){
