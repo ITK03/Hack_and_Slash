@@ -53,7 +53,7 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
 .mmDist{height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:9px;font-weight:900;background:rgba(10,8,16,.82)}
 .mmDist i{display:block;width:22px;height:22px;transform:rotate(var(--dir,0rad));transform-origin:center}
 .mmDist i::before{content:"";display:block;width:22px;height:22px;background:currentColor;
-  clip-path:polygon(100% 50%,0 5%,0 95%)}
+  clip-path:polygon(100% 50%,0 18%,0 38%,64% 50%,0 62%,0 82%)}
 #mmStair{color:#e08830}#mmPortal{color:#5aa0ff}
 #buffs{position:absolute;left:11px;top:calc(env(safe-area-inset-top) + 108px);z-index:11;
   display:flex;flex-direction:column;gap:4px;pointer-events:none}
@@ -114,7 +114,9 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
 .screen.on{display:flex}
 .shead{padding:calc(env(safe-area-inset-top) + 14px) 15px 10px;flex:0 0 auto;
   background:linear-gradient(180deg,var(--bg2),var(--bg));border-bottom:1px solid var(--line)}
+.screen>.tabs{flex:0 0 auto;margin:0;padding:8px 15px calc(env(safe-area-inset-bottom) + 8px);background:var(--bg2);border-top:1px solid var(--line)}
 .sbody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:14px 15px 20px}
+.sbody.fit{overflow:hidden;padding-top:8px;padding-bottom:8px}
 .sfoot{flex:0 0 auto;padding:11px 15px calc(env(safe-area-inset-bottom) + 13px);
   border-top:1px solid var(--line);background:var(--bg2)}
 .pauseActions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
@@ -181,8 +183,22 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
   border:1px solid #4a3e70;color:#c8bcf0;font-size:18px;font-weight:900;
   display:flex;align-items:center;justify-content:center}
 .plus.no{opacity:.2}
-#townBody .alloc{padding:5px 0}#townBody .alloc .ad{display:none}#townBody .alloc .plus{width:28px;height:28px}
+#townBody .alloc{padding:4px 0}#townBody .alloc .ad{display:block;font-size:8px;margin-top:1px}#townBody .alloc .plus{width:27px;height:27px}
 #townBody>h3{margin:10px 0 6px}
+.profile{display:grid;grid-template-columns:54px 1fr auto;gap:10px;align-items:center;margin-top:8px}
+.profileIcon{width:52px;height:52px;border:1px solid var(--line2);background:#171321;border-radius:50%;display:grid;place-items:center;font-size:27px}
+.depthBig{font-size:25px;font-weight:950;color:#fff}.depthBig small{display:block;font-size:8px;color:var(--ink3);letter-spacing:.12em}
+.wallet{font-size:10px;text-align:right;line-height:1.8;width:13ch;font-variant-numeric:tabular-nums}.wallet span,.wallet b{display:inline-block;width:12ch;white-space:nowrap;text-align:right}.wallet b{color:var(--gold)}
+.stamina{margin-top:4px}.stamina .bar{height:7px}.stamina i{background:linear-gradient(90deg,#56b86d,#b4db65)}
+.innerTabs{display:flex;gap:6px;margin-top:7px}.innerTabs .btn{flex:1;margin:0;padding:8px;font-size:10px}
+.formation{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.member{min-height:92px;padding:8px 4px;text-align:center;border:1px solid var(--line);background:var(--panel);border-radius:3px}
+.member.on{border-color:var(--gold)}.member .order{font-size:8px;color:var(--gold)}.member .face{font-size:24px;margin:4px}.member .ty{font-size:8px}
+.prepDepth{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.prepDepth input{width:96px;padding:9px;background:#0a0810;border:1px solid var(--line2);color:var(--ink)}
+.floorStep{display:grid;grid-template-columns:34px 92px 34px;gap:5px}.floorStep .btn{margin:0;padding:8px 2px}.floorStep input{width:92px;text-align:center}
+.pointBox{padding:5px 9px!important;margin-bottom:3px}.pointBox .st{margin:0;line-height:1.35}
+.shopTabs{display:flex;gap:5px;margin-bottom:9px}.shopTabs .btn{flex:1;margin:0;padding:8px 3px;font-size:10px}
+.sellDock{margin:10px -15px -20px;padding:9px 15px calc(env(safe-area-inset-bottom) + 9px);background:var(--bg2);border-top:1px solid var(--line);display:grid;grid-template-columns:auto 1fr auto;gap:7px;align-items:center}.sellDock .btn{margin:0;padding:9px}.sellDock .amount{text-align:center;color:var(--gold);font-size:11px;font-weight:900}
+.sellSheet .sellSummary{position:sticky;top:-20px;z-index:2;background:#191424;border-bottom:1px solid var(--line2);padding-bottom:10px}.sellChoices{display:grid;grid-template-columns:1fr 1fr;gap:7px}.sellChoices .btn{margin:0}
 
 /* 倉庫: アイコン格子 + 固定バー */
 #invBar{display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap}
@@ -265,7 +281,8 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
 .deathCause{border-color:#6e2028;background:radial-gradient(circle at 50% 0,rgba(150,35,45,.26),transparent 65%),var(--panel2);text-align:center}
 .deathCause b{display:block;color:#ff8588;font-size:18px;margin:8px 0}.deathCause .skull{font-size:34px;filter:drop-shadow(0 0 12px #9e2630)}
 @media(max-width:520px){.gearPanel{grid-template-columns:1fr}.gearPanel .g3{grid-template-columns:repeat(4,1fr)}
-  .gearPanel .slot{min-height:54px}.compareStats{grid-template-columns:1fr}.gearCompare{padding:14px}}
+  .gearPanel{display:block}.gearPanel .gearStats{margin-top:6px}.gearPanel h3{display:none}.gearPanel .slot{min-height:48px;padding:3px 2px}.gearPanel .slot .si{font-size:7px}.gearStats .stat{padding:3px 2px}
+  .compareStats{grid-template-columns:1fr}.gearCompare{padding:14px}}
 </style>
 </head>
 <body>
@@ -304,32 +321,29 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
 
 <div class="screen" id="scTown">
   <div class="shead">
-    <div class="row"><h2 id="townT">拠点</h2><div class="sub" id="townG">0 G</div></div>
-    <div class="sub" id="townS"></div>
-    <div class="tabs">
-      <div class="tab on" data-t="gear">装備</div>
-      <div class="tab" data-t="inv">倉庫</div>
-      <div class="tab" data-t="shop">商店</div>
-      <div class="tab" data-t="char">能力</div>
-      <div class="tab" data-t="conf">設定</div>
-    </div>
+    <div class="profile"><div class="profileIcon" id="profileIcon">●</div><div><div class="depthBig"><small>最大深度</small><span id="townDepth">1</span>F</div><div class="stamina"><div class="bar"><i id="staminaF"></i></div><div class="ty" id="staminaT">100 / 100</div></div></div><div class="wallet">◆ <span id="premiumT">0</span><br><b id="townG">0 G</b></div></div>
   </div>
   <div class="sbody" id="townBody"></div>
-  <div class="sfoot"><div class="btn pri" id="btnDive">潜る</div></div>
+  <div class="tabs">
+      <div class="tab on" data-t="prep">拠点</div>
+      <div class="tab" data-t="gear">装備</div>
+      <div class="tab" data-t="inv">倉庫</div>
+      <div class="tab" data-t="shop">商店</div>
+      <div class="tab" data-t="conf">設定</div>
+  </div>
 </div>
 
 <div class="screen" id="scPause">
   <div class="shead">
     <div class="row"><h2>一時停止</h2><div class="sub" id="pauseS"></div></div>
-    <div class="tabs">
-      <div class="tab on" data-p="drops">戦利品</div>
-      <div class="tab" data-p="gear">装備</div>
-      <div class="tab" data-p="char">能力</div>
-      <div class="tab" data-p="conf">設定</div>
-    </div>
   </div>
   <div class="sbody" id="pauseBody"></div>
   <div class="sfoot pauseActions"><div class="btn pri" id="btnResume">再開</div><div class="btn gh giveup" id="btnGiveUp">ここで力尽きる</div></div>
+  <div class="tabs">
+      <div class="tab on" data-p="drops">戦利品</div>
+      <div class="tab" data-p="gear">装備・能力</div>
+      <div class="tab" data-p="conf">設定</div>
+  </div>
 </div>
 
 <div class="screen" id="scEnd">
@@ -412,6 +426,7 @@ const CFG={
   SHRINE_CHANCE:.30,  // フロアに祭壇が出る確率
   POTION_HEAL:.20, POTION_BASE:3, POTION_MAX:6, POTION_POT_DROP:.01,
   SHARD_DROP:.13, SHARD_HEAL:.045,   // 拾った瞬間に少し回復する欠片
+  PICKUP_DELAY:.10, PICKUP_RADIUS:.50, MAGNET_RADIUS:1.5, MAGNET_SPEED:2.5,
   MP_REGEN:3.4,          // 毎秒。遅め
   SELL_DIV:50,
   EXIT_CLEAR:10,         // 帰還/階段に必要な「周囲に敵がいない」距離
@@ -816,11 +831,11 @@ const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   portal:null,stairs:null,boss:null,
   bag:[],stash:[],gear:{},
   runT:0,hitstop:0,shake:0,shakeT:0,flash:0,paused:true,
-  log:{runs:[]},tab:"gear",ptab:"drops",pots:CFG.POTION_BASE,lvlQ:0,
+  log:{runs:[]},tab:"prep",gearSub:"equip",ptab:"drops",pots:CFG.POTION_BASE,lvlQ:0,
   settings:{map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0},admin:false,debug:false,debugFloor:1,adminOpts:{},chars:{},avatars:{},
   combo:0,comboT:0,dmgLog:[],dps:0,startFloor:1,runGold:0,
   inv:{filters:[],sort:"score",sellSel:[],sellRar:1},
-  alloc:null,
+  formation:[],partyIndex:0,diveFloor:1,stamina:100,premium:0,profileAvatar:null,shopSub:"store",alloc:null,
   base:{lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0}};
 
 const armorDR=a=>Math.min(.45,a/(a+120+S.floor*22));
@@ -940,8 +955,9 @@ function curve(fl,points){
 // 裸で遊べる序盤から、5層ごとの装備更新が必要になる後半へ滑らかに接続する。
 const enemyHPScale=fl=>curve(fl,[[1,2.2],[5,3],[10,4],[15,7],[20,11],[25,16],[30,22],[35,29],[40,38],[45,49]]);
 const enemyDMGScale=fl=>curve(fl,[[1,.18],[5,.30],[10,.55],[15,1],[20,1.7],[25,2.6],[30,3.8],[35,5.3],[40,7.2],[45,9.5]]);
-const bossHPScale=fl=>curve(fl,[[5,.40],[10,.80],[15,1.5],[20,2.5],[25,3.8],[30,5.5],[35,7.5],[40,10],[45,13]]);
-const bossDMGScale=fl=>curve(fl,[[5,.25],[10,.45],[15,.75],[20,1.15],[25,1.7],[30,2.4],[35,3.3],[40,4.5],[45,6]]);
+// 各階層ボスは通常進行曲線に対して HP 2倍、攻撃力 1.5倍。
+const bossHPScale=fl=>2*curve(fl,[[5,.40],[10,.80],[15,1.5],[20,2.5],[25,3.8],[30,5.5],[35,7.5],[40,10],[45,13]]);
+const bossDMGScale=fl=>1.5*curve(fl,[[5,.25],[10,.45],[15,.75],[20,1.15],[25,1.7],[30,2.4],[35,3.3],[40,4.5],[45,6]]);
 function spawnE(k,x,y,fl,elite){
   const t=ET[k],hs=enemyHPScale(fl),ds=enemyDMGScale(fl);
   const e={k,n:t.n,x,y,r:t.r,sp:t.sp,aR:t.aR,cd:t.cd,cdT:rr(0,t.cd),xp:t.xp,col:t.col,sz:t.sz,
@@ -1403,12 +1419,12 @@ function update(dt){
   for(let i=S.drops.length-1;i>=0;i--){
     const d=S.drops[i];d.t+=dt;
     const dist=Math.hypot(p.x-d.x,p.y-d.y);
-    // 落下物は0.3秒間必ずその場に見せ、その後1.5m以内だけゆっくり吸着する。
+    // 0.1秒後から吸着。0.5m圏内は足元で拾った時と同じく即時回収する。
     // 回復は満タンでも消費して回収できるため、回収不能な落下物として残らない。
-    if(d.t>=.3&&dist<=1.5&&dist>.01&&!(d.pot&&S.pots>=CFG.POTION_MAX)){
-      const pull=Math.min(dist,1.25*dt);d.x+=(p.x-d.x)/dist*pull;d.y+=(p.y-d.y)/dist*pull;}
-    const pr=.2;
-    if(d.t>=.3&&d2(d.x,d.y,p.x,p.y)<pr*pr){
+    if(d.t>=CFG.PICKUP_DELAY&&dist<=CFG.MAGNET_RADIUS&&dist>CFG.PICKUP_RADIUS&&!(d.pot&&S.pots>=CFG.POTION_MAX)){
+      const pull=Math.min(dist,CFG.MAGNET_SPEED*dt);d.x+=(p.x-d.x)/dist*pull;d.y+=(p.y-d.y)/dist*pull;}
+    const pr=CFG.PICKUP_RADIUS;
+    if(d.t>=CFG.PICKUP_DELAY&&d2(d.x,d.y,p.x,p.y)<pr*pr){
       if(d.shard){
         p.hp=Math.min(p.max,p.hp+p.max*CFG.SHARD_HEAL);
         burst(p.x,p.y,"#6ae0a0",6,1);tone(760,.07,"sine",.08,1040);}
@@ -1982,6 +1998,9 @@ function leaveEnd(){clearTimeout(deathReturnTimer);clearInterval(deathCountdownT
   deathReturnTimer=deathCountdownTimer=null;$("scEnd").classList.remove("on");openTown();}
 function endRun(alive,cause){
   S.paused=true;
+  if(!alive&&S.formation&&S.partyIndex+1<S.formation.length){
+    S.partyIndex++;const [k,id]=S.formation[S.partyIndex].split(":");
+    switchClass(k,()=>{S.avatars[k]=id;S.p=newPlayer();S.paused=false;enterFloor(S.floor);updBuffs();updHUD();toast(`${currentCharacter().n}に交代`);});return;}
   const got=S.bag.slice();
   if(alive){S.stash.push(...got);SFX.extract();}else SFX.death();
   S.pots=CFG.POTION_BASE;
@@ -2019,10 +2038,11 @@ function endRun(alive,cause){
 function openTown(){
   S.scene="town";S.paused=true;
   $("scTown").classList.add("on");$("pauseB").classList.remove("show");
-  $("townT").textContent=CLASSES[S.cls].name+" Lv"+S.base.lv+(S.base.para?" +"+S.base.para:"");
   $("townG").textContent=S.gold+" G";
-  $("townS").textContent=`最深 ${S.deepest} / 所持 ${S.stash.length} / ポーション ${S.pots}`+
-    (S.base.pts?` / 未割当 ${S.base.pts}pt`:"");
+  $("townDepth").textContent=S.deepest;$("premiumT").textContent=S.premium||0;
+  $("staminaT").textContent=`${Math.round(S.stamina)} / 100`;$("staminaF").style.width=clamp(S.stamina,0,100)+"%";
+  const profile=allRoster().find(x=>x.k+":"+x.ch.id===S.profileAvatar)||{ch:currentCharacter()};
+  $("profileIcon").style.color=profile.ch.col;$("profileIcon").title=profile.ch.n;
   for(const t of document.querySelectorAll("#scTown .tab"))t.classList.toggle("on",t.dataset.t===S.tab);
   renderTown();}
 
@@ -2070,6 +2090,12 @@ function renderGearTab(host,inDungeon){const panel=document.createElement("div")
   const left=document.createElement("div"),right=document.createElement("div");
   left.innerHTML="<h3>装備</h3>";right.innerHTML="<h3>能力値</h3>";
   gearGrid(left,inDungeon);statBlock(right);panel.append(left,right);host.appendChild(panel);}
+function renderCombinedGear(host,inDungeon,after){
+  const tabs=document.createElement("div");tabs.className="innerTabs";
+  for(const [k,n] of [["equip","装備"],["ability","能力"]]){const d=document.createElement("div");d.className="btn "+(S.gearSub===k?"gold":"gh");d.textContent=n;
+    tapEl(d,()=>{S.gearSub=k;after();});tabs.appendChild(d);}
+  if(S.gearSub==="ability")renderAbilityTab(host,after);else renderGearTab(host,inDungeon);host.appendChild(tabs);
+}
 function renderAbilityTab(host,after){const h=document.createElement("h3");h.textContent="ステータス";host.appendChild(h);allocBlock(host,after);}
 const STATDEF=[["str","筋力","物理攻撃力が上がる"],["mag","魔力","特殊攻撃力が上がる"],
   ["def","防御","防御力、状態異常耐性が上がる。"],["agi","素早さ","移動速度、攻撃速度、回避率が上がる。"],
@@ -2093,7 +2119,7 @@ function allocBlock(host,after){
   const spent=Object.values(A.add).reduce((a,v)=>a+v,0);
   A.pts=b2.pts-spent;
   const dirty=spent>0;
-  const c=document.createElement("div");c.className="card";
+  const c=document.createElement("div");c.className="card pointBox";
   c.innerHTML=`<div class="st">残りポイント <b style="color:#a8e07a">${A.pts}</b>`+
     (dirty?' <span style="color:var(--gold)">— 未確定</span>':"")+`</div>`;
   host.appendChild(c);
@@ -2131,11 +2157,14 @@ function renderTown(){
     while(d.firstChild)b.appendChild(d.firstChild);};
   const btn=(txt,cls,fn)=>{const d=document.createElement("div");d.className="btn "+(cls||"");
     d.textContent=txt;tapEl(d,fn);b.appendChild(d);return d;};
-  if(S.tab==="gear")renderGearTab(b,false);
+  b.classList.toggle("fit",S.tab==="gear"||S.tab==="prep");
+  if(S.tab==="prep")renderPrepTab(b);
+  if(S.tab==="gear")renderCombinedGear(b,false,openTown);
   if(S.tab==="inv")renderInv(b);
   if(S.tab==="shop"){
-    const gc=Math.round(200+S.deepest*90);
-    add(`<h3>商店</h3><div class="card"><div class="nm">掘り出し物</div>
+    const st=document.createElement("div");st.className="shopTabs";for(const [k,n] of [["store","商店"],["gacha","ガチャ"],["gem","ジェム"]]){const d=document.createElement("div");d.className="btn "+(S.shopSub===k?"gold":"gh");d.textContent=n;tapEl(d,()=>{S.shopSub=k;openTown();});st.appendChild(d);}b.appendChild(st);
+    if(S.shopSub==="store"){const gc=Math.round(200+S.deepest*90);
+    add(`<div class="card"><div class="nm">掘り出し物</div>
       <div class="st">深度 ${S.deepest} 相当の装備を1つ買う。</div></div>`);
     btn("買う — "+gc+" G",S.gold>=gc?"gold":"no",()=>{
       if(S.gold<gc)return;
@@ -2146,67 +2175,71 @@ function renderTown(){
         SFX.chest();toast(it.name+"を入手");save();showItem(it,false);});});
     add(`<div class="card" style="margin-top:12px"><div class="nm">ポーション</div>
       <div class="st">ポーション購入は撤廃。5層ごとに自動で${CFG.POTION_BASE}個まで補充されます。壺から出た分だけ最大${CFG.POTION_MAX}個まで持てます。</div></div>`);}
-  if(S.tab==="conf"){
-    add(`<h3>表示・省電力</h3>`);const cg=document.createElement("div");cg.className="compactGrid";b.appendChild(cg);
-    const tg=(k,lbl)=>{const d=document.createElement("div");
-      d.className="btn"+(S.settings[k]?"":" gh");
-      d.textContent=lbl+"： "+(S.settings[k]?"ON":"OFF");
-      tapEl(d,()=>{S.settings[k]=S.settings[k]?0:1;if(k==="eco")resize();save();openTown();});cg.appendChild(d);};
-    tg("map","ミニマップ");tg("dmg","ダメージ数値");tg("dps","DPS");tg("loot","取得アイテム");
-    tg("timer","タイマー");tg("shake","画面の揺れ");tg("stick","移動キー表示");tg("eco","省電力モード");
-    add(`<h3>記録・管理</h3>`);const misc=document.createElement("div");misc.className="compactGrid";b.appendChild(misc);
-    const rec=document.createElement("div");rec.className="btn gh";rec.textContent="記録を見る";tapEl(rec,openRecords);misc.appendChild(rec);
-    const reset=document.createElement("div");reset.className="btn gh";reset.textContent="初期化";tapEl(reset,()=>{
-      ask("ゲームをリセット","すべての進行・装備・金貨が消えます。元に戻せません。",()=>{localStorage.removeItem(KEY);location.reload();});});misc.appendChild(reset);
-    const inp=document.createElement("input");inp.placeholder="コード";
-    inp.style.cssText="width:100%;padding:8px;margin-top:6px;border-radius:3px;background:#0a0810;"+
-      "border:1px solid var(--line);color:var(--ink);font-size:13px";
-    b.appendChild(inp);
-    const ok=document.createElement("div");ok.className="btn gh";ok.textContent="適用";
-    tapEl(ok,()=>{const code=inp.value.trim();if(code==="pM97342Gamt"||code==="omiomi"){
-      if(code==="omiomi")S.debug=true;else S.admin=true;SFX.lvl();toast(code==="omiomi"?"デバッグモード":"管理者モード");save();openTown();
-      }else{SFX.ng();toast("コードが違う");}});
-    b.appendChild(ok);
-    if(S.admin||S.debug){const modes=document.createElement("div");modes.className="compactGrid";b.appendChild(modes);
-      const off=(label,key)=>{const d=document.createElement("div");d.className="btn gh";d.textContent=label+"を終了";tapEl(d,()=>{S[key]=false;save();openTown();});modes.appendChild(d);};
-      if(S.admin)off("管理者モード","admin");if(S.debug)off("デバッグモード","debug");
-      add(`<h3>テスト開始階層</h3>`);const floor=document.createElement("input");floor.type="number";floor.min=1;floor.max=999999;floor.value=S.debugFloor||1;
-      floor.style.cssText="width:100%;padding:9px;background:#0a0810;border:1px solid var(--gold);color:var(--ink);border-radius:3px";
-      floor.addEventListener("change",()=>{S.debugFloor=clamp(Math.floor(+floor.value||1),1,999999);save();});b.appendChild(floor);
-      const dive=document.createElement("div");dive.className="btn gold";dive.textContent="指定階層へ潜る";tapEl(dive,()=>confirmDive(S.debugFloor||1));b.appendChild(dive);}
-    if(S.admin||S.debug){
-      add(`<h3 style="color:var(--gold)">進行テスト</h3>`);
-      const grid=document.createElement("div");grid.className="adminGrid";b.appendChild(grid);
-      const action=(label,fn)=>{const d=document.createElement("div");d.className="btn gh";d.textContent=label;tapEl(d,fn);grid.appendChild(d);};
-      const number=(label,initial,fn,min=0,max=9999999)=>{const v=prompt(label,String(initial));if(v===null)return;fn(clamp(Math.floor(+v||0),min,max));S.p.d=derive();recalcHP(S.p);save();openTown();};
-      action("ゴールド設定",()=>number("所持ゴールド",S.gold,v=>S.gold=v));
-      action("レベル設定",()=>number("レベル",S.base.lv,forceLevel,1,CFG.LV_CAP));}
-    if(S.admin){
-      add(`<h3 style="color:var(--gold)">管理者モード</h3>`);
-      const grid=document.createElement("div");grid.className="adminGrid";b.appendChild(grid);
-      const action=(label,fn)=>{const d=document.createElement("div");d.className="btn gh";d.textContent=label;tapEl(d,fn);grid.appendChild(d);};
-      const number=(label,initial,fn,min=0,max=9999999)=>{const v=prompt(label,String(initial));if(v===null)return;fn(clamp(Math.floor(+v||0),min,max));S.p.d=derive();recalcHP(S.p);save();openTown();};
-      action("ゴールド追加",()=>number("追加するゴールド",10000,v=>S.gold+=v));action("経験値",()=>number("経験値",S.base.xp,v=>S.base.xp=v));
-      action("ポイント",()=>number("未割当ポイント",S.base.pts,v=>S.base.pts=v));action("最深階層",()=>number("最深到達階層",S.deepest,v=>S.deepest=v,1));
-      for(const [k,n] of STATDEF)action(n,()=>number(n,S.base[k],v=>S.base[k]=v));
-      add(`<h3 style="color:var(--gold)">装備オプション補正</h3><div class="st" style="margin-bottom:8px">各オプションへ任意の管理者補正値を加算します。</div>`);
-      const optGrid=document.createElement("div");optGrid.className="adminGrid";b.appendChild(optGrid);
-      const seenOpt=new Set();
-      for(const a of AFF){if(seenOpt.has(a.id))continue;seenOpt.add(a.id);
-        const d=document.createElement("div");d.className="btn gh";d.textContent=`${a.n} ${S.adminOpts[a.id]||0}${a.p?"%":""}`;
-        tapEl(d,()=>number(a.n,S.adminOpts[a.id]||0,v=>S.adminOpts[a.id]=v,-999999,999999));optGrid.appendChild(d);}
-      action("装備生成",()=>{const count=clamp(Math.floor(+(prompt("生成数","5")||0)),0,500),rar=clamp(Math.floor(+(prompt("レア度 0〜4","2")||0)),0,4),fl=clamp(Math.floor(+(prompt("装備深度",String(S.deepest))||1)),1,999999);for(let i=0;i<count;i++)S.stash.push(makeItem(fl,0,0,rar));SFX.chest();save();openTown();});
-      action("倉庫を空に",()=>{S.stash=[];save();openTown();});action("ポーション",()=>number("ポーション数",S.pots,v=>S.pots=v,0,CFG.POTION_MAX));
-      action("HP/MP回復",()=>{S.p.hp=S.p.max;S.p.mp=S.p.d.mpMax;save();openTown();});action("全階層解放",()=>{S.deepest=999999;save();openTown();});}}
-  if(S.tab==="char")renderAbilityTab(b,openTown);}
+    else if(S.shopSub==="gacha"){
+      const gacha=(name,cost,fn)=>{add(`<div class="card"><div class="nm">${name}</div><div class="st">課金通貨 ${cost} ◆ で1回引けます。</div></div>`);btn(`1回引く — ${cost} ◆`,S.premium>=cost?"gold":"no",()=>{if(S.premium<cost)return;ask(name,`${cost} ◆ を使ってガチャを引きます。`,()=>{if(S.premium<cost)return;S.premium-=cost;fn();save();openTown();});});};
+      gacha("キャラクターガチャ",300,()=>{const {ch}=pick(allRoster());S.profileAvatar=CKEYS.find(k=>CHARACTERS[k].includes(ch))+":"+ch.id;SFX.lvl();toast(ch.n+"を獲得");});
+      gacha("装備ガチャ",200,()=>{const it=makeItem(Math.max(1,S.deepest),.6,S.p.d.luk,Math.max(1,ri(1,4)));S.stash.push(it);SFX.chest();toast(it.name+"を獲得");});}
+    else add(`<div class="card"><div class="nm">ジェムショップ</div><div class="st">ジェム購入機能は準備中です。</div></div><div class="g3"><div class="slot empty">ジェム A</div><div class="slot empty">ジェム B</div><div class="slot empty">ジェム C</div></div>`);}
+  if(S.tab==="conf")renderSettings(b,openTown,false);
+}
 
-function openRecords(){const r=S.log.runs;invMenu("記録",c=>{
+
+function allRoster(){const a=[];for(const k of CKEYS)for(const ch of CHARACTERS[k])a.push({k,ch});return a;}
+function openProfileIconPick(){const c=$("itC");c.innerHTML='<div class="nm">プロフィールアイコン</div><div class="sub">保有キャラクターから選択</div>';
+  for(const {k,ch} of allRoster()){const key=k+":"+ch.id,on=S.profileAvatar===key,d=document.createElement("div");d.className="card tap";d.innerHTML=`<div class="row"><div><div class="nm" style="color:${ch.col}">● ${ch.n}</div><div class="ty">${CLASSES[k].name} / ${ch.trait}</div></div>${on?'<span class="tag">設定中</span>':""}</div>`;tapEl(d,()=>{S.profileAvatar=key;save();$("itPop").classList.remove("on");openTown();});c.appendChild(d);}
+  const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);$("itPop").classList.add("on");}
+function renderPrepTab(b){
+  const roster=allRoster();if(!S.formation.length)S.formation=[S.cls+":"+currentCharacter().id];
+  const h=document.createElement("h3");h.textContent="潜入編成（最大4人）";b.appendChild(h);
+  const g=document.createElement("div");g.className="formation";
+  for(let i=0;i<4;i++){const key=S.formation[i],entry=roster.find(x=>x.k+":"+x.ch.id===key),d=document.createElement("div");d.className="member"+(i===0?" on":"");
+    d.innerHTML=entry?`<div class="order">${i+1}番手</div><div class="face" style="color:${entry.ch.col}">●</div><div class="nm">${entry.ch.n}</div><div class="ty">${CLASSES[entry.k].name}</div>`:`<div class="order">${i+1}番手</div><div class="face">＋</div><div class="ty">空き</div>`;
+    tapEl(d,()=>openFormationPick(i));g.appendChild(d);}b.appendChild(g);
+  const note=document.createElement("div");note.className="st";note.textContent="編成は潜入前のみ変更できます。戦闘不能になると次のキャラクターへ交代します。装備品は倉庫で共有され、装備中の品は他のキャラクターが使用できません。";b.appendChild(note);
+  const maxStart=Math.max(1,Math.floor((S.deepest-1)/CFG.SKIP_STEP)*CFG.SKIP_STEP+1);S.diveFloor=clamp(S.diveFloor||1,1,maxStart);
+  const row=document.createElement("div");row.className="card prepDepth";row.innerHTML=`<div><div class="nm">開始階層</div><div class="ty">5n+1階層 / 解放済み 最大${maxStart}F</div></div>`;
+  const controls=document.createElement("div");controls.className="floorStep";const setFloor=v=>{v=clamp(Math.floor(+v||1),1,maxStart);S.diveFloor=Math.floor((v-1)/CFG.SKIP_STEP)*CFG.SKIP_STEP+1;inp.value=S.diveFloor;save();};
+  const minus=document.createElement("div");minus.className="btn gh";minus.textContent="−";tapEl(minus,()=>setFloor(S.diveFloor-CFG.SKIP_STEP));
+  const inp=document.createElement("input");inp.type="number";inp.inputMode="numeric";inp.min=1;inp.max=maxStart;inp.value=S.diveFloor;inp.addEventListener("change",()=>setFloor(inp.value));
+  const plus=document.createElement("div");plus.className="btn gh";plus.textContent="＋";tapEl(plus,()=>setFloor(S.diveFloor+CFG.SKIP_STEP));controls.append(minus,inp,plus);row.appendChild(controls);b.appendChild(row);
+  const dive=document.createElement("div");dive.className="btn pri";dive.textContent="この編成で潜る";tapEl(dive,()=>confirmDive(S.diveFloor));b.appendChild(dive);
+}
+function openFormationPick(slot){const c=$("itC");c.innerHTML='<div style="font-size:15px;font-weight:800;margin-bottom:10px">職業を選択</div>';
+  for(const k of CKEYS){const d=document.createElement("div");d.className="card tap";d.innerHTML=`<div class="nm" style="color:${CLASSES[k].col}">${CLASSES[k].name}</div><div class="st">${CLASSES[k].desc}</div>`;tapEl(d,()=>openFormationChoices(slot,k));c.appendChild(d);}
+  if(slot>0&&S.formation[slot]){const rm=document.createElement("div");rm.className="btn gh";rm.textContent="この枠を外す";tapEl(rm,()=>{S.formation.splice(slot,1);save();$("itPop").classList.remove("on");openTown();});c.appendChild(rm);}
+  const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);$("itPop").classList.add("on");}
+function openFormationChoices(slot,k){const c=$("itC");c.innerHTML=`<div class="nm">${CLASSES[k].name}のキャラクター</div>`;for(const ch of CHARACTERS[k]){const key=k+":"+ch.id,on=S.formation.includes(key),d=document.createElement("div");d.className="card tap"+(on?" no":"");d.innerHTML=`<div class="row"><div><div class="nm" style="color:${ch.col}">● ${ch.n}</div><div class="ty">${ch.trait}</div></div>${on?'<span class="tag">編成中</span>':""}</div><div class="st">${ch.d}</div>`;tapEl(d,()=>{if(on)return;S.formation[slot]=key;S.formation=S.formation.filter(Boolean).slice(0,4);save();$("itPop").classList.remove("on");openTown();});c.appendChild(d);}const back=document.createElement("div");back.className="btn gh";back.textContent="職業選択へ戻る";tapEl(back,()=>openFormationPick(slot));c.appendChild(back);$("itPop").classList.add("on");}
+
+function renderSettings(b,after,inDungeon){
+  const h=document.createElement("h3");h.textContent="表示・省電力";b.appendChild(h);const cg=document.createElement("div");cg.className="compactGrid";b.appendChild(cg);
+  for(const [k,lbl] of [["map","ミニマップ"],["dmg","ダメージ数値"],["dps","DPS"],["loot","取得アイテム"],["timer","タイマー"],["shake","画面の揺れ"],["stick","移動キー表示"],["eco","省電力モード"]]){const d=document.createElement("div");d.className="btn "+(S.settings[k]?"gold":"gh");d.textContent=lbl+"："+(S.settings[k]?"ON":"OFF");tapEl(d,()=>{S.settings[k]=S.settings[k]?0:1;if(k==="eco")resize();save();after();});cg.appendChild(d);}
+  const mh=document.createElement("h3");mh.textContent="記録・管理";b.appendChild(mh);
+  {const misc=document.createElement("div");misc.className="compactGrid";const rec=document.createElement("div");rec.className="btn gh";rec.textContent="プレイ記録を見る";tapEl(rec,()=>openRecords(after));misc.appendChild(rec);const reset=document.createElement("div");reset.className="btn gh";reset.textContent="初期化";tapEl(reset,()=>ask("ゲームをリセット","すべての進行・装備・通貨が消えます。",()=>{localStorage.removeItem(KEY);location.reload();}));misc.appendChild(reset);b.appendChild(misc);}
+  const inp=document.createElement("input");inp.setAttribute("aria-label","モード切替コード");inp.autocomplete="off";inp.style.cssText="width:100%;padding:9px;margin-top:7px;background:#0a0810;border:1px solid var(--line);color:var(--ink)";b.appendChild(inp);
+  inp.addEventListener("input",()=>{const code=inp.value.trim();if(code!=="pM97342Gamt"&&code!=="omiomi")return;if(code==="omiomi")S.debug=true;else S.admin=true;inp.value="";SFX.lvl();toast(code==="omiomi"?"デバッグモード":"管理者モード");save();after();});
+  if(!(S.admin||S.debug))return;
+  const modes=document.createElement("div");modes.className="compactGrid";b.appendChild(modes);for(const [key,n] of [["admin","管理者"],["debug","デバッグ"]])if(S[key]){const d=document.createElement("div");d.className="btn gh";d.textContent=n+"モードを終了";tapEl(d,()=>{S[key]=false;save();after();});modes.appendChild(d);}
+  const number=(label,initial,fn,min=-999999999,max=999999999)=>{const v=prompt(label,String(initial));if(v===null||!Number.isFinite(+v))return;fn(clamp(+v,min,max));S.p.d=derive();recalcHP(S.p);save();after();};
+  const grid=document.createElement("div");grid.className="adminGrid";b.appendChild(grid);const action=(label,fn)=>{const d=document.createElement("div");d.className="btn gh";d.textContent=label;tapEl(d,fn);grid.appendChild(d);};
+  // デバッグモードは検証に必要な3項目だけ。管理者モードでは全項目を開放する。
+  action("レベル",()=>number("レベル",S.base.lv,v=>forceLevel(v),1,CFG.LV_CAP));action("ゴールド",()=>number("所持ゴールド",S.gold,v=>S.gold=Math.floor(v),0));action("最深階層",()=>number("最深階層",S.deepest,v=>S.deepest=Math.floor(v),1));
+  if(!S.admin)return;
+  action("課金通貨",()=>number("課金通貨",S.premium,v=>S.premium=Math.floor(v),0));action("スタミナ",()=>number("スタミナ",S.stamina,v=>S.stamina=v,0,100));action("経験値",()=>number("経験値",S.base.xp,v=>S.base.xp=v,0));action("能力pt",()=>number("未割当ポイント",S.base.pts,v=>S.base.pts=Math.floor(v),0));action("ポーション",()=>number("ポーション",S.pots,v=>S.pots=Math.floor(v),0,CFG.POTION_MAX));
+  for(const [k,n] of STATDEF)action(n,()=>number(n,S.base[k],v=>S.base[k]=v));
+  action("装備獲得",()=>{const count=clamp(Math.floor(+(prompt("生成数","1")||0)),1,500),rar=clamp(Math.floor(+(prompt("レア度 0〜4","2")||0)),0,4),fl=clamp(Math.floor(+(prompt("装備深度",String(S.deepest))||1)),1,999999);for(let i=0;i<count;i++)S.stash.push(makeItem(fl,0,0,rar));SFX.chest();save();after();});
+  action("倉庫を空に",()=>{S.stash=[];save();after();});action("HP/MP回復",()=>{S.p.hp=S.p.max;S.p.mp=S.p.d.mpMax;save();after();});action("全階層解放",()=>{S.deepest=999999;save();after();});
+  const fh=document.createElement("h3");fh.textContent="1階層単位のテスト潜入";b.appendChild(fh);const floor=document.createElement("input");floor.type="number";floor.min=1;floor.max=999999;floor.value=S.debugFloor||1;floor.style.cssText="width:100%;padding:9px;background:#0a0810;border:1px solid var(--gold);color:var(--ink)";floor.addEventListener("change",()=>{S.debugFloor=clamp(Math.floor(+floor.value||1),1,999999);floor.value=S.debugFloor;save();});b.appendChild(floor);const dive=document.createElement("div");dive.className="btn gold";dive.textContent="指定階層へ潜る";tapEl(dive,()=>confirmDive(S.debugFloor||1));b.appendChild(dive);
+  const oh=document.createElement("h3");oh.textContent="全装備オプション（自由入力）";oh.style.color="var(--gold)";b.appendChild(oh);const og=document.createElement("div");og.className="adminGrid";b.appendChild(og);
+  const opts=[...AFF,{id:"agiF",n:"素早さ"},{id:"mpF",n:"MP"},{id:"lukF",n:"運"}],seen=new Set();for(const a of opts){if(seen.has(a.id))continue;seen.add(a.id);const d=document.createElement("div");d.className="btn gh";d.textContent=`${a.n} ${S.adminOpts[a.id]||0}${a.p?"%":""}`;tapEl(d,()=>number(a.n,S.adminOpts[a.id]||0,v=>S.adminOpts[a.id]=v));og.appendChild(d);}
+}
+
+function openRecords(after=openTown){const r=S.log.runs;invMenu("記録",c=>{
   const d=document.createElement("div");d.className="card";d.innerHTML=`
     <div class="stat"><span>最深到達</span><b>${S.deepest}</b></div><div class="stat"><span>潜行回数</span><b>${r.length}</b></div>
     <div class="stat"><span>生還</span><b>${r.filter(x=>x.alive).length}</b></div><div class="stat"><span>累計撃破</span><b>${r.reduce((a,x)=>a+(x.kills||0),0)}</b></div>
     <div class="stat"><span>次のレベルまで</span><b>${S.base.lv>=CFG.LV_CAP?"—":(xpNeed(S.base.lv)-S.base.xp)+" exp"}</b></div>`;c.appendChild(d);
   const ta=document.createElement("textarea");ta.readOnly=true;ta.value=JSON.stringify({runs:r.length,extracted:r.filter(x=>x.alive).length,deepest:S.deepest,detail:r},null,1);c.appendChild(ta);
-  const cp=document.createElement("div");cp.className="btn gh";cp.textContent="ログをコピー";tapEl(cp,()=>{ta.select();try{navigator.clipboard.writeText(ta.value);}catch(e){document.execCommand("copy");}toast("コピーしました");});c.appendChild(cp);});}
+  const cp=document.createElement("div");cp.className="btn gh";cp.textContent="ログをコピー";tapEl(cp,()=>{ta.select();try{navigator.clipboard.writeText(ta.value);}catch(e){document.execCommand("copy");}toast("コピーしました");});c.appendChild(cp);},after);}
 
 /* ---------- 倉庫: アイコン格子 + フィルタ/並べ替え + 固定売却バー ---------- */
 function invFiltered(){
@@ -2220,8 +2253,8 @@ function invFiltered(){
   list.sort((a,c)=>F.sort==="rar"?(c.rar-a.rar||c.score-a.score)
     :F.sort==="ilvl"?(c.ilvl-a.ilvl||c.score-a.score):(c.score-a.score));
   return list;}
-function invMenu(title,build){const c=$("itC");c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:10px">${title}</div>`;build(c);
-  const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";tapEl(x,()=>{$("itPop").classList.remove("on");openTown();});c.appendChild(x);$("itPop").classList.add("on");}
+function invMenu(title,build,after=openTown){const c=$("itC");c.classList.remove("sellSheet");c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:10px">${title}</div>`;build(c);
+  const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";tapEl(x,()=>{$("itPop").classList.remove("on");after();});c.appendChild(x);$("itPop").classList.add("on");}
 function openInvFilter(){const F=S.inv;F.filters=F.filters||[];
   invMenu("フィルタ",c=>{
     const add=(host,key,label)=>{const on=F.filters.includes(key),d=document.createElement("div");d.className="fbtn"+(on?" on":"");d.textContent=(on?"✓ ":"")+label;
@@ -2236,17 +2269,11 @@ function openInvSort(){const F=S.inv;
   invMenu("並び替え",c=>{
     for(const [k,n] of [["score","強さ順"],["rar","レア順"],["ilvl","深度順"]]){const d=document.createElement("div");d.className="btn"+(F.sort===k?" gold":" gh");d.textContent=n;
       tapEl(d,()=>{F.sort=k;$("itPop").classList.remove("on");openTown();});c.appendChild(d);}});}
-function openInvSell(){const F=S.inv;F.sellSel=F.sellSel||[];F.sellMode=true;if(F.sellRar==null)F.sellRar=1;
-  invMenu("売却",c=>{
-    const selected=F.sellSel.filter(i=>S.stash.includes(i)&&!Object.values(S.gear).includes(i));
-    const val=selected.reduce((a,i)=>a+sellV(i),0);
-    const s=document.createElement("div");s.className="btn gold"+(selected.length?"":" no");s.textContent=`選択中を売却 (${selected.length}個 / +${val}G)`;
-    tapEl(s,()=>{if(!selected.length)return;for(const it of selected){const k=S.stash.indexOf(it);if(k>=0)S.stash.splice(k,1);}S.gold+=val;F.sellSel=[];SFX.gold();toast("+"+val+" G");save();$("itPop").classList.remove("on");openTown();});c.appendChild(s);
-    for(let r=0;r<5;r++){const junk=S.stash.filter(i=>!Object.values(S.gear).includes(i)&&i.rar<=r),tot=junk.reduce((a,i)=>a+sellV(i),0);
-      const d=document.createElement("div");d.className="btn gh"+(junk.length?"":" no");d.textContent=`${CFG.RARITY[r][0]}以下を売却 (${junk.length}個 / +${tot}G)`;
-      tapEl(d,()=>{if(!junk.length)return;for(const it of junk){const k=S.stash.indexOf(it);if(k>=0)S.stash.splice(k,1);}S.gold+=tot;SFX.gold();toast("+"+tot+" G");save();$("itPop").classList.remove("on");openTown();});c.appendChild(d);}
-    const clear=document.createElement("div");clear.className="btn gh";clear.textContent="選択を解除";tapEl(clear,()=>{F.sellSel=[];openInvSell();});c.appendChild(clear);
-    const mode=document.createElement("div");mode.className="btn gh";mode.textContent="売却選択モードを終了";tapEl(mode,()=>{F.sellMode=false;F.sellSel=[];$("itPop").classList.remove("on");openTown();});c.appendChild(mode);});}
+function openInvSell(){const F=S.inv;F.sellSel=F.sellSel||[];
+  invMenu("レア度で一括選択",c=>{
+    const note=document.createElement("div");note.className="sub";note.textContent="ソーシャルゲームで一般的な『低レアを保護して一括選択』方式です。装備中の品は選択されません。";c.appendChild(note);
+    for(let r=0;r<5;r++){const candidates=S.stash.filter(i=>!Object.values(S.gear).includes(i)&&i.rar<=r),d=document.createElement("div");d.className="btn gh";d.textContent=`${CFG.RARITY[r][0]}以下を選択（${candidates.length}個）`;tapEl(d,()=>{F.sellSel=[...new Set([...F.sellSel,...candidates])];$("itPop").classList.remove("on");openTown();});c.appendChild(d);}});}
+function confirmSelectedSell(){const F=S.inv,selected=F.sellSel.filter(i=>S.stash.includes(i)&&!Object.values(S.gear).includes(i)),val=selected.reduce((a,i)=>a+sellV(i),0);if(!selected.length)return;ask("選択装備を売却",`${selected.length}個を ${val} G で売却します。よろしいですか？`,()=>{for(const it of selected){const k=S.stash.indexOf(it);if(k>=0)S.stash.splice(k,1);}S.gold+=val;F.sellSel=[];F.sellMode=false;SFX.gold();toast("+"+val+" G");save();openTown();});}
 
 /* ---------- 倉庫: アイコン格子 + フィルタ/並べ替え/売却 ---------- */
 function renderInv(b){
@@ -2255,10 +2282,11 @@ function renderInv(b){
   const mk=(lbl,fn,on)=>{const d=document.createElement("div");d.className="btn gh"+(on?" gold":"");d.style.marginTop="0";d.textContent=lbl;tapEl(d,fn);bar.appendChild(d);};
   mk("フィルタ"+(F.filters.length?` (${F.filters.length})`:""),openInvFilter,F.filters.length);
   mk(F.sort==="score"?"並び替え:強さ":F.sort==="rar"?"並び替え:レア":"並び替え:深度",openInvSort,0);
-  mk((F.sellMode?"売却選択中":"売却")+(F.sellSel.length?` (${F.sellSel.length})`:""),openInvSell,F.sellMode||F.sellSel.length);
+  mk(F.sellMode?"売却を終了":"売却",()=>{F.sellMode=!F.sellMode;if(!F.sellMode)F.sellSel=[];openTown();},F.sellMode);
+  if(F.sellMode)mk("低レア一括選択",openInvSell,0);
   b.appendChild(bar);
   const list=invFiltered();
-  if(!list.length){const d=document.createElement("div");d.className="card";d.innerHTML=`<div class="st">該当する装備がない。</div>`;b.appendChild(d);return;}
+  if(!list.length){const d=document.createElement("div");d.className="card";d.innerHTML=`<div class="st">該当する装備がない。</div>`;b.appendChild(d);}
   const g=document.createElement("div");g.className="grid";
   for(const it of list){
     const cur=S.gear[it.slot],better=!cur||it.score>cur.score,equipped=Object.values(S.gear).includes(it),sel=F.sellSel.includes(it);
@@ -2268,7 +2296,9 @@ function renderInv(b){
     c.addEventListener("touchstart",()=>{}, {passive:true});
     c.addEventListener("contextmenu",e=>{e.preventDefault();if(equipped)return;const i=F.sellSel.indexOf(it);if(i>=0)F.sellSel.splice(i,1);else F.sellSel.push(it);openTown();});
     g.appendChild(c);}
-  b.appendChild(g);}
+  b.appendChild(g);
+  if(F.sellMode){const selected=F.sellSel.filter(i=>S.stash.includes(i)&&!Object.values(S.gear).includes(i)),val=selected.reduce((a,i)=>a+sellV(i),0),dock=document.createElement("div");dock.className="sellDock";
+    const clear=document.createElement("div");clear.className="btn gh";clear.textContent="クリア";tapEl(clear,()=>{F.sellSel=[];openTown();});const amount=document.createElement("div");amount.className="amount";amount.textContent=`${selected.length}個 / ${val} G`;const ok=document.createElement("div");ok.className="btn gold"+(selected.length?"":" no");ok.textContent="OK";tapEl(ok,confirmSelectedSell);dock.append(clear,amount,ok);b.appendChild(dock);}}
 
 function showItem(it,inDungeon){
   const cur=S.gear[it.slot],equipped=Object.values(S.gear).includes(it);
@@ -2412,7 +2442,7 @@ function openPause(){
   $("scPause").classList.add("on");
   $("pauseS").textContent=`深度 ${S.floor} / 未帰還 ${S.bag.length}個 / 獲得 ${S.runGold} G`;
   for(const t of document.querySelectorAll("#scPause .tab"))t.classList.toggle("on",t.dataset.p===S.ptab);
-  const b=$("pauseBody");b.innerHTML="";
+  const b=$("pauseBody");b.innerHTML="";b.classList.toggle("fit",S.ptab==="gear");
   if(S.ptab==="drops"){
     const gold=document.createElement("div");gold.className="card";gold.innerHTML=`<div class="stat"><span>今回獲得したゴールド</span><b style="color:var(--gold)">${S.runGold} G</b></div>`;b.appendChild(gold);
     const h=document.createElement("h3");h.textContent="今回拾った未鑑定装備";b.appendChild(h);
@@ -2427,14 +2457,9 @@ function openPause(){
     note.textContent="未帰還の装備は種類・レア度・深度だけ確認できる。オプションは帰還後に鑑定される。";
     b.appendChild(note);
   }else if(S.ptab==="gear"){
-    renderGearTab(b,true);
-  }else if(S.ptab==="char")renderAbilityTab(b,openPause);
+    renderCombinedGear(b,true,openPause);}
   else{
-    const grid=document.createElement("div");grid.className="compactGrid";
-    const addToggle=(k,lbl)=>{const d=document.createElement("div");d.className="btn"+(S.settings[k]?" gold":" gh");d.textContent=lbl+"："+(S.settings[k]?"ON":"OFF");
-      tapEl(d,()=>{S.settings[k]=S.settings[k]?0:1;if(k==="eco")resize();save();openPause();});grid.appendChild(d);};
-    const h=document.createElement("h3");h.textContent="設定";b.appendChild(h);
-    b.appendChild(grid);addToggle("map","ミニマップ");addToggle("dmg","ダメージ数値");addToggle("dps","DPS");addToggle("loot","取得アイテム");addToggle("timer","タイマー");addToggle("shake","画面の揺れ");addToggle("stick","移動キー表示");addToggle("eco","省電力モード");}
+    renderSettings(b,openPause,true);}
 }
 
 /* ---------- クラス選択 / 潜行 ---------- */
@@ -2484,8 +2509,9 @@ function startDive(){
   const x=document.createElement("div");x.className="btn popClose";x.textContent="やめる";
   tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);$("itPop").classList.add("on");}
 function beginRun(fl){
-  $("scTown").classList.remove("on");
-  S.scene="dungeon";S.paused=false;S.runT=0;S.runGold=0;S.startFloor=fl;
+  const first=S.formation&&S.formation[0];if(first){const [k,id]=first.split(":");if(k!==S.cls){switchClass(k,()=>{S.avatars[k]=id;beginRun(fl);});return;}S.avatars[k]=id;}
+  $("scTown").classList.remove("on");$("scPause").classList.remove("on");
+  S.scene="dungeon";S.paused=false;S.partyIndex=0;S.runT=0;S.runGold=0;S.startFloor=fl;
   S.dmgLog.length=0;S.dps=0;
   S.p=newPlayer();S.bag.length=0;
   $("s0").querySelector("span").textContent="攻撃";
@@ -2499,7 +2525,7 @@ function beginRun(fl){
 const KEY="descent_v5";
 function save(){try{localStorage.setItem(KEY,JSON.stringify({cls:S.cls,deepest:S.deepest,
   gold:S.gold,stash:S.stash,gear:S.gear,base:S.base,pots:S.pots,log:S.log,
-  settings:S.settings,admin:S.admin,debug:S.debug,debugFloor:S.debugFloor,adminOpts:S.adminOpts,chars:S.chars,avatars:S.avatars}));}catch(e){}}
+  settings:S.settings,admin:S.admin,debug:S.debug,debugFloor:S.debugFloor,adminOpts:S.adminOpts,chars:S.chars,avatars:S.avatars,formation:S.formation,diveFloor:S.diveFloor,stamina:S.stamina,premium:S.premium,profileAvatar:S.profileAvatar,shopSub:S.shopSub,gearSub:S.gearSub}));}catch(e){}}
 function load(){try{
   const d=JSON.parse(localStorage.getItem(KEY)||"null");
   if(!d||!d.cls||!CLASSES[d.cls])return false;
@@ -2524,6 +2550,7 @@ function load(){try{
   S.pots=d.pots==null?CFG.POTION_BASE:Math.min(CFG.POTION_MAX,d.pots);S.log=d.log||{runs:[]};
   S.settings=Object.assign({map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0},d.settings||{});
   S.admin=!!d.admin;S.debug=!!d.debug;S.debugFloor=d.debugFloor||1;S.adminOpts=d.adminOpts||{};S.chars=d.chars||{};S.avatars=d.avatars||{};
+  S.formation=d.formation||[];S.diveFloor=d.diveFloor||1;S.stamina=d.stamina==null?100:d.stamina;S.premium=d.premium||0;S.profileAvatar=d.profileAvatar||null;S.shopSub=d.shopSub||"store";S.gearSub=d.gearSub||"equip";
   if(!S.avatars[S.cls])S.avatars[S.cls]=CHARACTERS[S.cls][0].id;
   const nb=Object.assign({lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0},d.base||{});
   delete nb.need;
@@ -2539,11 +2566,11 @@ resize();
 for(let i=0;i<4;i++)holdBtn($("s"+i),i);
 hook($("pot"),()=>{if(S.scene==="dungeon"&&!S.paused)usePotion();});
 hook($("act"),()=>{if(S.scene==="dungeon"&&!S.paused)doAction();});
+tapEl($("profileIcon"),openProfileIconPick);
 hook($("pauseB"),()=>{if(S.scene==="dungeon"&&!S.paused){S.ptab="drops";openPause();}});
 tapEl($("btnResume"),()=>{$("scPause").classList.remove("on");S.paused=false;updHUD();});
 tapEl($("btnGiveUp"),()=>{$("scPause").classList.remove("on");
   ask("ここで力尽きる",`今回拾った ${S.bag.length} 個を失って拠点に戻ります。`,()=>endRun(false,"探索を断念した"));});
-tapEl($("btnDive"),startDive);
 tapEl($("btnBack"),leaveEnd);
 tapEl($("askY"),()=>{$("askPop").classList.remove("on");S.paused=askPrevPaused;const f=askFn;askFn=null;if(f)f();});
 tapEl($("askN"),()=>{$("askPop").classList.remove("on");S.paused=askPrevPaused;askFn=null;});
