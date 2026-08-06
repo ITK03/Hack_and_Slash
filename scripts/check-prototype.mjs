@@ -50,8 +50,9 @@ if (missingGameplayQuality.length) {
 }
 
 const regressionSnippets = [
-  'd.t>=.3&&dist<=1.5',
-  'const pull=Math.min(dist,1.25*dt)',
+  'PICKUP_DELAY:.10',
+  'PICKUP_RADIUS:.50',
+  'MAGNET_SPEED:2.5',
   'const sweptD=',
   'const bossHPScale=',
   'style.visibility=S.settings.stick?"visible":"hidden"',
@@ -62,6 +63,11 @@ const regressionSnippets = [
   'body::before{display:none}',
   'stick:1,eco:0',
   'debugFloor:S.debugFloor',
+  'data-t="prep"',
+  '装備・能力',
+  '管理者／デバッグコード',
+  '全装備オプション（自由入力）',
+  'この編成で潜る',
 ];
 const missingRegressions = regressionSnippets.filter((snippet) => !index.includes(snippet));
 if (missingRegressions.length) {
