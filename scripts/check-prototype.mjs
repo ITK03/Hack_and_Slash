@@ -37,7 +37,7 @@ if (missingShopConfirmation.length) {
 
 const gameplayQualitySnippets = [
   'ECO_DPR:1.25',
-  'settings:{map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,eco:1}',
+  'settings:{map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0}',
   'S.runGold+=d.gold',
   '今回獲得したゴールド',
   'const CHARACTERS=',
@@ -47,6 +47,21 @@ const gameplayQualitySnippets = [
 const missingGameplayQuality = gameplayQualitySnippets.filter((snippet) => !index.includes(snippet));
 if (missingGameplayQuality.length) {
   throw new Error(`The gameplay quality improvements are incomplete: ${missingGameplayQuality.join(', ')}`);
+}
+
+const regressionSnippets = [
+  'const pull=Math.min(dist,7*dt)',
+  '開錠失敗 — 敵が現れた',
+  'code==="omiomi"',
+  'const st=CFG.SKIP_STEP',
+  'id="btnGiveUp"',
+  'body::before{display:none}',
+  'stick:1,eco:0',
+  'debugFloor:S.debugFloor',
+];
+const missingRegressions = regressionSnippets.filter((snippet) => !index.includes(snippet));
+if (missingRegressions.length) {
+  throw new Error(`Gameplay regression fixes are incomplete: ${missingRegressions.join(', ')}`);
 }
 
 const wrangler = await readFile('wrangler.jsonc', 'utf8');
