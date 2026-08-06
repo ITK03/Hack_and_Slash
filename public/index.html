@@ -50,10 +50,10 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
   background:rgba(8,7,14,.72);pointer-events:none}
 #mm{width:88px;height:88px;display:block}
 #mmGuide{display:grid;grid-template-columns:44px 44px;border-top:1px solid rgba(80,70,105,.7)}
-.mmDist{height:30px;display:flex;align-items:center;justify-content:center;gap:1px;font-size:9px;font-weight:900;background:rgba(10,8,16,.82)}
-.mmDist i{display:block;width:11px;height:14px;transform:rotate(var(--dir,0rad));transform-origin:center}
-.mmDist i::before{content:"";display:block;width:11px;height:14px;background:currentColor;
-  clip-path:polygon(100% 50%,0 36%,18% 50%,0 64%)}
+.mmDist{height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:9px;font-weight:900;background:rgba(10,8,16,.82)}
+.mmDist i{display:block;width:22px;height:22px;transform:rotate(var(--dir,0rad));transform-origin:center}
+.mmDist i::before{content:"";display:block;width:22px;height:22px;background:currentColor;
+  clip-path:polygon(100% 50%,0 5%,0 95%)}
 #mmStair{color:#e08830}#mmPortal{color:#5aa0ff}
 #buffs{position:absolute;left:11px;top:calc(env(safe-area-inset-top) + 108px);z-index:11;
   display:flex;flex-direction:column;gap:4px;pointer-events:none}
@@ -65,7 +65,7 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
 #combo.on{opacity:1}
 #combo small{display:block;font-size:9px;font-weight:700;letter-spacing:.22em;
   color:var(--ink2);text-align:center;margin-top:-2px;text-shadow:none}
-#bossBar{position:absolute;left:11px;right:108px;top:calc(env(safe-area-inset-top) + 66px);
+#bossBar{position:absolute;left:11px;right:108px;top:calc(env(safe-area-inset-top) + 82px);
   z-index:12;display:none;pointer-events:none;max-width:360px}
 #bossBar .bn{font-size:11px;font-weight:800;color:#f09a86;text-align:center;margin-bottom:4px;
   letter-spacing:.08em;text-shadow:0 1px 4px #000}
@@ -252,6 +252,7 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
 .gearPanel .slot{min-height:58px;padding:5px 3px}.gearPanel .slot .si{font-size:8px}.gearPanel .slot .sl{font-size:8px}
 .gearStats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:6px!important}
 .gearStats .ty{grid-column:1/-1}.gearStats .stat{font-size:9px;padding:4px 3px;gap:4px;min-width:0}
+.gearStats .stat:last-child{border-bottom:1px solid var(--line)}
 .gearStats .stat span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.gearStats .stat b{white-space:nowrap}
 .gearCompare{width:min(720px,calc(100vw - 24px));max-width:720px}.gearCompare .optBox{max-height:none;overflow:visible}
 .gearCompare .grid,#itC>.grid{padding-bottom:0}
@@ -378,10 +379,10 @@ const CFG={
   /* --- 敵 --- */
   SPAWN_BASE:8, SPAWN_PER_FLOOR:1.05, SPAWN_MAX:46,   // Diablo 1 相当(1階層40〜60体)
   PACK_FROM:4, PACK_CHANCE:.30,          // 群れは深度4から
-  HP_SCALE:.38, DMG_SCALE:.44,           // 高難度: 深く潜ると急激に強くなる
+  HP_SCALE:.38, DMG_SCALE:.44,           // 旧セーブ・表示との互換用（実倍率は進行曲線関数へ集約）
   E_SPEED_BASE:.46, E_SPEED_PER:.028, E_SPEED_MAX:1.0,
   ELITE_CHANCE:.07, ELITE_HP:5, ELITE_DMG:1.7, BOSS_EVERY:5,
-  BOSS_MUL:{5:.3,10:.7},    // 深度ごとのボス補正(HPと攻撃力に同時に掛かる)
+  BOSS_MUL:{5:.4,10:.8},    // 旧データ互換用。生成時はボス専用の進行曲線を使う
   BOSS_RATE:{5:.3,10:.5},   // 攻撃頻度の倍率(0.3 = 頻度7割減)
   BOSS_SLOW_TO:15,          // この深度までは動きを緩くする
   BOSS_SLOW_SP:.65,         // 移動速度
@@ -544,12 +545,12 @@ const CLASSES={
     atkStat:"str",atkName:"物理攻撃力",mpRegMul:1.2,dodgeMul:.3,msMul:1,
     str:16,mag:2,def:14,agi:8,spi:6,luk:6,col:"#e07038",
     skills:[
-      {n:"薙ぎ払い",c:12,cd:.55,k:"cleave",dmg:[46,66],r:3.4,arc:1.55},
+      {n:"薙ぎ払い",c:12,cd:.55,k:"cleave",dmg:[69,99],r:3.4,arc:1.55},
       {n:"突進斬り",c:22,cd:2.2,k:"dash",dmg:[80,116],w:1.15,len:4.4},
-      {n:"大地砕き",c:34,cd:5.0,k:"slam",dmg:[150,215],r:4.6,stun:1.4}]},
+      {n:"大地砕き",c:34,cd:5.0,k:"slam",dmg:[75,108],r:4.6,stun:1.4}]},
   mage:{name:"魔術師",desc:"範囲殲滅。打たれ弱く、MP管理と位置取りが要る。",
     hp:88,mp:150,defMul:.62,atk:[12,17],range:6.2,arc:.5,proj:{sp:12,col:"#9ac8ff",r:.2},
-    atkStat:"mag",atkName:"特殊攻撃力",mpRegMul:.7,dodgeMul:1,msMul:.8,
+    atkStat:"mag",atkName:"特殊攻撃力",mpRegMul:1.05,dodgeMul:1,msMul:.8,
     str:4,mag:18,def:6,agi:10,spi:16,luk:8,col:"#5b9bf0",
     skills:[
       {n:"火球",c:24,cd:.7,k:"ball",dmg:[37,53],sp:11,r:2.2,col:"#ff8a3a"},
@@ -618,16 +619,16 @@ const icon=(k,sz)=>`<svg viewBox="0 0 24 24" width="${sz||20}" height="${sz||20}
 
 const AFF=[
   {id:"atk",n:"物理攻撃力",f:il=>ri(2,4+(il*.8|0))},
-  {id:"atkP",n:"攻撃力",f:il=>ri(3,6+(il*.6|0)),p:1},
-  {id:"hp",n:"最大HP",f:il=>ri(8,15+(il*2.4|0))},
+  {id:"atkP",n:"物理・特殊攻撃力",f:il=>ri(3,6+(il*.6|0))},
+  {id:"hp",n:"HP",f:il=>ri(8,15+(il*2.4|0))},
   {id:"armor",n:"防御力",f:il=>ri(4,8+(il*1.5|0))},
-  {id:"crit",n:"クリティカル率",f:il=>ri(1,2+(il*.4|0)),p:1},
+  {id:"crit",n:"クリティカル発生率",f:il=>ri(1,2+(il*.4|0)),p:1},
   {id:"cdmg",n:"クリティカル倍率",f:il=>ri(8,14+(il*2|0)),p:1},
   {id:"as",n:"攻撃速度",f:il=>ri(2,4+(il*.5|0)),p:1},
   {id:"ms",n:"移動速度",f:il=>ri(2,3+(il*.3|0)),p:1},
   {id:"ls",n:"ライフスティール",f:il=>ri(1,1+(il*.03|0)),p:1},
   {id:"cdr",n:"クールダウン短縮",f:il=>ri(2,4+(il*.4|0)),p:1},
-  {id:"dr",n:"ダメージ軽減",f:il=>ri(1,2+(il*.28|0)),p:1},
+  {id:"dr",n:"防御力",f:il=>ri(2,4+(il*.56|0))},
   {id:"mf",n:"アイテム発見率",f:il=>ri(4,8+(il*1.2|0)),p:1},
   {id:"mreg",n:"MP回復",f:il=>ri(3,5+(il*.5|0)),p:1},
   {id:"luk",n:"運",f:il=>ri(1,2+(il*.3|0))},
@@ -816,7 +817,7 @@ const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   bag:[],stash:[],gear:{},
   runT:0,hitstop:0,shake:0,shakeT:0,flash:0,paused:true,
   log:{runs:[]},tab:"gear",ptab:"drops",pots:CFG.POTION_BASE,lvlQ:0,
-  settings:{map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0},admin:false,debug:false,debugFloor:1,chars:{},avatars:{},
+  settings:{map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0},admin:false,debug:false,debugFloor:1,adminOpts:{},chars:{},avatars:{},
   combo:0,comboT:0,dmgLog:[],dps:0,startFloor:1,runGold:0,
   inv:{filters:[],sort:"score",sellSel:[],sellRar:1},
   alloc:null,
@@ -832,24 +833,26 @@ function derive(){
     if(it.main)t[it.main.id]=(t[it.main.id]||0)+mainV(it);
     for(const a of it.affs)t[a.id]=(t[a.id]||0)+a.v;
     if(it.pw&&!pw.includes(it.pw))pw.push(it.pw);}
+  if(S.admin)for(const k in S.adminOpts)t[k]=(t[k]||0)+(Number(S.adminOpts[k])||0);
   const str=C.str+b.str,mag=C.mag+b.mag,def=C.def+b.def,
         agi=C.agi+b.agi+t.agiF,spi=C.spi+b.spi,luk=C.luk+b.luk+t.luk+t.lukF+(ch.luk||0),lv=b.lv;
-  const armor=t.armor+def*1.1;
+  // 旧「ダメージ軽減」と旧「攻撃力」は、同程度の固定能力値へ統合する。
+  const armor=t.armor+t.dr*1.5+def*1.1;
   const manaPw=pw.includes("mana")?1.5:1;
-  const physAtk=t.atk+str*.92+lv*2.1,specAtk=t.matk+mag*.92+lv*2.1;
-  const atkS=C.atkStat==="mag"?mag:str;   // 戦士=筋力 / 魔術師=魔力
+  const physAtk=t.atk+t.atkP+str*.92+lv*2.1,specAtk=t.matk+t.atkP+mag*.92+lv*2.1;
+  const bonusAgi=b.agi+t.agiF;
   return {C,pw,opt:t,str,mag,def,agi,spi,luk,physAtk,specAtk,
-    max:Math.round((C.hp+def*2.6+lv*17+t.hp)*(ch.hp||1)),
-    atkFlat:(C.atkStat==="mag"?specAtk:physAtk), atkMul:1+t.atkP/100, armor,
+    max:Math.round((C.hp+lv*17+t.hp)*(ch.hp||1)),
+    atkFlat:(C.atkStat==="mag"?specAtk:physAtk), armor,
     rng:1+t.rng/100,
     crit:.05+agi*.0022+t.crit/100+(ch.crit||0), cdmg:1.8+t.cdmg/100,
-    as:1+agi*.0022+t.as/100,
-    ms:(1+Math.min(.28,agi*.0016))*(1+t.ms/100)*(C.msMul||1)*(ch.ms||1),
-    ls:Math.min(.03,t.ls/100), cdr:Math.min(.5,t.cdr/100),
-    dr:Math.min(.7,(t.dr/100+armorDR(armor))*(C.defMul||1)),
+    as:1+bonusAgi*.0022+t.as/100,
+    ms:(1+Math.min(.28,bonusAgi*.0016))*(1+t.ms/100)*(C.msMul||1)*(ch.ms||1),
+    ls:Math.min(.03,t.ls/100), cdr:Math.min(.5,t.cdr/100+b.spi*.0015),
+    dr:Math.min(.7,armorDR(armor)*(C.defMul||1)),
     stRes:Math.min(.72,def/(def+150)),
     agiD:agi, mf:t.mf/100,
-    mpMax:Math.round((C.mp+spi*3.2+t.mpF)*manaPw*(ch.mp||1)),
+    mpMax:Math.round((C.mp+t.mpF)*manaPw*(ch.mp||1)),
     mpReg:(CFG.MP_REGEN+spi*.075)*(1+t.mreg/100)*manaPw*(C.mpRegMul||1)};
 }
 /* 回避: 自分と階層の力量差で決まる。格上相手にはほとんど効かない。 */
@@ -861,12 +864,14 @@ function dodgeRateFor(d){const gap=(S.base.lv*.5+4)-S.floor;
 function deriveWith(slot,item){
   const bak=S.gear[slot];S.gear[slot]=item;
   const d=derive();S.gear[slot]=bak;return d;}
-const DSHOW=[["max","最大HP",0],["mpMax","MP",0],["mpReg","MP回復/秒",2],
-  ["physAtk","物理攻撃力",0],["specAtk","特殊攻撃力",0],["atkFlat","主攻撃力",0],["atkMul","攻撃倍率",3],
-  ["armor","防御力",0],["crit","クリティカル率",1],["cdmg","クリティカル倍率",1],
-  ["as","攻撃速度",1],["ms","移動速度",1],["dr","ダメージ軽減",1],["stRes","状態異常耐性",1],
-  ["dodge","回避率",1],["rng","攻撃範囲",1],["ls","ライフスティール",1],["cdr","クールダウン短縮",1],
-  ["mf","アイテム発見率",1],["luk","運",0]];
+const DSHOW=[["max","HP",0],["mpMax","MP",0],
+  ["physAtk","物理攻撃力",0],["specAtk","特殊攻撃力",0],
+  ["armor","防御力",0],["stRes","状態異常耐性",1],
+  ["luk","運",0],["mpReg","MP回復",2],
+  ["as","攻撃速度",1],["ms","移動速度",1],
+  ["dodge","回避率",1],["cdr","クールダウン短縮",1],
+  ["crit","クリティカル発生率",1],["cdmg","クリティカル倍率",1],
+  ["ls","ライフスティール",1],["mf","アイテム発見率",1]];
 function optTotals(over,overSlot){
   const t={};
   for(const k of SLOTK){
@@ -898,11 +903,11 @@ function deltaHTML(slot,item){
   return rows||'<div class="st">変化なし</div>';}
 function quickDeltaHTML(slot,item){
   const a=derive(),b=deriveWith(slot,item);
-  const keys=["max","atkFlat","armor","mpMax","luk","dr"];
+  const keys=["max","physAtk","specAtk","armor","mpMax","luk"];
   return `<div class="quickDelta">`+keys.map(k=>{
     const meta=DSHOW.find(x=>x[0]===k)||[k,k,0],pct=meta[2],va=pct?a[k]*100:a[k],vb=pct?b[k]*100:b[k],d=vb-va;
     const cls=d>0?"up":d<0?"dn":"";
-    return `<div class="qd"><span>${k==="atkFlat"?(a.C.atkName||meta[1]):meta[1]}</span><b>${vb.toFixed(pct?1:0)}${pct?"%":""}</b><small class="${cls}">${Math.abs(d)<(pct?.05:.5)?"±0":(d>0?"+":"")+d.toFixed(pct?1:0)}${pct?"%":""}</small></div>`;
+    return `<div class="qd"><span>${meta[1]}</span><b>${vb.toFixed(pct?1:0)}${pct?"%":""}</b><small class="${cls}">${Math.abs(d)<(pct?.05:.5)?"±0":(d>0?"+":"")+d.toFixed(pct?1:0)}${pct?"%":""}</small></div>`;
   }).join("")+`</div>`;}
 function newPlayer(){const d=derive();
   return {x:0,y:0,r:CFG.P_RADIUS,face:0,d,hp:d.max,max:d.max,mp:d.mpMax,
@@ -926,8 +931,19 @@ const UPS=[
 
 /* ---------- 敵生成 ---------- */
 const eSpeedMul=fl=>Math.min(CFG.E_SPEED_MAX,CFG.E_SPEED_BASE+CFG.E_SPEED_PER*(fl-1));
+function curve(fl,points){
+  if(fl<=points[0][0])return points[0][1];
+  for(let i=1;i<points.length;i++)if(fl<=points[i][0]){
+    const[a,av]=points[i-1],[b,bv]=points[i];return lerp(av,bv,(fl-a)/(b-a));}
+  const[a,av]=points[points.length-2],[b,bv]=points[points.length-1];
+  return bv+(fl-b)*(bv-av)/(b-a);}
+// 裸で遊べる序盤から、5層ごとの装備更新が必要になる後半へ滑らかに接続する。
+const enemyHPScale=fl=>curve(fl,[[1,2.2],[5,3],[10,4],[15,7],[20,11],[25,16],[30,22],[35,29],[40,38],[45,49]]);
+const enemyDMGScale=fl=>curve(fl,[[1,.18],[5,.30],[10,.55],[15,1],[20,1.7],[25,2.6],[30,3.8],[35,5.3],[40,7.2],[45,9.5]]);
+const bossHPScale=fl=>curve(fl,[[5,.40],[10,.80],[15,1.5],[20,2.5],[25,3.8],[30,5.5],[35,7.5],[40,10],[45,13]]);
+const bossDMGScale=fl=>curve(fl,[[5,.25],[10,.45],[15,.75],[20,1.15],[25,1.7],[30,2.4],[35,3.3],[40,4.5],[45,6]]);
 function spawnE(k,x,y,fl,elite){
-  const t=ET[k],soft=(fl>=6&&fl<=10?.90:1),hs=(1+CFG.HP_SCALE*(fl-1))*soft,ds=(1+CFG.DMG_SCALE*(fl-1))*soft;
+  const t=ET[k],hs=enemyHPScale(fl),ds=enemyDMGScale(fl);
   const e={k,n:t.n,x,y,r:t.r,sp:t.sp,aR:t.aR,cd:t.cd,cdT:rr(0,t.cd),xp:t.xp,col:t.col,sz:t.sz,
     ai:t.ai,rng:!!t.rng,keep:t.keep||0,slow:!!t.slow,boom:!!t.boom,heavy:!!t.heavy,
     hp:t.hp*hs,max:t.hp*hs,dmg:t.dmg*ds,hopT:rr(0,1),st:{},touch:t.touch||0,touchT:0,
@@ -935,22 +951,21 @@ function spawnE(k,x,y,fl,elite){
     flash:0,kbx:0,kby:0,agro:false,frz:0,stun:0,elite:null,shield:0,regen:0,dot:0,dotT:0,wind:0};
   if(elite){const a=pick(EAFF);
     e.elite=a;e.n=a.n+"の"+t.n;
-    e.hp=e.max=e.max*CFG.ELITE_HP;e.dmg*=CFG.ELITE_DMG;e.sz*=1.35;e.r*=1.25;e.xp*=7;
+    e.hp=e.max=e.max*2.5;e.dmg*=1.3;e.sz*=1.35;e.r*=1.25;e.xp*=7;
     if(a.id==="fast")e.sp*=1.5;
     if(a.id==="shield")e.shield=e.max*.35;
     if(a.id==="regen")e.regen=e.max*.012;}
   S.enemies.push(e);return e;}
 function spawnBoss(fl){
   const b=BOSSES[((fl/CFG.BOSS_EVERY|0)-1)%BOSSES.length];
-  const soft=(fl>=6&&fl<=10?.90:1),hs=(1+CFG.HP_SCALE*(fl-1)*1.15)*soft,rl=rooms[rooms.stairIdx];
-  const bm=CFG.BOSS_MUL[fl]==null?1:CFG.BOSS_MUL[fl];
+  const hs=bossHPScale(fl),ds=bossDMGScale(fl),rl=rooms[rooms.stairIdx];
   const rate=CFG.BOSS_RATE[fl]==null?1:CFG.BOSS_RATE[fl];
   const slow=fl<=CFG.BOSS_SLOW_TO;
   const e={k:"boss",n:b.n,x:rl.cx+.5,y:rl.cy+.5,r:.8,
     sp:b.sp*(slow?CFG.BOSS_SLOW_SP:1),aR:1.8,
     cd:1.6/rate,cdT:1.8/rate,telMul:(slow?CFG.BOSS_SLOW_TEL:1),
     xp:600+fl*60,col:b.col,sz:b.sz,boss:1,ai:"boss",rng:0,keep:0,touch:0,
-    hp:b.hp*hs*bm,max:b.hp*hs*bm,dmg:b.dmg*(1+CFG.DMG_SCALE*(fl-1))*bm*soft,
+    hp:b.hp*hs,max:b.hp*hs,dmg:b.dmg*ds,
     flash:0,kbx:0,kby:0,agro:false,frz:0,stun:0,elite:null,shield:0,regen:0,dot:0,dotT:0,
     wind:0,tel:0,telK:null,telX:0,telY:0,telA:0,phase:1,sumT:8};
   S.enemies.push(e);S.boss=e;
@@ -1025,7 +1040,7 @@ function burst(x,y,col,n,pw){if(S.parts.length>PART_MAX)return;
 const shk=v=>{S.shake=Math.max(S.shake,v);S.shakeT=.2;};
 const hasPw=id=>S.p&&S.p.d.pw.includes(id);
 function pDmg(base,mul){const p=S.p;
-  let m=(mul||1)*p.mAtk*p.sAtk*p.buffAtk*p.d.atkMul;
+  let m=(mul||1)*p.mAtk*p.sAtk*p.buffAtk;
   if(hasPw("berserk"))m*=1+(1-p.hp/p.max)*.8;
   return (rr(base[0],base[1])+p.d.atkFlat)*m;}
 function hurtE(e,dmg,crit,kx,ky,quiet){
@@ -1099,7 +1114,13 @@ function gainXP(v){const b=S.base;
     b.xp-=xpNeed(b.lv);b.lv++;b.pts+=CFG.STAT_PER_LV;
     S.p.d=derive();recalcHP(S.p);SFX.lvl();save();}   // 即保存: 死んでもレベルは残る
   updHUD();}
-function hurtP(dm,cause){const p=S.p;if(p.hurtT>0||p.invulT>0)return;
+function forceLevel(lv){
+  const b=S.base,next=clamp(Math.floor(lv),1,CFG.LV_CAP),gained=Math.max(0,next-b.lv);
+  b.lv=next;b.xp=0;b.pts+=gained*CFG.STAT_PER_LV;
+  S.p.d=derive();recalcHP(S.p);
+  if(gained){SFX.lvl();toast(`Lv${next}：能力ポイント +${gained*CFG.STAT_PER_LV}`);}
+}
+function hurtP(dm,cause,force){const p=S.p;if((p.hurtT>0&&!force)||p.invulT>0)return;
   if(rnd()<dodgeRate()){p.hurtT=.16;
     S.nums.push({x:p.x,y:p.y,v:0,txt:"回避",t:0,c:"#8ad8ff"});
     tone(900,.06,"sine",.06,1300);return;}
@@ -1248,7 +1269,7 @@ function usePotion(){const p=S.p;
 function update(dt){
   if(S.paused||!S.p)return;
   if(S.hitstop>0){S.hitstop-=dt;return;}
-  const p=S.p;
+  const p=S.p,moveX0=S.p.x,moveY0=S.p.y,skillMoving=p.dashT>0;
   S.runT+=dt;
   if(S.shakeT>0){S.shakeT-=dt;if(S.shakeT<=0)S.shake=0;}
   if(S.flash>0)S.flash-=dt;
@@ -1327,8 +1348,13 @@ function update(dt){
       if(e.hopT<=0&&d<6){e.hopT=rr(1.4,2.2);e.kbx=ux*.5;e.kby=uy*.5;}
       mx*=.5;my*=.5;}
     mv(e,(mx+sx*.5)*e.sp*esp*slowMul*dt,(my+sy*.5)*e.sp*esp*slowMul*dt);
-    if(e.touch&&d<e.r+p.r+.15){e.touchT-=dt;    // 接触ダメージ(スキル動作中は無敵)
-      if(e.touchT<=0){e.touchT=e.touch;if(p.dashT<=0)hurtP(e.dmg*.75,e.n+"との接触");}}
+    // 移動後の距離で判定し、敵がこのフレームに接触した瞬間からダメージを与える。
+    const vx=p.x-moveX0,vy=p.y-moveY0,vv=vx*vx+vy*vy;
+    const u=vv?clamp(((e.x-moveX0)*vx+(e.y-moveY0)*vy)/vv,0,1):0;
+    const sweptD=Math.hypot(moveX0+vx*u-e.x,moveY0+vy*u-e.y);
+    const contactD=Math.min(Math.hypot(p.x-e.x,p.y-e.y),sweptD);
+    if(e.touch&&!skillMoving&&contactD<e.r+p.r+.15){e.touchT-=dt;    // 通常移動の軌跡全体で接触判定
+      if(e.touchT<=0){e.touchT=e.touch;if(p.dashT<=0)hurtP(e.dmg*.75,e.n+"との接触",true);}}
     if(e.elite&&e.elite.id==="fire"&&rnd()<dt*2.5)
       S.fx.push({t:"pool",x:e.x,y:e.y,tm:0,dur:2.4,R:.9,col:"#ff7a3a",dmg:e.dmg*.5,en:1,tick:0});
     e.cdT-=dt;
@@ -1377,12 +1403,13 @@ function update(dt){
   for(let i=S.drops.length-1;i>=0;i--){
     const d=S.drops[i];d.t+=dt;
     const dist=Math.hypot(p.x-d.x,p.y-d.y);
-    // 壁際や他のオブジェクトの中心に落ちても回収不能にならないよう、近距離では吸着する。
-    if(dist<3.8&&dist>.01&&!(d.shard&&p.hp>=p.max)&&!(d.pot&&S.pots>=CFG.POTION_MAX)){
-      const pull=Math.min(dist,7*dt);d.x+=(p.x-d.x)/dist*pull;d.y+=(p.y-d.y)/dist*pull;}
-    const pr=d.gold?1.7:(d.pot||d.shard)?1.15:1.05;
-    if(d2(d.x,d.y,p.x,p.y)<pr*pr){
-      if(d.shard){if(p.hp>=p.max)continue;
+    // 落下物は0.3秒間必ずその場に見せ、その後1.5m以内だけゆっくり吸着する。
+    // 回復は満タンでも消費して回収できるため、回収不能な落下物として残らない。
+    if(d.t>=.3&&dist<=1.5&&dist>.01&&!(d.pot&&S.pots>=CFG.POTION_MAX)){
+      const pull=Math.min(dist,1.25*dt);d.x+=(p.x-d.x)/dist*pull;d.y+=(p.y-d.y)/dist*pull;}
+    const pr=.2;
+    if(d.t>=.3&&d2(d.x,d.y,p.x,p.y)<pr*pr){
+      if(d.shard){
         p.hp=Math.min(p.max,p.hp+p.max*CFG.SHARD_HEAL);
         burst(p.x,p.y,"#6ae0a0",6,1);tone(760,.07,"sine",.08,1040);}
       else if(d.gold){S.gold+=d.gold;S.runGold+=d.gold;SFX.gold();}
@@ -1893,7 +1920,9 @@ function drawMM(){
 /* ---------- HUD ---------- */
 function updHUD(){
   const p=S.p;if(!p)return;
-  $("stickZone").style.display=S.settings.stick?"block":"none";
+  // 表示設定はスティックの見た目だけに適用し、入力面は常に有効にする。
+  $("stickZone").style.display="block";
+  $("stick").style.visibility=S.settings.stick?"visible":"hidden";
   $("hpF").style.width=(p.hp/p.max*100)+"%";
   $("hpT").textContent=Math.ceil(p.hp)+"/"+Math.ceil(p.max);
   $("mpF").style.width=(p.mp/p.d.mpMax*100)+"%";
@@ -2042,9 +2071,9 @@ function renderGearTab(host,inDungeon){const panel=document.createElement("div")
   left.innerHTML="<h3>装備</h3>";right.innerHTML="<h3>能力値</h3>";
   gearGrid(left,inDungeon);statBlock(right);panel.append(left,right);host.appendChild(panel);}
 function renderAbilityTab(host,after){const h=document.createElement("h3");h.textContent="ステータス";host.appendChild(h);allocBlock(host,after);}
-const STATDEF=[["str","筋力","物理攻撃力"],["mag","魔力","特殊攻撃力"],
-  ["def","防御","防御力・状態異常耐性・最大HP"],["agi","素早さ","回避率・移動速度・攻撃速度"],
-  ["spi","精神","MP上限と回復"],["luk","運","ドロップ品質・宝箱・獲得金貨"]];
+const STATDEF=[["str","筋力","物理攻撃力が上がる"],["mag","魔力","特殊攻撃力が上がる"],
+  ["def","防御","防御力、状態異常耐性が上がる。"],["agi","素早さ","移動速度、攻撃速度、回避率が上がる。"],
+  ["spi","精神","MP回復、クールダウン短縮が上がる。"],["luk","運","運が上がる。"]];
 /* 押しっぱなしで連続加算。1点ずつ連打させない。 */
 function repeatBtn(el,fn){
   let tm=null,iv=null;
@@ -2145,15 +2174,27 @@ function renderTown(){
       floor.style.cssText="width:100%;padding:9px;background:#0a0810;border:1px solid var(--gold);color:var(--ink);border-radius:3px";
       floor.addEventListener("change",()=>{S.debugFloor=clamp(Math.floor(+floor.value||1),1,999999);save();});b.appendChild(floor);
       const dive=document.createElement("div");dive.className="btn gold";dive.textContent="指定階層へ潜る";tapEl(dive,()=>confirmDive(S.debugFloor||1));b.appendChild(dive);}
+    if(S.admin||S.debug){
+      add(`<h3 style="color:var(--gold)">進行テスト</h3>`);
+      const grid=document.createElement("div");grid.className="adminGrid";b.appendChild(grid);
+      const action=(label,fn)=>{const d=document.createElement("div");d.className="btn gh";d.textContent=label;tapEl(d,fn);grid.appendChild(d);};
+      const number=(label,initial,fn,min=0,max=9999999)=>{const v=prompt(label,String(initial));if(v===null)return;fn(clamp(Math.floor(+v||0),min,max));S.p.d=derive();recalcHP(S.p);save();openTown();};
+      action("ゴールド設定",()=>number("所持ゴールド",S.gold,v=>S.gold=v));
+      action("レベル設定",()=>number("レベル",S.base.lv,forceLevel,1,CFG.LV_CAP));}
     if(S.admin){
       add(`<h3 style="color:var(--gold)">管理者モード</h3>`);
       const grid=document.createElement("div");grid.className="adminGrid";b.appendChild(grid);
       const action=(label,fn)=>{const d=document.createElement("div");d.className="btn gh";d.textContent=label;tapEl(d,fn);grid.appendChild(d);};
       const number=(label,initial,fn,min=0,max=9999999)=>{const v=prompt(label,String(initial));if(v===null)return;fn(clamp(Math.floor(+v||0),min,max));S.p.d=derive();recalcHP(S.p);save();openTown();};
-      action("ゴールド追加",()=>number("追加するゴールド",10000,v=>S.gold+=v));action("ゴールド設定",()=>number("所持ゴールド",S.gold,v=>S.gold=v));
-      action("レベル",()=>number("レベル",S.base.lv,v=>S.base.lv=v,1,CFG.LV_CAP));action("経験値",()=>number("経験値",S.base.xp,v=>S.base.xp=v));
+      action("ゴールド追加",()=>number("追加するゴールド",10000,v=>S.gold+=v));action("経験値",()=>number("経験値",S.base.xp,v=>S.base.xp=v));
       action("ポイント",()=>number("未割当ポイント",S.base.pts,v=>S.base.pts=v));action("最深階層",()=>number("最深到達階層",S.deepest,v=>S.deepest=v,1));
       for(const [k,n] of STATDEF)action(n,()=>number(n,S.base[k],v=>S.base[k]=v));
+      add(`<h3 style="color:var(--gold)">装備オプション補正</h3><div class="st" style="margin-bottom:8px">各オプションへ任意の管理者補正値を加算します。</div>`);
+      const optGrid=document.createElement("div");optGrid.className="adminGrid";b.appendChild(optGrid);
+      const seenOpt=new Set();
+      for(const a of AFF){if(seenOpt.has(a.id))continue;seenOpt.add(a.id);
+        const d=document.createElement("div");d.className="btn gh";d.textContent=`${a.n} ${S.adminOpts[a.id]||0}${a.p?"%":""}`;
+        tapEl(d,()=>number(a.n,S.adminOpts[a.id]||0,v=>S.adminOpts[a.id]=v,-999999,999999));optGrid.appendChild(d);}
       action("装備生成",()=>{const count=clamp(Math.floor(+(prompt("生成数","5")||0)),0,500),rar=clamp(Math.floor(+(prompt("レア度 0〜4","2")||0)),0,4),fl=clamp(Math.floor(+(prompt("装備深度",String(S.deepest))||1)),1,999999);for(let i=0;i<count;i++)S.stash.push(makeItem(fl,0,0,rar));SFX.chest();save();openTown();});
       action("倉庫を空に",()=>{S.stash=[];save();openTown();});action("ポーション",()=>number("ポーション数",S.pots,v=>S.pots=v,0,CFG.POTION_MAX));
       action("HP/MP回復",()=>{S.p.hp=S.p.max;S.p.mp=S.p.d.mpMax;save();openTown();});action("全階層解放",()=>{S.deepest=999999;save();openTown();});}}
@@ -2458,7 +2499,7 @@ function beginRun(fl){
 const KEY="descent_v5";
 function save(){try{localStorage.setItem(KEY,JSON.stringify({cls:S.cls,deepest:S.deepest,
   gold:S.gold,stash:S.stash,gear:S.gear,base:S.base,pots:S.pots,log:S.log,
-  settings:S.settings,admin:S.admin,debug:S.debug,debugFloor:S.debugFloor,chars:S.chars,avatars:S.avatars}));}catch(e){}}
+  settings:S.settings,admin:S.admin,debug:S.debug,debugFloor:S.debugFloor,adminOpts:S.adminOpts,chars:S.chars,avatars:S.avatars}));}catch(e){}}
 function load(){try{
   const d=JSON.parse(localStorage.getItem(KEY)||"null");
   if(!d||!d.cls||!CLASSES[d.cls])return false;
@@ -2482,7 +2523,7 @@ function load(){try{
   S.gear=ng;
   S.pots=d.pots==null?CFG.POTION_BASE:Math.min(CFG.POTION_MAX,d.pots);S.log=d.log||{runs:[]};
   S.settings=Object.assign({map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0},d.settings||{});
-  S.admin=!!d.admin;S.debug=!!d.debug;S.debugFloor=d.debugFloor||1;S.chars=d.chars||{};S.avatars=d.avatars||{};
+  S.admin=!!d.admin;S.debug=!!d.debug;S.debugFloor=d.debugFloor||1;S.adminOpts=d.adminOpts||{};S.chars=d.chars||{};S.avatars=d.avatars||{};
   if(!S.avatars[S.cls])S.avatars[S.cls]=CHARACTERS[S.cls][0].id;
   const nb=Object.assign({lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0},d.base||{});
   delete nb.need;
