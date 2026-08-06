@@ -234,6 +234,20 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
 .qd b{display:block;font-size:13px;color:#efe8ff}.qd .up{color:#6ae86a}.qd .dn{color:#ff7070}
 .optBox{max-height:180px;overflow-y:auto;touch-action:pan-y;border-top:1px solid var(--line);margin-top:8px;padding-top:8px}
 .bagList{display:flex;flex-direction:column;gap:7px}.bagRow{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);background:#100e18;border-radius:3px;padding:9px 10px;font-size:11px;font-weight:800}
+.gearPanel{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:8px;align-items:start}
+.gearPanel h3{margin:4px 0 6px}.gearPanel .g3{grid-template-columns:repeat(2,1fr);gap:5px}
+.gearPanel .slot{min-height:58px;padding:5px 3px}.gearPanel .slot .si{font-size:8px}.gearPanel .slot .sl{font-size:8px}
+.gearStats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:6px!important}
+.gearStats .ty{grid-column:1/-1}.gearStats .stat{font-size:9px;padding:4px 3px;gap:4px;min-width:0}
+.gearStats .stat span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.gearStats .stat b{white-space:nowrap}
+.gearCompare{width:min(720px,calc(100vw - 24px));max-width:720px}.gearCompare .optBox{max-height:none;overflow:visible}
+.gearCompare .grid,#itC>.grid{padding-bottom:0}
+.compareHead{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.compareItem{border:1px solid var(--line);background:#100d18;padding:10px;border-radius:3px;text-align:center;min-width:0}
+.compareItem .nm{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.compareStats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 14px}
+@media(max-width:520px){.gearPanel{grid-template-columns:1fr}.gearPanel .g3{grid-template-columns:repeat(4,1fr)}
+  .gearPanel .slot{min-height:54px}.compareStats{grid-template-columns:1fr}.gearCompare{padding:14px}}
 </style>
 </head>
 <body>
@@ -1916,29 +1930,18 @@ function gearGrid(host,inDungeon){
     d.innerHTML=`<div class="ic ${it?RC[it.rar]:"e"}">${icon(it?iconKey(it):s.k,22)}</div>
       <div class="sl">${s.n}</div>
       <div class="si ${it?RC[it.rar]:""}">${it?it.name:"—"}</div>`;
-    tapEl(d,()=>openPick(s.k,inDungeon));gg.appendChild(d);}
+    tapEl(d,()=>openGearDetail(s.k,inDungeon));gg.appendChild(d);}
   host.appendChild(gg);}
 function statLine(nm,total,opt,pct){
   const base=total-opt;
   return `<div class="stat"><span>${nm}</span><b>${pct?total.toFixed(1)+"%":Math.round(total)}${Math.abs(opt)>0.01?` <small style="color:var(--gold)">+${pct?opt.toFixed(1):Math.round(opt)}</small>`:""}</b></div>`;}
 function statBlock(host){
-  const d=derive(),c=document.createElement("div");c.className="card";
-  const o=d.opt||{};
-  c.innerHTML=`<div class="ty" style="margin-bottom:6px">戦闘ステータス（白=合計 / 金=装備オプション分）</div>
-    ${statLine("最大HP",d.max,o.hp||0,0)}
-    ${statLine("MP",d.mpMax,o.mpF||0,0)}
-    <div class="stat"><span>MP回復</span><b>${d.mpReg.toFixed(1)}/s${o.mreg?` <small style="color:var(--gold)">+${o.mreg}%</small>`:""}</b></div>
-    ${statLine("物理攻撃力",d.physAtk,o.atk||0,0)}
-    ${statLine("特殊攻撃力",d.specAtk,o.matk||0,0)}
-    <div class="stat"><span>攻撃倍率</span><b>×${d.atkMul.toFixed(2)}${o.atkP?` <small style="color:var(--gold)">+${o.atkP}%</small>`:""}</b></div>
-    ${statLine("防御力",d.armor,o.armor||0,0)}
-    ${statLine("クリティカル率",d.crit*100,o.crit||0,1)}
-    ${statLine("攻撃速度",d.as*100,o.as||0,1)}
-    ${statLine("移動速度",d.ms*100,o.ms||0,1)}
-    ${statLine("ダメージ軽減",d.dr*100,o.dr||0,1)}
-    <div class="stat"><span>回避率</span><b>${(dodgeRate()*100).toFixed(1)}%</b></div>
-    <div class="stat"><span>状態異常耐性</span><b>${(d.stRes*100).toFixed(0)}%</b></div>
-    ${statLine("運",d.luk,(o.luk||0)+(o.lukF||0),0)}`;
+  const d=derive(),c=document.createElement("div");c.className="card gearStats";
+  c.innerHTML=`<div class="ty" style="margin-bottom:4px">全能力値（装備オプションを含む）</div>`+
+    DSHOW.map(([k,nm,mode])=>{const v=k==="dodge"?dodgeRateFor(d):(d[k]||0),
+      shown=mode===1?v*100:v,dec=mode===1||mode===2?1:mode===3?2:0,
+      pre=mode===3?"×":"",suf=mode===1?"%":mode===2?"/s":"";
+      return `<div class="stat"><span>${nm}</span><b>${pre}${shown.toFixed(dec)}${suf}</b></div>`;}).join("");
   host.appendChild(c);
   if(d.pw.length){const h=document.createElement("h3");h.textContent="装備中の固有効果";host.appendChild(h);
     for(const id of d.pw){const P=POWER(id);if(!P)continue;
@@ -2004,7 +2007,10 @@ function renderTown(){
     while(d.firstChild)b.appendChild(d.firstChild);};
   const btn=(txt,cls,fn)=>{const d=document.createElement("div");d.className="btn "+(cls||"");
     d.textContent=txt;tapEl(d,fn);b.appendChild(d);return d;};
-  if(S.tab==="gear"){add(`<h3>装備</h3>`);gearGrid(b,false);add(`<h3>能力値</h3>`);statBlock(b);}
+  if(S.tab==="gear"){const panel=document.createElement("div");panel.className="gearPanel";
+    const left=document.createElement("div"),right=document.createElement("div");
+    left.innerHTML="<h3>装備</h3>";right.innerHTML="<h3>能力値</h3>";
+    gearGrid(left,false);statBlock(right);panel.append(left,right);b.appendChild(panel);}
   if(S.tab==="inv")renderInv(b);
   if(S.tab==="shop"){
     const gc=Math.round(200+S.deepest*90);
@@ -2136,6 +2142,7 @@ function renderInv(b){
 function showItem(it,inDungeon){
   const cur=S.gear[it.slot],equipped=Object.values(S.gear).includes(it);
   const c=$("itC");
+  c.classList.remove("gearCompare");
   c.innerHTML=`<div class="${RC[it.rar]}" style="margin-bottom:8px">${icon(iconKey(it),34)}</div>
     <div style="font-size:18px;font-weight:900;text-align:center" class="${RC[it.rar]}">${it.name}</div>
     <div class="sub" style="text-align:center;margin:5px 0 14px">
@@ -2218,36 +2225,47 @@ function equip(it){
   if(old)S.stash.push(old);
   S.p.d=derive();recalcHP(S.p);
   SFX.chest();save();}
+function openGearDetail(slotK,inDungeon){
+  const it=S.gear[slotK],c=$("itC");c.classList.remove("gearCompare");
+  c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:10px">${SLOTN(slotK)}</div>`;
+  if(it){c.innerHTML+=`<div class="${RC[it.rar]}" style="margin-bottom:8px">${icon(iconKey(it),34)}</div>
+    <div class="nm ${RC[it.rar]}" style="text-align:center">${it.name}</div>
+    <div class="st optBox" style="text-align:center">${statsHTML(it)}</div>`;}
+  else c.innerHTML+='<div class="card"><div class="st">装備されていません。</div></div>';
+  const add=(text,cls,fn)=>{const d=document.createElement("div");d.className="btn "+cls;d.textContent=text;tapEl(d,fn);c.appendChild(d);};
+  if(it)add("評価","gold",()=>showItem(it,inDungeon));
+  add("装備変更","pri",()=>openPick(slotK,inDungeon));
+  if(it)add("外す","gh",()=>{S.stash.push(it);S.gear[slotK]=null;S.p.d=derive();recalcHP(S.p);save();
+    $("itPop").classList.remove("on");inDungeon?openPause():openTown();});
+  add("閉じる","popClose",()=>$("itPop").classList.remove("on"));$("itPop").classList.add("on");}
+function itemStatTotals(it){const t={};if(!it)return t;
+  if(it.main)t[it.main.id]=(t[it.main.id]||0)+mainV(it);
+  for(const a of it.affs)t[a.id]=(t[a.id]||0)+a.v;return t;}
+function openGearCompare(slotK,it,inDungeon){
+  const old=S.gear[slotK],a=itemStatTotals(old),b=itemStatTotals(it),keys=[...new Set([...Object.keys(a),...Object.keys(b)])],
+    before=optTotals(null,null),after=optTotals(it,slotK),c=$("itC");c.classList.add("gearCompare");
+  const itemBox=(x,label)=>`<div class="compareItem"><div class="ty">${label}</div>
+    <div class="${x?RC[x.rar]:""}">${icon(x?iconKey(x):slotK,30)}</div>
+    <div class="nm ${x?RC[x.rar]:""}">${x?x.name:"装備なし"}</div>
+    <div class="st">${x?statsHTML(x):"効果なし"}</div></div>`;
+  c.innerHTML=`<div style="font-size:15px;font-weight:800">${SLOTN(slotK)}の変更確認</div>
+    <div class="compareHead">${itemBox(old,"変更前")}${itemBox(it,"変更後")}</div>
+    <div class="ty">両装備についているステータスのみ（装備全体の現在値 → 変更後）</div>
+    <div class="compareStats optBox">${keys.map(k=>{const av=before[k]||0,bv=after[k]||0,d=bv-av,p=AFP(k),cls=d>0?"up":d<0?"dn":"";
+      return `<div class="stat"><span>${AFN(k)}</span><b>${av}${p?"%":""} → ${bv}${p?"%":""} <small class="${cls}">(${d>0?"+":d===0?"±":""}${d})</small></b></div>`;}).join("")}</div>`;
+  const equipB=document.createElement("div");equipB.className="btn pri";equipB.textContent="この装備に変更";
+  tapEl(equipB,()=>{equip(it);$("itPop").classList.remove("on");inDungeon?openPause():openTown();});c.appendChild(equipB);
+  const back=document.createElement("div");back.className="btn gh";back.textContent="候補一覧へ戻る";tapEl(back,()=>openPick(slotK,inDungeon));c.appendChild(back);
+  $("itPop").classList.add("on");}
 function openPick(slotK,inDungeon){
-  // ダンジョン内では「持ち帰り済み」だけを装備できる。今回の戦利品(S.bag)は不可。
-  const list=S.stash.filter(i=>i.slot===slotK&&!Object.values(S.gear).includes(i))
-    .sort((a,b)=>b.score-a.score);
-  const c=$("itC");
-  c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:4px">${SLOTN(slotK)}</div>
-    <div class="sub" style="margin-bottom:12px">${inDungeon?"持ち帰り済みの装備のみ":"タップで装備"}</div>`;
-  const cur=S.gear[slotK];
-  if(cur){const d=document.createElement("div");d.className="card";
-    d.innerHTML=`<div class="ty">装備中</div><div class="nm ${RC[cur.rar]}">${cur.name}</div>
-      <div class="st">${statsHTML(cur)}</div>`;
-    if(!inDungeon&&cur.lv<MAXLV){
-      const up=document.createElement("div");up.className="btn gold";
-      up.textContent=`強化する（Lv${cur.lv} / ${cur.xp}exp）`;
-      tapEl(up,()=>{$("itPop").classList.remove("on");openFuse(cur);});
-      d.appendChild(up);}
-    const u=document.createElement("div");u.className="btn gh";u.textContent="外す";
-    tapEl(u,()=>{S.stash.push(cur);S.gear[slotK]=null;S.p.d=derive();recalcHP(S.p);
-      $("itPop").classList.remove("on");save();inDungeon?openPause():openTown();});
-    d.appendChild(u);c.appendChild(d);}
-  if(!list.length){const d=document.createElement("div");d.className="card";
-    d.innerHTML=`<div class="st">この枠に装備できるものがない。</div>`;c.appendChild(d);}
-  if(list.length){const candidates=document.createElement("div");candidates.className="grid";
-    for(const it of list){const d=document.createElement("div"),better=!cur||it.score>cur.score;
-      d.className="cell "+RC[it.rar];d.style.borderColor=it.rar===4?"#ff8adf":CFG.RARITY[it.rar][3];
-      d.setAttribute("aria-label",it.name);d.title=it.name;
-      d.innerHTML=icon(iconKey(it),30)+(better?'<div class="eq" style="color:#7ad04e">▲</div>':"")+`<div class="lvl">${it.ilvl}</div>`;
-      tapEl(d,()=>{showItem(it,inDungeon);});candidates.appendChild(d);}c.appendChild(candidates);}
-  const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";
-  tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);
+  const list=S.stash.filter(i=>i.slot===slotK&&!Object.values(S.gear).includes(i)).sort((a,b)=>b.score-a.score),c=$("itC");
+  c.classList.remove("gearCompare");c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:4px">${SLOTN(slotK)}を変更</div>
+    <div class="sub" style="margin-bottom:12px">保有装備からアイコンを選択</div>`;
+  if(!list.length)c.innerHTML+='<div class="card"><div class="st">変更できる保有装備がありません。</div></div>';
+  else{const g=document.createElement("div");g.className="grid";for(const it of list){const d=document.createElement("div");
+    d.className="cell "+RC[it.rar];d.style.borderColor=it.rar===4?"#ff8adf":CFG.RARITY[it.rar][3];d.setAttribute("aria-label",it.name);d.title=it.name;
+    d.innerHTML=icon(iconKey(it),30)+`<div class="lvl">${it.ilvl}</div>`;tapEl(d,()=>openGearCompare(slotK,it,inDungeon));g.appendChild(d);}c.appendChild(g);}
+  const x=document.createElement("div");x.className="btn popClose";x.textContent="戻る";tapEl(x,()=>openGearDetail(slotK,inDungeon));c.appendChild(x);
   $("itPop").classList.add("on");}
 
 /* ---------- ダンジョン内の一時停止 ---------- */
