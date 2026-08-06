@@ -20,10 +20,8 @@
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:var(--fs);
   color:var(--ink);touch-action:none;user-select:none;-webkit-user-select:none;
   overscroll-behavior:none;font-variant-numeric:tabular-nums}
-body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.2;
-  background:repeating-linear-gradient(117deg,transparent 0 7px,rgba(255,255,255,.018) 8px 9px),
-    radial-gradient(circle at 18% 12%,rgba(112,75,145,.18),transparent 35%),
-    radial-gradient(circle at 82% 88%,rgba(120,55,35,.12),transparent 40%)}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
+  background:linear-gradient(180deg,#0b0911,#08070c)}
 canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
 
 #hud{position:absolute;top:0;left:0;right:56px;padding:calc(env(safe-area-inset-top) + 7px) 8px 8px 11px;
@@ -53,8 +51,9 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
 #mm{width:88px;height:88px;display:block}
 #mmGuide{display:grid;grid-template-columns:44px 44px;border-top:1px solid rgba(80,70,105,.7)}
 .mmDist{height:30px;display:flex;align-items:center;justify-content:center;gap:1px;font-size:9px;font-weight:900;background:rgba(10,8,16,.82)}
-.mmDist i{display:block;width:22px;height:22px;line-height:20px;font-style:normal;font-size:22px;
-  filter:drop-shadow(0 0 3px currentColor);transform:rotate(var(--dir,0rad));transform-origin:center;text-align:center}
+.mmDist i{display:block;width:16px;height:20px;transform:rotate(var(--dir,0rad));transform-origin:center}
+.mmDist i::before{content:"";display:block;width:16px;height:20px;background:currentColor;
+  clip-path:polygon(100% 50%,0 0,22% 50%,0 100%)}
 #mmStair{color:#e08830}#mmPortal{color:#5aa0ff}
 #buffs{position:absolute;left:11px;top:calc(env(safe-area-inset-top) + 108px);z-index:11;
   display:flex;flex-direction:column;gap:4px;pointer-events:none}
@@ -118,6 +117,8 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
 .sbody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:14px 15px 20px}
 .sfoot{flex:0 0 auto;padding:11px 15px calc(env(safe-area-inset-bottom) + 13px);
   border-top:1px solid var(--line);background:var(--bg2)}
+.pauseActions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.pauseActions .btn{margin:0}.pauseActions .giveup{font-size:10px;padding:10px;color:#a89eaf}
 h2{font-size:17px;font-weight:900;letter-spacing:.06em;color:#f0e9dc}
 .sub{font-size:11px;color:var(--ink3);margin-top:3px;font-weight:600}
 .tabs{display:flex;gap:4px;margin-top:12px}
@@ -279,7 +280,7 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
   <div id="loot"></div>
 </div>
 <div id="pauseB"><span></span><span></span></div>
-<div id="mmW"><canvas id="mm" width="88" height="88"></canvas><div id="mmGuide"><div class="mmDist" id="mmStair"><i>➜</i><span>--m</span></div><div class="mmDist" id="mmPortal"><i>➜</i><span>--m</span></div></div></div>
+<div id="mmW"><canvas id="mm" width="88" height="88"></canvas><div id="mmGuide"><div class="mmDist" id="mmStair"><i></i><span>--m</span></div><div class="mmDist" id="mmPortal"><i></i><span>--m</span></div></div></div>
 <div id="buffs"></div>
 <div id="combo"></div>
 <div id="bossBar"><div class="bn" id="bossN"></div><div class="bar"><i id="bossF"></i></div></div>
@@ -326,7 +327,7 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
     </div>
   </div>
   <div class="sbody" id="pauseBody"></div>
-  <div class="sfoot"><div class="btn pri" id="btnResume">再開</div></div>
+  <div class="sfoot pauseActions"><div class="btn pri" id="btnResume">再開</div><div class="btn gh giveup" id="btnGiveUp">ここで力尽きる</div></div>
 </div>
 
 <div class="screen" id="scEnd">
@@ -814,7 +815,7 @@ const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   bag:[],stash:[],gear:{},
   runT:0,hitstop:0,shake:0,shakeT:0,flash:0,paused:true,
   log:{runs:[]},tab:"gear",ptab:"drops",pots:CFG.POTION_BASE,lvlQ:0,
-  settings:{map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,eco:1},admin:false,chars:{},avatars:{},
+  settings:{map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,eco:0},admin:false,debug:false,chars:{},avatars:{},
   combo:0,comboT:0,dmgLog:[],dps:0,startFloor:1,runGold:0,
   inv:{filters:[],sort:"score",sellSel:[],sellRar:1},
   alloc:null,
@@ -1374,7 +1375,11 @@ function update(dt){
 
   for(let i=S.drops.length-1;i>=0;i--){
     const d=S.drops[i];d.t+=dt;
-    const pr=d.gold?1.6:(d.pot||d.shard)?1.0:.65;
+    const dist=Math.hypot(p.x-d.x,p.y-d.y);
+    // 壁際や他のオブジェクトの中心に落ちても回収不能にならないよう、近距離では吸着する。
+    if(dist<3.8&&dist>.01&&!(d.shard&&p.hp>=p.max)&&!(d.pot&&S.pots>=CFG.POTION_MAX)){
+      const pull=Math.min(dist,7*dt);d.x+=(p.x-d.x)/dist*pull;d.y+=(p.y-d.y)/dist*pull;}
+    const pr=d.gold?1.7:(d.pot||d.shard)?1.15:1.05;
     if(d2(d.x,d.y,p.x,p.y)<pr*pr){
       if(d.shard){if(p.hp>=p.max)continue;
         p.hp=Math.min(p.max,p.hp+p.max*CFG.SHARD_HEAL);
@@ -1482,7 +1487,7 @@ function nextLockTarget(){
   const rar=LK.rar,round=LK.round,luk=S.p.d.luk;
   LK.center=rr(.18,.82);
   const earlyEase=clamp((6-S.floor)*.025,0,.12);
-  LK.zone=clamp(.30+earlyEase+luk*.006-rar*.035-round*.045,.09,.50);
+  LK.zone=clamp(.34+earlyEase+luk*.006-rar*.035-round*.065-S.floor*.0025,.09,.52);
   LK.speed=.62+S.floor*.012+rar*.18+round*.22+rnd()*.28;}
 function openLock(q){
   S.paused=true;for(let i=0;i<4;i++)HELD[i]=false;
@@ -1507,7 +1512,12 @@ function lockHit(){
   if(!LK||LK.done)return;
   LK.res=LK.res||[];
   const hit=Math.abs(LK.pos-LK.center)<LK.zone/2;
-  LK.res[LK.round]=hit;if(hit){LK.ok++;SFX.ok();buzz(20);}else{SFX.ng();buzz(60);}
+  LK.res[LK.round]=hit;if(hit){LK.ok++;SFX.ok();buzz(20);}else{
+    // 一度でも失敗したら宝箱は失われ、その場で階層相応の敵が出現する。
+    LK.done=true;LK.q.open=1;SFX.ng();buzz(60);renderLock();
+    const count=clamp(1+Math.floor(S.floor/12),1,5);
+    for(let i=0;i<count;i++)spawnE(rnd()<Math.min(.45,S.floor*.012)?"grunt":"swarm",LK.q.x+rr(-2,2),LK.q.y+rr(-2,2),S.floor,false);
+    setTimeout(()=>{$("lockPop").classList.remove("on");S.paused=false;toast("開錠失敗 — 敵が現れた","ng");LK=null;},300);return;}
   LK.round++;if(LK.round<3)nextLockTarget();
   renderLock();
   if(LK.round>=3){
@@ -1985,18 +1995,24 @@ function openTown(){
   for(const t of document.querySelectorAll("#scTown .tab"))t.classList.toggle("on",t.dataset.t===S.tab);
   renderTown();}
 
+function classPicker(host,disabled){
+  const jobs=document.createElement("div");jobs.className="compactGrid";
+  for(const k of CKEYS){const cur=k===S.cls,sv=S.chars[k],d=document.createElement("div");
+    d.className="btn "+(cur||disabled?"no":"gh");d.textContent=CLASSES[k].name+(cur?"（使用中）":sv&&sv.base?` Lv${sv.base.lv}`:"（新規）");
+    if(!disabled&&!cur)tapEl(d,()=>switchClass(k));jobs.appendChild(d);}host.appendChild(jobs);}
 function gearGrid(host,inDungeon){
   const gg=document.createElement("div");gg.className="g3";
-  if(!inDungeon){const ch=currentCharacter(),d=document.createElement("div");d.className="slot";
+  {const ch=currentCharacter(),d=document.createElement("div");d.className="slot"+(inDungeon?" no":"");
     d.innerHTML=`<div class="ic" style="color:${ch.col};font-size:25px">●</div><div class="sl">キャラクター</div><div class="si">${ch.n}</div>`;
-    tapEl(d,openCharacterPick);gg.appendChild(d);}
+    if(!inDungeon)tapEl(d,openCharacterPick);gg.appendChild(d);}
   for(const s of SLOTS){const it=S.gear[s.k];
     const d=document.createElement("div");d.className="slot"+(it?"":" empty");
     d.innerHTML=`<div class="ic ${it?RC[it.rar]:"e"}">${icon(it?iconKey(it):s.k,22)}</div>
       <div class="sl">${s.n}</div>
       <div class="si ${it?RC[it.rar]:""}">${it?it.name:"—"}</div>`;
     tapEl(d,()=>openGearDetail(s.k,inDungeon));gg.appendChild(d);}
-  host.appendChild(gg);}
+  host.appendChild(gg);
+  const h=document.createElement("h3");h.textContent="職業";host.appendChild(h);classPicker(host,inDungeon);}
 function openCharacterPick(){const c=$("itC"),list=CHARACTERS[S.cls];c.classList.remove("gearCompare");
   c.innerHTML='<div style="font-size:15px;font-weight:800;margin-bottom:10px">キャラクター変更</div>';
   for(const ch of list){const d=document.createElement("div"),on=currentCharacter().id===ch.id;
@@ -2104,12 +2120,6 @@ function renderTown(){
       tapEl(d,()=>{S.settings[k]=S.settings[k]?0:1;if(k==="eco")resize();save();openTown();});cg.appendChild(d);};
     tg("map","ミニマップ");tg("dmg","ダメージ数値");tg("dps","DPS");tg("loot","取得アイテム");
     tg("timer","タイマー");tg("shake","画面の揺れ");tg("eco","省電力モード");
-    add(`<h3>職業</h3>`);const jobs=document.createElement("div");jobs.className="compactGrid";b.appendChild(jobs);
-    for(const k of CKEYS){
-      const cur=k===S.cls,sv=S.chars[k];
-      const d=document.createElement("div");d.className="btn"+(cur?" no":"");
-      d.textContent=CLASSES[k].name+(cur?"（使用中）":(sv&&sv.base)?` Lv${sv.base.lv} に切替`:" を新規作成");
-      tapEl(d,()=>{if(!cur)switchClass(k);});jobs.appendChild(d);}
     add(`<h3>記録・管理</h3>`);const misc=document.createElement("div");misc.className="compactGrid";b.appendChild(misc);
     const rec=document.createElement("div");rec.className="btn gh";rec.textContent="記録を見る";tapEl(rec,openRecords);misc.appendChild(rec);
     const reset=document.createElement("div");reset.className="btn gh";reset.textContent="初期化";tapEl(reset,()=>{
@@ -2119,11 +2129,17 @@ function renderTown(){
       "border:1px solid var(--line);color:var(--ink);font-size:13px";
     b.appendChild(inp);
     const ok=document.createElement("div");ok.className="btn gh";ok.textContent="適用";
-    tapEl(ok,()=>{if(inp.value.trim()==="pM97342Gamt"){S.admin=true;SFX.lvl();
-      toast("管理者モード");save();openTown();}else{SFX.ng();toast("コードが違う");}});
+    tapEl(ok,()=>{const code=inp.value.trim();if(code==="pM97342Gamt"||code==="omiomi"){S.admin=true;S.debug=code==="omiomi"||S.debug;SFX.lvl();
+      toast(S.debug?"デバッグモード":"管理者モード");save();openTown();}else{SFX.ng();toast("コードが違う");}});
     b.appendChild(ok);
     if(S.admin){
       add(`<h3 style="color:var(--gold)">管理者モード</h3>`);
+      const edit=(label,get,set,min=0,max=9999999)=>{const row=document.createElement("label");row.className="row card";row.style.padding="7px 9px";
+        row.innerHTML=`<span class="ty" style="margin:0">${label}</span>`;const n=document.createElement("input");n.type="number";n.min=min;n.max=max;n.value=get();n.style.cssText="width:92px;padding:6px;background:#0a0810;border:1px solid var(--line);color:var(--ink);border-radius:3px";
+        n.addEventListener("change",()=>{set(clamp(Math.floor(+n.value||0),min,max));S.p.d=derive();recalcHP(S.p);save();openTown();});row.appendChild(n);b.appendChild(row);};
+      edit("ゴールド",()=>S.gold,v=>S.gold=v);edit("レベル",()=>S.base.lv,v=>S.base.lv=v,1,CFG.LV_CAP);
+      edit("経験値",()=>S.base.xp,v=>S.base.xp=v);edit("未割当ポイント",()=>S.base.pts,v=>S.base.pts=v);
+      edit("最深到達階層",()=>S.deepest,v=>S.deepest=v,1);for(const [k,n] of STATDEF)edit(n,()=>S.base[k],v=>S.base[k]=v);
       btn("金貨 +100000","gold",()=>{S.gold+=100000;save();openTown();});
       btn("ステータスポイント +100","gh",()=>{S.base.pts+=100;S.alloc=null;save();openTown();});
       btn("レベル +10","gh",()=>{S.base.lv=Math.min(CFG.LV_CAP,S.base.lv+10);
@@ -2348,14 +2364,7 @@ function openPause(){
   $("pauseS").textContent=`深度 ${S.floor} / 未帰還 ${S.bag.length}個 / 獲得 ${S.runGold} G`;
   for(const t of document.querySelectorAll("#scPause .tab"))t.classList.toggle("on",t.dataset.p===S.ptab);
   const b=$("pauseBody");b.innerHTML="";
-  const addGiveUp=()=>{
-    const gv=document.createElement("div");gv.className="btn gh";gv.style.marginTop="8px";
-    gv.textContent="ここで力尽きる（戦利品は失う）";
-    tapEl(gv,()=>{$("scPause").classList.remove("on");
-      ask("ここで力尽きる",`今回拾った ${S.bag.length} 個を失って拠点に戻ります。`,()=>endRun(false,"探索を断念した"));});
-    b.appendChild(gv);};
   if(S.ptab==="drops"){
-    addGiveUp();
     const gold=document.createElement("div");gold.className="card";gold.innerHTML=`<div class="stat"><span>今回獲得したゴールド</span><b style="color:var(--gold)">${S.runGold} G</b></div>`;b.appendChild(gold);
     const h=document.createElement("h3");h.textContent="今回拾った未鑑定装備";b.appendChild(h);
     if(!S.bag.length){const d=document.createElement("div");d.className="card";d.innerHTML='<div class="st">まだ装備を拾っていない。</div>';b.appendChild(d);}
@@ -2382,7 +2391,7 @@ function openPause(){
       tapEl(d,()=>{S.settings[k]=S.settings[k]?0:1;if(k==="eco")resize();save();openPause();});grid.appendChild(d);};
     const h=document.createElement("h3");h.textContent="設定";b.appendChild(h);
     b.appendChild(grid);addToggle("map","ミニマップ");addToggle("dmg","ダメージ数字");addToggle("dps","DPS");addToggle("loot","取得アイテム");addToggle("timer","タイマー");addToggle("shake","画面揺れ");addToggle("eco","省電力");}
-  if(S.ptab!=="drops")addGiveUp();}
+}
 
 /* ---------- クラス選択 / 潜行 ---------- */
 function openClass(){
@@ -2405,8 +2414,8 @@ function confirmDive(fl){
     ()=>beginRun(fl));}
 function startDive(){
   // 階層が数百/数千になっても、ページ切り替えで開始地点を選ぶ
-  const st=CFG.SKIP_STEP;
-  const maxStart=Math.max(1,Math.floor((S.deepest-1)/st)*st+1);
+  const st=S.admin?1:CFG.SKIP_STEP;
+  const maxStart=S.debug?Math.max(999,S.deepest):Math.max(1,Math.floor((S.deepest-1)/st)*st+1);
   if(maxStart<=1){confirmDive(1);return;}
   const starts=[];for(let f=1;f<=maxStart;f+=st)starts.push(f);
   const pageSize=6,maxPage=Math.max(0,Math.ceil(starts.length/pageSize)-1);
@@ -2416,6 +2425,11 @@ function startDive(){
   const c=$("itC");
   c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:4px">開始する深度</div>
     <div class="sub" style="margin-bottom:10px">解放済み ${starts.length}地点 / 最大 ${maxStart}F</div>`;
+  if(S.debug){const row=document.createElement("div");row.className="row card";
+    row.innerHTML='<span class="ty">デバッグ指定</span>';const n=document.createElement("input");n.type="number";n.min=1;n.max=999999;n.value=Math.min(S.deepest,999);
+    n.style.cssText="width:110px;padding:7px;background:#0a0810;border:1px solid var(--gold);color:var(--ink);border-radius:3px";
+    const go=document.createElement("div");go.className="btn gold";go.style.margin="0";go.textContent="開始";
+    tapEl(go,()=>{$("itPop").classList.remove("on");confirmDive(clamp(Math.floor(+n.value||1),1,999999));});row.append(n,go);c.appendChild(row);}
   const nav=document.createElement("div");nav.className="g2";
   const newer=document.createElement("div");newer.className="btn gh"+(S.startPage<=0?" no":"");newer.textContent="より深い";
   tapEl(newer,()=>{if(S.startPage<=0)return;S.startPage--;startDive();});nav.appendChild(newer);
@@ -2443,7 +2457,7 @@ function beginRun(fl){
 const KEY="descent_v5";
 function save(){try{localStorage.setItem(KEY,JSON.stringify({cls:S.cls,deepest:S.deepest,
   gold:S.gold,stash:S.stash,gear:S.gear,base:S.base,pots:S.pots,log:S.log,
-  settings:S.settings,admin:S.admin,chars:S.chars,avatars:S.avatars}));}catch(e){}}
+  settings:S.settings,admin:S.admin,debug:S.debug,chars:S.chars,avatars:S.avatars}));}catch(e){}}
 function load(){try{
   const d=JSON.parse(localStorage.getItem(KEY)||"null");
   if(!d||!d.cls||!CLASSES[d.cls])return false;
@@ -2466,8 +2480,8 @@ function load(){try{
   for(const k in S.gear){const it=fix(S.gear[k]);if(it&&!ng[it.slot])ng[it.slot]=it;}
   S.gear=ng;
   S.pots=d.pots==null?CFG.POTION_BASE:Math.min(CFG.POTION_MAX,d.pots);S.log=d.log||{runs:[]};
-  S.settings=Object.assign({map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,eco:1},d.settings||{});
-  S.admin=!!d.admin;S.chars=d.chars||{};S.avatars=d.avatars||{};
+  S.settings=Object.assign({map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,eco:0},d.settings||{});
+  S.admin=!!d.admin;S.debug=!!d.debug;S.chars=d.chars||{};S.avatars=d.avatars||{};
   if(!S.avatars[S.cls])S.avatars[S.cls]=CHARACTERS[S.cls][0].id;
   const nb=Object.assign({lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0},d.base||{});
   delete nb.need;
@@ -2485,6 +2499,8 @@ hook($("pot"),()=>{if(S.scene==="dungeon"&&!S.paused)usePotion();});
 hook($("act"),()=>{if(S.scene==="dungeon"&&!S.paused)doAction();});
 hook($("pauseB"),()=>{if(S.scene==="dungeon"&&!S.paused){S.ptab="drops";openPause();}});
 tapEl($("btnResume"),()=>{$("scPause").classList.remove("on");S.paused=false;updHUD();});
+tapEl($("btnGiveUp"),()=>{$("scPause").classList.remove("on");
+  ask("ここで力尽きる",`今回拾った ${S.bag.length} 個を失って拠点に戻ります。`,()=>endRun(false,"探索を断念した"));});
 tapEl($("btnDive"),startDive);
 tapEl($("btnBack"),leaveEnd);
 tapEl($("askY"),()=>{$("askPop").classList.remove("on");S.paused=askPrevPaused;const f=askFn;askFn=null;if(f)f();});
