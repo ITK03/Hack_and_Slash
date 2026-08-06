@@ -188,15 +188,15 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 .profile{display:grid;grid-template-columns:54px 1fr auto;gap:10px;align-items:center;margin-top:8px}
 .profileIcon{width:52px;height:52px;border:1px solid var(--line2);background:#171321;border-radius:50%;display:grid;place-items:center;font-size:27px}
 .depthBig{font-size:25px;font-weight:950;color:#fff}.depthBig small{display:block;font-size:8px;color:var(--ink3);letter-spacing:.12em}
-.wallet{font-size:10px;text-align:right;line-height:1.8;width:13ch;font-variant-numeric:tabular-nums}.wallet span,.wallet b{display:inline-block;width:12ch;white-space:nowrap;text-align:right}.wallet b{color:var(--gold)}
+.wallet{font-size:10px;text-align:right;width:16ch;font-variant-numeric:tabular-nums}.currency{display:flex;align-items:center;justify-content:flex-end;gap:4px;height:20px;white-space:nowrap}.currency .coin{color:var(--gold);font-size:13px}.currency .gem{color:#79d9ff;font-size:12px}.currency span{display:inline-block;min-width:12ch;text-align:right;font-weight:900}.currency.gold span{color:var(--gold)}
 .stamina{margin-top:4px}.stamina .bar{height:7px}.stamina i{background:linear-gradient(90deg,#56b86d,#b4db65)}
 .innerTabs{display:flex;gap:6px;margin-top:7px}.innerTabs .btn{flex:1;margin:0;padding:8px;font-size:10px}
 .formation{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.member{min-height:92px;padding:8px 4px;text-align:center;border:1px solid var(--line);background:var(--panel);border-radius:3px}
 .member.on{border-color:var(--gold)}.member .order{font-size:8px;color:var(--gold)}.member .face{font-size:24px;margin:4px}.member .ty{font-size:8px}
 .prepDepth{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.prepDepth input{width:96px;padding:9px;background:#0a0810;border:1px solid var(--line2);color:var(--ink)}
-.floorStep{display:grid;grid-template-columns:34px 92px 34px;gap:5px}.floorStep .btn{margin:0;padding:8px 2px}.floorStep input{width:92px;text-align:center}
+.floorStep{display:grid;grid-template-columns:34px 92px 34px;gap:5px}.floorStep .btn{margin:0;padding:8px 2px}.floorStep input{width:92px;text-align:center;font-size:22px;font-weight:950;font-variant-numeric:tabular-nums}.prepDepth>.nm,.prepDepth .nm{font-size:17px;font-weight:950}
 .pointBox{padding:5px 9px!important;margin-bottom:3px}.pointBox .st{margin:0;line-height:1.35}
-.shopTabs{display:flex;gap:5px;margin-bottom:9px}.shopTabs .btn{flex:1;margin:0;padding:8px 3px;font-size:10px}
+.characterIconGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0}.characterIconChoice{aspect-ratio:1;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;border-radius:50%;font-size:28px;position:relative}.characterIconChoice.on{border:2px solid var(--gold);box-shadow:0 0 10px rgba(224,192,64,.35)}.characterIconChoice small{position:absolute;bottom:-13px;font-size:7px;color:var(--ink2);white-space:nowrap}.shopTabs{display:flex;gap:5px;margin-bottom:9px}.shopTabs .btn{flex:1;margin:0;padding:8px 3px;font-size:10px}
 .sellDock{margin:10px -15px -20px;padding:9px 15px calc(env(safe-area-inset-bottom) + 9px);background:var(--bg2);border-top:1px solid var(--line);display:grid;grid-template-columns:auto 1fr auto;gap:7px;align-items:center}.sellDock .btn{margin:0;padding:9px}.sellDock .amount{text-align:center;color:var(--gold);font-size:11px;font-weight:900}
 .sellSheet .sellSummary{position:sticky;top:-20px;z-index:2;background:#191424;border-bottom:1px solid var(--line2);padding-bottom:10px}.sellChoices{display:grid;grid-template-columns:1fr 1fr;gap:7px}.sellChoices .btn{margin:0}
 
@@ -321,7 +321,7 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
 
 <div class="screen" id="scTown">
   <div class="shead">
-    <div class="profile"><div class="profileIcon" id="profileIcon">●</div><div><div class="depthBig"><small>最大深度</small><span id="townDepth">1</span>F</div><div class="stamina"><div class="bar"><i id="staminaF"></i></div><div class="ty" id="staminaT">100 / 100</div></div></div><div class="wallet">◆ <span id="premiumT">0</span><br><b id="townG">0 G</b></div></div>
+    <div class="profile"><div class="profileIcon" id="profileIcon">●</div><div><div class="depthBig"><small>最大深度</small><span id="townDepth">1</span>F</div></div><div class="wallet"><div class="currency"><i class="gem">◆</i><span id="premiumT">0</span></div><div class="currency gold"><i class="coin">●</i><span id="townG">0</span></div></div></div>
   </div>
   <div class="sbody" id="townBody"></div>
   <div class="tabs">
@@ -776,7 +776,7 @@ function mv(e,dx,dy){if(walk(e.x+dx,e.y+dy,e.r)){e.x+=dx;e.y+=dy;return;}
 /* ---------- アイテム ---------- */
 function rarRoll(fl,mf,luk){
   const bonus=1+(mf||0)+(luk||0)*.012;
-  const w=CFG.RARITY.map((r,i)=>Math.max(.0001,(r[1]+r[2]*fl)*(i>=2?bonus:1)));
+  const w=CFG.RARITY.map((r,i)=>Math.max(.0001,r[1]*(i>=2?bonus:1))); // 階層ではレア率を変えない
   const t=w.reduce((a,b)=>a+b,0);let v=rnd()*t;
   for(let i=0;i<w.length;i++){v-=w[i];if(v<=0)return i;}return 0;}
 const SW={atk:5,matk:5,atkP:4,hp:1,armor:1.4,crit:7,cdmg:2,as:5,ms:3,ls:9,cdr:4,dr:5,
@@ -832,10 +832,10 @@ const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   bag:[],stash:[],gear:{},
   runT:0,hitstop:0,shake:0,shakeT:0,flash:0,paused:true,
   log:{runs:[]},tab:"prep",gearSub:"equip",ptab:"drops",pots:CFG.POTION_BASE,lvlQ:0,
-  settings:{map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0},admin:false,debug:false,debugFloor:1,adminOpts:{},chars:{},avatars:{},
+  settings:{map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0},admin:false,debug:false,debugFloor:1,adminOpts:{},chars:{},characterStates:{},avatars:{},
   combo:0,comboT:0,dmgLog:[],dps:0,startFloor:1,runGold:0,
   inv:{filters:[],sort:"score",sellSel:[],sellRar:1},
-  formation:[],partyIndex:0,diveFloor:1,stamina:100,premium:0,profileAvatar:null,shopSub:"store",alloc:null,
+  formation:[],partyIndex:0,diveFloor:1,stamina:100,premium:0,profileAvatar:null,shopSub:"gacha",alloc:null,
   base:{lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0}};
 
 const armorDR=a=>Math.min(.45,a/(a+120+S.floor*22));
@@ -2000,7 +2000,7 @@ function endRun(alive,cause){
   S.paused=true;
   if(!alive&&S.formation&&S.partyIndex+1<S.formation.length){
     S.partyIndex++;const [k,id]=S.formation[S.partyIndex].split(":");
-    switchClass(k,()=>{S.avatars[k]=id;S.p=newPlayer();S.paused=false;enterFloor(S.floor);updBuffs();updHUD();toast(`${currentCharacter().n}に交代`);});return;}
+    selectCharacter(k,id,()=>{S.p=newPlayer();S.paused=false;enterFloor(S.floor);updBuffs();updHUD();toast(`${currentCharacter().n}に交代`);});return;}
   const got=S.bag.slice();
   if(alive){S.stash.push(...got);SFX.extract();}else SFX.death();
   S.pots=CFG.POTION_BASE;
@@ -2038,9 +2038,8 @@ function endRun(alive,cause){
 function openTown(){
   S.scene="town";S.paused=true;
   $("scTown").classList.add("on");$("pauseB").classList.remove("show");
-  $("townG").textContent=S.gold+" G";
+  $("townG").textContent=S.gold;
   $("townDepth").textContent=S.deepest;$("premiumT").textContent=S.premium||0;
-  $("staminaT").textContent=`${Math.round(S.stamina)} / 100`;$("staminaF").style.width=clamp(S.stamina,0,100)+"%";
   const profile=allRoster().find(x=>x.k+":"+x.ch.id===S.profileAvatar)||{ch:currentCharacter()};
   $("profileIcon").style.color=profile.ch.col;$("profileIcon").title=profile.ch.n;
   for(const t of document.querySelectorAll("#scTown .tab"))t.classList.toggle("on",t.dataset.t===S.tab);
@@ -2068,7 +2067,7 @@ function openCharacterChoices(k){const c=$("itC"),list=CHARACTERS[k];
   c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:10px">${CLASSES[k].name}のキャラクター</div>`;
   for(const ch of list){const d=document.createElement("div"),on=currentCharacter().id===ch.id;
     d.className="card tap";d.innerHTML=`<div class="row"><div><div class="nm" style="color:${ch.col}">● ${ch.n}</div><div class="ty">${ch.trait}</div></div>${on?'<span class="tag">選択中</span>':""}</div><div class="st">${ch.d}</div>`;
-    tapEl(d,()=>{S.avatars[S.cls]=ch.id;S.p=newPlayer();save();$("itPop").classList.remove("on");openTown();});c.appendChild(d);}
+    tapEl(d,()=>{selectCharacter(k,ch.id,()=>{$("itPop").classList.remove("on");openTown();});});c.appendChild(d);}
   const back=document.createElement("div");back.className="btn gh";back.textContent="職業選択へ戻る";tapEl(back,openCharacterPick);c.appendChild(back);
   const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);$("itPop").classList.add("on");}
 function statLine(nm,total,opt,pct){
@@ -2094,7 +2093,7 @@ function renderCombinedGear(host,inDungeon,after){
   const tabs=document.createElement("div");tabs.className="innerTabs";
   for(const [k,n] of [["equip","装備"],["ability","能力"]]){const d=document.createElement("div");d.className="btn "+(S.gearSub===k?"gold":"gh");d.textContent=n;
     tapEl(d,()=>{S.gearSub=k;after();});tabs.appendChild(d);}
-  if(S.gearSub==="ability")renderAbilityTab(host,after);else renderGearTab(host,inDungeon);host.appendChild(tabs);
+  host.appendChild(tabs);if(S.gearSub==="ability")renderAbilityTab(host,after);else renderGearTab(host,inDungeon);
 }
 function renderAbilityTab(host,after){const h=document.createElement("h3");h.textContent="ステータス";host.appendChild(h);allocBlock(host,after);}
 const STATDEF=[["str","筋力","物理攻撃力が上がる"],["mag","魔力","特殊攻撃力が上がる"],
@@ -2162,7 +2161,7 @@ function renderTown(){
   if(S.tab==="gear")renderCombinedGear(b,false,openTown);
   if(S.tab==="inv")renderInv(b);
   if(S.tab==="shop"){
-    const st=document.createElement("div");st.className="shopTabs";for(const [k,n] of [["store","商店"],["gacha","ガチャ"],["gem","ジェム"]]){const d=document.createElement("div");d.className="btn "+(S.shopSub===k?"gold":"gh");d.textContent=n;tapEl(d,()=>{S.shopSub=k;openTown();});st.appendChild(d);}b.appendChild(st);
+    const st=document.createElement("div");st.className="shopTabs";for(const [k,n] of [["gacha","ガチャ"],["gem","ジェム"],["store","ゴールド"]]){const d=document.createElement("div");d.className="btn "+(S.shopSub===k?"gold":"gh");d.textContent=n;tapEl(d,()=>{S.shopSub=k;openTown();});st.appendChild(d);}b.appendChild(st);
     if(S.shopSub==="store"){const gc=Math.round(200+S.deepest*90);
     add(`<div class="card"><div class="nm">掘り出し物</div>
       <div class="st">深度 ${S.deepest} 相当の装備を1つ買う。</div></div>`);
@@ -2171,25 +2170,27 @@ function renderTown(){
       ask("掘り出し物を購入する",`${gc} G を支払って、深度 ${S.deepest} 相当の装備を1つ購入します。\n購入後の所持金: ${S.gold-gc} G`,()=>{
         if(S.gold<gc)return;
         S.gold-=gc;
-        const it=makeItem(Math.max(1,S.deepest),.3,S.p.d.luk);S.stash.push(it);
+        const it=makeItem(Math.max(1,S.deepest),1,S.p.d.luk);S.stash.push(it);
         SFX.chest();toast(it.name+"を入手");save();showItem(it,false);});});
-    add(`<div class="card" style="margin-top:12px"><div class="nm">ポーション</div>
-      <div class="st">ポーション購入は撤廃。5層ごとに自動で${CFG.POTION_BASE}個まで補充されます。壺から出た分だけ最大${CFG.POTION_MAX}個まで持てます。</div></div>`);}
+    }
     else if(S.shopSub==="gacha"){
       const gacha=(name,cost,fn)=>{add(`<div class="card"><div class="nm">${name}</div><div class="st">課金通貨 ${cost} ◆ で1回引けます。</div></div>`);btn(`1回引く — ${cost} ◆`,S.premium>=cost?"gold":"no",()=>{if(S.premium<cost)return;ask(name,`${cost} ◆ を使ってガチャを引きます。`,()=>{if(S.premium<cost)return;S.premium-=cost;fn();save();openTown();});});};
-      gacha("キャラクターガチャ",300,()=>{const {ch}=pick(allRoster());S.profileAvatar=CKEYS.find(k=>CHARACTERS[k].includes(ch))+":"+ch.id;SFX.lvl();toast(ch.n+"を獲得");});
-      gacha("装備ガチャ",200,()=>{const it=makeItem(Math.max(1,S.deepest),.6,S.p.d.luk,Math.max(1,ri(1,4)));S.stash.push(it);SFX.chest();toast(it.name+"を獲得");});}
+      gacha("キャラクターガチャ",300,()=>{const {k,ch}=pick(allRoster());S.profileAvatar=k+":"+ch.id;SFX.lvl();showGachaResult("キャラクター獲得",`<div style="color:${ch.col};font-size:58px">●</div><div class="nm">${ch.n}</div><div class="st">${CLASSES[k].name} / ${ch.trait}</div>`);});
+      gacha("装備ガチャ",200,()=>{const it=makeItem(Math.max(1,S.deepest),.6,S.p.d.luk,Math.max(1,ri(1,4)));S.stash.push(it);SFX.chest();showGachaResult("装備獲得",`<div class="${RC[it.rar]}">${icon(iconKey(it),54)}</div><div class="nm ${RC[it.rar]}">${it.name}</div><div class="st">${CFG.RARITY[it.rar][0]} / ${SLOTN(it.slot)}</div>`);});}
     else add(`<div class="card"><div class="nm">ジェムショップ</div><div class="st">ジェム購入機能は準備中です。</div></div><div class="g3"><div class="slot empty">ジェム A</div><div class="slot empty">ジェム B</div><div class="slot empty">ジェム C</div></div>`);}
   if(S.tab==="conf")renderSettings(b,openTown,false);
 }
 
 
 function allRoster(){const a=[];for(const k of CKEYS)for(const ch of CHARACTERS[k])a.push({k,ch});return a;}
-function openProfileIconPick(){const c=$("itC");c.innerHTML='<div class="nm">プロフィールアイコン</div><div class="sub">保有キャラクターから選択</div>';
-  for(const {k,ch} of allRoster()){const key=k+":"+ch.id,on=S.profileAvatar===key,d=document.createElement("div");d.className="card tap";d.innerHTML=`<div class="row"><div><div class="nm" style="color:${ch.col}">● ${ch.n}</div><div class="ty">${CLASSES[k].name} / ${ch.trait}</div></div>${on?'<span class="tag">設定中</span>':""}</div>`;tapEl(d,()=>{S.profileAvatar=key;save();$("itPop").classList.remove("on");openTown();});c.appendChild(d);}
+function openProfileIconPick(){const c=$("itC");c.innerHTML='<div class="nm">プロフィールアイコン</div><div class="sub">アイコンを選択</div>';
+  const g=document.createElement("div");g.className="characterIconGrid";
+  for(const {k,ch} of allRoster()){const key=k+":"+ch.id,on=S.profileAvatar===key,d=document.createElement("div");d.className="characterIconChoice"+(on?" on":"");d.style.color=ch.col;d.innerHTML=`●<small>${ch.n}</small>`;d.title=ch.n;tapEl(d,()=>{S.profileAvatar=key;save();$("itPop").classList.remove("on");openTown();});g.appendChild(d);}c.appendChild(g);
   const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);$("itPop").classList.add("on");}
+function showGachaResult(title,html){const c=$("itC");c.innerHTML=`<div style="text-align:center"><div style="font-size:18px;font-weight:900;margin-bottom:18px">${title}</div>${html}</div>`;const x=document.createElement("div");x.className="btn pri";x.textContent="閉じる";tapEl(x,()=>{$("itPop").classList.remove("on");openTown();});c.appendChild(x);$("itPop").classList.add("on");}
+
 function renderPrepTab(b){
-  const roster=allRoster();if(!S.formation.length)S.formation=[S.cls+":"+currentCharacter().id];
+  const roster=allRoster();
   const h=document.createElement("h3");h.textContent="潜入編成（最大4人）";b.appendChild(h);
   const g=document.createElement("div");g.className="formation";
   for(let i=0;i<4;i++){const key=S.formation[i],entry=roster.find(x=>x.k+":"+x.ch.id===key),d=document.createElement("div");d.className="member"+(i===0?" on":"");
@@ -2244,7 +2245,7 @@ function openRecords(after=openTown){const r=S.log.runs;invMenu("記録",c=>{
 /* ---------- 倉庫: アイコン格子 + フィルタ/並べ替え + 固定売却バー ---------- */
 function invFiltered(){
   const F=S.inv;F.filters=F.filters||[];
-  let list=S.stash.slice();
+  let list=[...S.stash,...equippedEntries().map(e=>e.it)];
   const fs=F.filters;
   if(fs.length){list=list.filter(i=>fs.some(f=>{
     if(f[0]==="r")return i.rar===+f[1];
@@ -2272,8 +2273,8 @@ function openInvSort(){const F=S.inv;
 function openInvSell(){const F=S.inv;F.sellSel=F.sellSel||[];
   invMenu("レア度で一括選択",c=>{
     const note=document.createElement("div");note.className="sub";note.textContent="ソーシャルゲームで一般的な『低レアを保護して一括選択』方式です。装備中の品は選択されません。";c.appendChild(note);
-    for(let r=0;r<5;r++){const candidates=S.stash.filter(i=>!Object.values(S.gear).includes(i)&&i.rar<=r),d=document.createElement("div");d.className="btn gh";d.textContent=`${CFG.RARITY[r][0]}以下を選択（${candidates.length}個）`;tapEl(d,()=>{F.sellSel=[...new Set([...F.sellSel,...candidates])];$("itPop").classList.remove("on");openTown();});c.appendChild(d);}});}
-function confirmSelectedSell(){const F=S.inv,selected=F.sellSel.filter(i=>S.stash.includes(i)&&!Object.values(S.gear).includes(i)),val=selected.reduce((a,i)=>a+sellV(i),0);if(!selected.length)return;ask("選択装備を売却",`${selected.length}個を ${val} G で売却します。よろしいですか？`,()=>{for(const it of selected){const k=S.stash.indexOf(it);if(k>=0)S.stash.splice(k,1);}S.gold+=val;F.sellSel=[];F.sellMode=false;SFX.gold();toast("+"+val+" G");save();openTown();});}
+    for(let r=0;r<5;r++){const candidates=S.stash.filter(i=>!isEquipped(i)&&i.rar<=r),d=document.createElement("div");d.className="btn gh";d.textContent=`${CFG.RARITY[r][0]}以下を選択（${candidates.length}個）`;tapEl(d,()=>{F.sellSel=[...new Set([...F.sellSel,...candidates])];$("itPop").classList.remove("on");openTown();});c.appendChild(d);}});}
+function confirmSelectedSell(){const F=S.inv,selected=F.sellSel.filter(i=>S.stash.includes(i)&&!isEquipped(i)),val=selected.reduce((a,i)=>a+sellV(i),0);if(!selected.length)return;ask("選択装備を売却",`${selected.length}個を ${val} G で売却します。よろしいですか？`,()=>{for(const it of selected){const k=S.stash.indexOf(it);if(k>=0)S.stash.splice(k,1);}S.gold+=val;F.sellSel=[];F.sellMode=false;SFX.gold();toast("+"+val+" G");save();openTown();});}
 
 /* ---------- 倉庫: アイコン格子 + フィルタ/並べ替え/売却 ---------- */
 function renderInv(b){
@@ -2289,19 +2290,19 @@ function renderInv(b){
   if(!list.length){const d=document.createElement("div");d.className="card";d.innerHTML=`<div class="st">該当する装備がない。</div>`;b.appendChild(d);}
   const g=document.createElement("div");g.className="grid";
   for(const it of list){
-    const cur=S.gear[it.slot],better=!cur||it.score>cur.score,equipped=Object.values(S.gear).includes(it),sel=F.sellSel.includes(it);
+    const cur=S.gear[it.slot],better=!cur||it.score>cur.score,equipped=isEquipped(it),sel=F.sellSel.includes(it);
     const c=document.createElement("div");c.className="cell "+RC[it.rar]+(sel?" sel":"");c.style.borderColor=it.rar===4?"#ff8adf":CFG.RARITY[it.rar][3];
-    c.innerHTML=icon(iconKey(it),26)+(equipped?'<div class="eq">E</div>':"")+(better?'<div class="eq" style="color:#7ad04e">▲</div>':"")+(sel?'<div class="eq" style="left:3px;right:auto;color:#ffd24a">売</div>':"")+`<div class="lvl">${it.ilvl}</div>`;
+    c.innerHTML=icon(iconKey(it),26)+(equipped?'<div class="eq">E</div>':"")+(better&&!equipped?'<div class="eq" style="left:3px;right:auto;color:#7ad04e">▲</div>':"")+(sel?'<div class="eq" style="left:3px;right:auto;color:#ffd24a">売</div>':"")+`<div class="lvl">${it.ilvl}</div>`;
     tapEl(c,()=>{if(!equipped&&F.sellMode){const i=F.sellSel.indexOf(it);if(i>=0)F.sellSel.splice(i,1);else F.sellSel.push(it);openTown();}else showItem(it,false);});
     c.addEventListener("touchstart",()=>{}, {passive:true});
     c.addEventListener("contextmenu",e=>{e.preventDefault();if(equipped)return;const i=F.sellSel.indexOf(it);if(i>=0)F.sellSel.splice(i,1);else F.sellSel.push(it);openTown();});
     g.appendChild(c);}
   b.appendChild(g);
-  if(F.sellMode){const selected=F.sellSel.filter(i=>S.stash.includes(i)&&!Object.values(S.gear).includes(i)),val=selected.reduce((a,i)=>a+sellV(i),0),dock=document.createElement("div");dock.className="sellDock";
+  if(F.sellMode){const selected=F.sellSel.filter(i=>S.stash.includes(i)&&!isEquipped(i)),val=selected.reduce((a,i)=>a+sellV(i),0),dock=document.createElement("div");dock.className="sellDock";
     const clear=document.createElement("div");clear.className="btn gh";clear.textContent="クリア";tapEl(clear,()=>{F.sellSel=[];openTown();});const amount=document.createElement("div");amount.className="amount";amount.textContent=`${selected.length}個 / ${val} G`;const ok=document.createElement("div");ok.className="btn gold"+(selected.length?"":" no");ok.textContent="OK";tapEl(ok,confirmSelectedSell);dock.append(clear,amount,ok);b.appendChild(dock);}}
 
 function showItem(it,inDungeon){
-  const cur=S.gear[it.slot],equipped=Object.values(S.gear).includes(it);
+  const cur=S.gear[it.slot],owner=equippedOwner(it),equipped=!!owner,equippedHere=owner===activeCharacterKey();
   const c=$("itC");
   c.classList.remove("gearCompare");
   c.innerHTML=`<div class="${RC[it.rar]}" style="margin-bottom:8px">${icon(iconKey(it),34)}</div>
@@ -2318,7 +2319,7 @@ function showItem(it,inDungeon){
   if(!inDungeon&&it.lv<MAXLV){
     const need=fuseNeed(it),gold=fuseGold(it);
     mk(`強化する（Lv${it.lv} / ${it.xp}exp）`,"gold",()=>{$("itPop").classList.remove("on");openFuse(it);});}
-  if(equipped)mk("外す","gh",()=>{S.gear[it.slot]=null;S.p.d=derive();recalcHP(S.p);
+  if(equippedHere)mk("外す","gh",()=>{S.gear[it.slot]=null;S.p.d=derive();recalcHP(S.p);
     $("itPop").classList.remove("on");save();inDungeon?openPause():openTown();});
   else{
     if(!inDungeon)mk("売却 "+sellV(it)+"G","gh",()=>{
@@ -2333,8 +2334,8 @@ function fusePreview(target,xp){let lv=target.lv,cur=target.xp+xp,up=0;
   return {lv,xp:cur,up};}
 function openFuse(target){
   if(fuseTarget!==target){fuseTarget=target;fuseSel=[];}
-  fuseSel=fuseSel.filter(i=>S.stash.includes(i)&&i!==target&&!Object.values(S.gear).includes(i));
-  const list=S.stash.filter(i=>i!==target&&i.slot===target.slot&&!Object.values(S.gear).includes(i))
+  fuseSel=fuseSel.filter(i=>S.stash.includes(i)&&i!==target&&!isEquipped(i));
+  const list=S.stash.filter(i=>i!==target&&i.slot===target.slot&&!isEquipped(i))
     .sort((a,b)=>fuseXP(b)-fuseXP(a));
   const c=$("itC"),need=fuseNeed(target),perGold=fuseGold(target);
   const totalXP=fuseSel.reduce((a,i)=>a+fuseXP(i),0),cost=perGold*fuseSel.length,prev=fusePreview(target,totalXP);
@@ -2342,7 +2343,7 @@ function openFuse(target){
     <div class="sub" style="margin:4px 0 10px">Lv${target.lv} — 経験値 ${target.xp}/${need}</div>`;
   const box=document.createElement("div");box.className="card";
   const nxt=Object.assign({},target,{lv:Math.min(MAXLV,target.lv+1),affs:target.affs,main:target.main});
-  const eq=Object.values(S.gear).includes(target);
+  const eq=isEquipped(target);
   box.innerHTML=`<div class="ty" style="margin:0 0 6px">選択中 ${fuseSel.length}個 / +${totalXP}exp / 費用 ${cost}G</div>
     <div class="stat"><span>強化後予測</span><b>Lv${prev.lv}${prev.up?` <span class="up">(+${prev.up})</span>`:""}</b></div>
     <div class="stat"><span>${AFN(target.main.id)}（次Lv基礎）</span><b>${mainV(nxt)} <span class="up">(+${mainV(nxt)-mainV(target)})</span></b></div>`+
@@ -2413,7 +2414,7 @@ function openGearCompare(slotK,it,inDungeon){
   const back=document.createElement("div");back.className="btn gh";back.textContent="候補一覧へ戻る";tapEl(back,()=>openPick(slotK,inDungeon));c.appendChild(back);
   $("itPop").classList.add("on");}
 function openPick(slotK,inDungeon){
-  const list=S.stash.filter(i=>i.slot===slotK&&!Object.values(S.gear).includes(i)).sort((a,b)=>b.score-a.score),c=$("itC");
+  const list=S.stash.filter(i=>i.slot===slotK&&!isEquipped(i)).sort((a,b)=>b.score-a.score),c=$("itC");
   c.classList.remove("gearCompare");c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:4px">${SLOTN(slotK)}を変更</div>
     <div class="sub" style="margin-bottom:12px">保有装備からアイコンを選択</div>`;
   if(!list.length)c.innerHTML+='<div class="card"><div class="st">変更できる保有装備がありません。</div></div>';
@@ -2426,17 +2427,18 @@ function openPick(slotK,inDungeon){
 /* ---------- ダンジョン内の一時停止 ---------- */
 /* 職業切替: レベル/ステータス/装備は職業ごと、金貨と倉庫は共有 */
 /* 職業切替: レベルとステータスは職業ごと。装備・金貨・倉庫は共有。 */
-function switchClass(k,after){
-  S.chars[S.cls]={base:S.base};
-  const sv=S.chars[k];
-  S.base=sv&&sv.base?sv.base
-    :{lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0};
-  S.cls=k;S.alloc=null;if(!S.avatars[k])S.avatars[k]=CHARACTERS[k][0].id;
-  const w=S.gear.weapon;                       // 装備できない武器だけ外す
-  if(w&&w.wt&&WCLS[w.wt]!==k){S.stash.push(w);S.gear.weapon=null;
-    toast(CLASSES[k].name+"は"+(w.wt==="sword"?"剣":"杖")+"を装備できないため外しました");}
-  S.p=newPlayer();
-  SFX.lvl();save();if(after)after();else openTown();}
+function emptyGear(){const g={};for(const k of SLOTK)g[k]=null;return g;}
+function activeCharacterKey(){return S.cls+":"+(S.avatars[S.cls]||CHARACTERS[S.cls][0].id);}
+function storeActiveCharacter(){if(!S.cls)return;S.characterStates[activeCharacterKey()]={base:S.base,gear:S.gear};S.chars[S.cls]={base:S.base};}
+function equippedEntries(){const out=[];for(const [owner,st] of Object.entries(S.characterStates||{}))for(const it of Object.values(st.gear||{}))if(it)out.push({it,owner});
+  for(const it of Object.values(S.gear||{}))if(it&&!out.some(e=>e.it===it))out.push({it,owner:activeCharacterKey()});return out;}
+const equippedOwner=it=>(equippedEntries().find(e=>e.it===it)||{}).owner;
+const isEquipped=it=>!!equippedOwner(it);
+function selectCharacter(k,id,after){const target=k+":"+id;if(target===activeCharacterKey()){if(after)after();return;}
+  storeActiveCharacter();S.cls=k;S.avatars[k]=id;const sv=S.characterStates[target];
+  S.base=sv&&sv.base?sv.base:{lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0};S.gear=sv&&sv.gear?sv.gear:emptyGear();S.alloc=null;S.p=newPlayer();SFX.lvl();save();if(after)after();else openTown();}
+function switchClass(k,after){selectCharacter(k,S.avatars[k]||CHARACTERS[k][0].id,after);}
+
 function openPause(){
   S.paused=true;for(let i=0;i<4;i++)HELD[i]=false;IN.dx=IN.dy=0;
   $("scPause").classList.add("on");
@@ -2478,6 +2480,7 @@ function openClass(){
     c.appendChild(d);}
   $("scClass").classList.add("on");}
 function confirmDive(fl){
+  if(!S.formation||!S.formation.length){toast("キャラクターを1人以上編成してください","ng");return;}
   ask("ダンジョンに潜る",
     "深度 "+fl+" から開始します。\n危険度: "+dangerOf(fl).n+"\n未鑑定品は帰還するまで確定しません。",
     ()=>beginRun(fl));}
@@ -2509,7 +2512,7 @@ function startDive(){
   const x=document.createElement("div");x.className="btn popClose";x.textContent="やめる";
   tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);$("itPop").classList.add("on");}
 function beginRun(fl){
-  const first=S.formation&&S.formation[0];if(first){const [k,id]=first.split(":");if(k!==S.cls){switchClass(k,()=>{S.avatars[k]=id;beginRun(fl);});return;}S.avatars[k]=id;}
+  const first=S.formation&&S.formation[0];if(first){const [k,id]=first.split(":");if(activeCharacterKey()!==first){selectCharacter(k,id,()=>beginRun(fl));return;}}
   $("scTown").classList.remove("on");$("scPause").classList.remove("on");
   S.scene="dungeon";S.paused=false;S.partyIndex=0;S.runT=0;S.runGold=0;S.startFloor=fl;
   S.dmgLog.length=0;S.dps=0;
@@ -2523,9 +2526,9 @@ function beginRun(fl){
 
 /* ---------- 保存 ---------- */
 const KEY="descent_v5";
-function save(){try{localStorage.setItem(KEY,JSON.stringify({cls:S.cls,deepest:S.deepest,
+function save(){storeActiveCharacter();try{localStorage.setItem(KEY,JSON.stringify({cls:S.cls,deepest:S.deepest,
   gold:S.gold,stash:S.stash,gear:S.gear,base:S.base,pots:S.pots,log:S.log,
-  settings:S.settings,admin:S.admin,debug:S.debug,debugFloor:S.debugFloor,adminOpts:S.adminOpts,chars:S.chars,avatars:S.avatars,formation:S.formation,diveFloor:S.diveFloor,stamina:S.stamina,premium:S.premium,profileAvatar:S.profileAvatar,shopSub:S.shopSub,gearSub:S.gearSub}));}catch(e){}}
+  settings:S.settings,admin:S.admin,debug:S.debug,debugFloor:S.debugFloor,adminOpts:S.adminOpts,chars:S.chars,characterStates:S.characterStates,avatars:S.avatars,formation:S.formation,diveFloor:S.diveFloor,stamina:S.stamina,premium:S.premium,profileAvatar:S.profileAvatar,shopSub:S.shopSub,gearSub:S.gearSub}));}catch(e){}}
 function load(){try{
   const d=JSON.parse(localStorage.getItem(KEY)||"null");
   if(!d||!d.cls||!CLASSES[d.cls])return false;
@@ -2549,8 +2552,8 @@ function load(){try{
   S.gear=ng;
   S.pots=d.pots==null?CFG.POTION_BASE:Math.min(CFG.POTION_MAX,d.pots);S.log=d.log||{runs:[]};
   S.settings=Object.assign({map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0},d.settings||{});
-  S.admin=!!d.admin;S.debug=!!d.debug;S.debugFloor=d.debugFloor||1;S.adminOpts=d.adminOpts||{};S.chars=d.chars||{};S.avatars=d.avatars||{};
-  S.formation=d.formation||[];S.diveFloor=d.diveFloor||1;S.stamina=d.stamina==null?100:d.stamina;S.premium=d.premium||0;S.profileAvatar=d.profileAvatar||null;S.shopSub=d.shopSub||"store";S.gearSub=d.gearSub||"equip";
+  S.admin=!!d.admin;S.debug=!!d.debug;S.debugFloor=d.debugFloor||1;S.adminOpts=d.adminOpts||{};S.chars=d.chars||{};S.characterStates=d.characterStates||{};S.avatars=d.avatars||{};
+  S.formation=d.formation||[];S.diveFloor=d.diveFloor||1;S.stamina=d.stamina==null?100:d.stamina;S.premium=d.premium||0;S.profileAvatar=d.profileAvatar||null;S.shopSub=d.shopSub||"gacha";S.gearSub=d.gearSub||"equip";
   if(!S.avatars[S.cls])S.avatars[S.cls]=CHARACTERS[S.cls][0].id;
   const nb=Object.assign({lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0},d.base||{});
   delete nb.need;
@@ -2559,6 +2562,8 @@ function load(){try{
     nb.str=nb.mag=nb.def=nb.agi=nb.spi=nb.luk=0;
     delete nb.dex;delete nb.vit;delete nb.ene;delete nb.para;}
   S.base=nb;
+  for(const st of Object.values(S.characterStates)){st.base=Object.assign({lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0},st.base||{});const fixed=emptyGear();for(const it of Object.values(st.gear||{})){const x=fix(it);if(x&&!fixed[x.slot])fixed[x.slot]=x;}st.gear=fixed;}
+  const active=S.characterStates[activeCharacterKey()];if(active){S.base=active.base;S.gear=active.gear;}else S.characterStates[activeCharacterKey()]={base:S.base,gear:S.gear};
   return true;}catch(e){return false;}}
 
 /* ---------- 起動 ---------- */
@@ -2570,7 +2575,7 @@ tapEl($("profileIcon"),openProfileIconPick);
 hook($("pauseB"),()=>{if(S.scene==="dungeon"&&!S.paused){S.ptab="drops";openPause();}});
 tapEl($("btnResume"),()=>{$("scPause").classList.remove("on");S.paused=false;updHUD();});
 tapEl($("btnGiveUp"),()=>{$("scPause").classList.remove("on");
-  ask("ここで力尽きる",`今回拾った ${S.bag.length} 個を失って拠点に戻ります。`,()=>endRun(false,"探索を断念した"));});
+  ask("ここで力尽きる",`編成全員を全滅扱いにして、今回拾った ${S.bag.length} 個を失って拠点に戻ります。`,()=>{S.partyIndex=S.formation.length;endRun(false,"探索を断念した");});});
 tapEl($("btnBack"),leaveEnd);
 tapEl($("askY"),()=>{$("askPop").classList.remove("on");S.paused=askPrevPaused;const f=askFn;askFn=null;if(f)f();});
 tapEl($("askN"),()=>{$("askPop").classList.remove("on");S.paused=askPrevPaused;askFn=null;});
@@ -2578,7 +2583,7 @@ hook($("lockHit"),lockHit);
 for(const t of document.querySelectorAll("#scTown .tab"))tapEl(t,()=>{S.tab=t.dataset.t;openTown();});
 for(const t of document.querySelectorAll("#scPause .tab"))tapEl(t,()=>{S.ptab=t.dataset.p;openPause();});
 
-if(load()){S.p=newPlayer();openTown();}else openClass();
+if(!load()){S.cls=CKEYS[0];S.avatars[S.cls]=CHARACTERS[S.cls][0].id;S.gear={};for(const k of SLOTK)S.gear[k]=null;S.p=newPlayer();save();}else S.p=newPlayer();openTown();
 
 let last=performance.now(),acc=0;
 function frame(now){
