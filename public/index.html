@@ -20,8 +20,8 @@
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:var(--fs);
   color:var(--ink);touch-action:none;user-select:none;-webkit-user-select:none;
   overscroll-behavior:none;font-variant-numeric:tabular-nums}
-body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
-  background:linear-gradient(180deg,#0b0911,#08070c)}
+/* Canvasを覆わない軽量な背景。 */
+body::before{display:none}
 canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
 
 #hud{position:absolute;top:0;left:0;right:56px;padding:calc(env(safe-area-inset-top) + 7px) 8px 8px 11px;
@@ -51,9 +51,9 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
 #mm{width:88px;height:88px;display:block}
 #mmGuide{display:grid;grid-template-columns:44px 44px;border-top:1px solid rgba(80,70,105,.7)}
 .mmDist{height:30px;display:flex;align-items:center;justify-content:center;gap:1px;font-size:9px;font-weight:900;background:rgba(10,8,16,.82)}
-.mmDist i{display:block;width:16px;height:20px;transform:rotate(var(--dir,0rad));transform-origin:center}
-.mmDist i::before{content:"";display:block;width:16px;height:20px;background:currentColor;
-  clip-path:polygon(100% 50%,0 0,22% 50%,0 100%)}
+.mmDist i{display:block;width:11px;height:14px;transform:rotate(var(--dir,0rad));transform-origin:center}
+.mmDist i::before{content:"";display:block;width:11px;height:14px;background:currentColor;
+  clip-path:polygon(100% 50%,0 36%,18% 50%,0 64%)}
 #mmStair{color:#e08830}#mmPortal{color:#5aa0ff}
 #buffs{position:absolute;left:11px;top:calc(env(safe-area-inset-top) + 108px);z-index:11;
   display:flex;flex-direction:column;gap:4px;pointer-events:none}
@@ -73,11 +73,11 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
 
 #stickZone{position:absolute;left:0;bottom:0;width:50%;height:46%;z-index:20}
 #stick{position:absolute;width:114px;height:114px;border-radius:50%;
-  border:1px solid rgba(200,190,220,.14);background:rgba(18,15,26,.3);
-  transform:translate(-50%,-50%);opacity:.16;transition:opacity .1s;pointer-events:none}
+  left:76px;bottom:calc(env(safe-area-inset-bottom) + 54px);border:1px solid rgba(220,210,235,.15);background:rgba(25,21,34,.12);
+  transform:translate(-50%,0);opacity:.22;transition:opacity .1s;pointer-events:none}
 #stick>i{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;
   border-radius:50%;background:rgba(222,215,236,.26);
-  box-shadow:0 0 16px rgba(255,240,210,.22),inset 0 0 0 1px rgba(255,255,255,.14)}
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.10)}
 #pad{position:absolute;right:6px;bottom:calc(env(safe-area-inset-bottom) + 12px);z-index:20;
   width:200px;height:190px;pointer-events:none}
 .sk{position:absolute;border-radius:50%;pointer-events:auto;overflow:hidden;
@@ -157,6 +157,7 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .compactGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 .compactGrid .btn{margin-top:0;padding:9px 5px;font-size:10px}
+.adminGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.adminGrid .btn{margin:0;padding:9px 3px;font-size:9px}
 .slot{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
   border-radius:3px;padding:9px 5px;text-align:center;min-height:78px;display:flex;
   flex-direction:column;justify-content:center;gap:3px}
@@ -496,9 +497,9 @@ addEventListener("resize",resize);
 const IN={dx:0,dy:0,id:-1,ox:0,oy:0};
 const stick=$("stick"),zone=$("stickZone");
 const STICK_MAX=50;
-function sStart(x,y,id){IN.id=id;IN.ox=x;IN.oy=y;
-  stick.style.left=x+"px";stick.style.top=y+"px";stick.style.opacity="1";
-  stick.firstElementChild.style.transform="translate(0,0)";aInit();}
+function sStart(x,y,id){const r=stick.getBoundingClientRect();IN.id=id;IN.ox=r.left+r.width/2;IN.oy=r.top+r.height/2;
+  stick.style.opacity=".55";
+  stick.firstElementChild.style.transform="translate(0,0)";sMove(x,y);aInit();}
 function sMove(x,y){
   /* 生の距離で割ると、遠くまで引くほど遅くなる（クランプ後のベクトルを
      クランプ前の長さで割っていたのが原因）。クランプ後の長さで正規化する。 */
@@ -507,7 +508,7 @@ function sMove(x,y){
   dx=dx/raw*cl; dy=dy/raw*cl;
   stick.firstElementChild.style.transform=`translate(${dx}px,${dy}px)`;
   if(cl<7){IN.dx=0;IN.dy=0;}else{IN.dx=dx/STICK_MAX;IN.dy=dy/STICK_MAX;}}
-function sEnd(){IN.id=-1;IN.dx=0;IN.dy=0;stick.style.opacity=".16";}
+function sEnd(){IN.id=-1;IN.dx=0;IN.dy=0;stick.style.opacity=".22";}
 zone.addEventListener("touchstart",e=>{e.preventDefault();if(IN.id!==-1)return;
   const t=e.changedTouches[0];sStart(t.clientX,t.clientY,t.identifier);},{passive:false});
 zone.addEventListener("touchmove",e=>{e.preventDefault();
@@ -815,7 +816,7 @@ const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   bag:[],stash:[],gear:{},
   runT:0,hitstop:0,shake:0,shakeT:0,flash:0,paused:true,
   log:{runs:[]},tab:"gear",ptab:"drops",pots:CFG.POTION_BASE,lvlQ:0,
-  settings:{map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,eco:0},admin:false,debug:false,chars:{},avatars:{},
+  settings:{map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0},admin:false,debug:false,debugFloor:1,chars:{},avatars:{},
   combo:0,comboT:0,dmgLog:[],dps:0,startFloor:1,runGold:0,
   inv:{filters:[],sort:"score",sellSel:[],sellRar:1},
   alloc:null,
@@ -1892,6 +1893,7 @@ function drawMM(){
 /* ---------- HUD ---------- */
 function updHUD(){
   const p=S.p;if(!p)return;
+  $("stickZone").style.display=S.settings.stick?"block":"none";
   $("hpF").style.width=(p.hp/p.max*100)+"%";
   $("hpT").textContent=Math.ceil(p.hp)+"/"+Math.ceil(p.max);
   $("mpF").style.width=(p.mp/p.d.mpMax*100)+"%";
@@ -1995,11 +1997,6 @@ function openTown(){
   for(const t of document.querySelectorAll("#scTown .tab"))t.classList.toggle("on",t.dataset.t===S.tab);
   renderTown();}
 
-function classPicker(host,disabled){
-  const jobs=document.createElement("div");jobs.className="compactGrid";
-  for(const k of CKEYS){const cur=k===S.cls,sv=S.chars[k],d=document.createElement("div");
-    d.className="btn "+(cur||disabled?"no":"gh");d.textContent=CLASSES[k].name+(cur?"（使用中）":sv&&sv.base?` Lv${sv.base.lv}`:"（新規）");
-    if(!disabled&&!cur)tapEl(d,()=>switchClass(k));jobs.appendChild(d);}host.appendChild(jobs);}
 function gearGrid(host,inDungeon){
   const gg=document.createElement("div");gg.className="g3";
   {const ch=currentCharacter(),d=document.createElement("div");d.className="slot"+(inDungeon?" no":"");
@@ -2011,13 +2008,19 @@ function gearGrid(host,inDungeon){
       <div class="sl">${s.n}</div>
       <div class="si ${it?RC[it.rar]:""}">${it?it.name:"—"}</div>`;
     tapEl(d,()=>openGearDetail(s.k,inDungeon));gg.appendChild(d);}
-  host.appendChild(gg);
-  const h=document.createElement("h3");h.textContent="職業";host.appendChild(h);classPicker(host,inDungeon);}
-function openCharacterPick(){const c=$("itC"),list=CHARACTERS[S.cls];c.classList.remove("gearCompare");
-  c.innerHTML='<div style="font-size:15px;font-weight:800;margin-bottom:10px">キャラクター変更</div>';
+  host.appendChild(gg);}
+function openCharacterPick(){const c=$("itC");c.classList.remove("gearCompare");
+  c.innerHTML='<div style="font-size:15px;font-weight:800;margin-bottom:10px">職業を選択</div>';
+  for(const k of CKEYS){const d=document.createElement("div"),sv=S.chars[k];d.className="card tap";
+    d.innerHTML=`<div class="nm" style="color:${CLASSES[k].col}">${CLASSES[k].name}</div><div class="ty">${k===S.cls?"使用中":sv&&sv.base?`Lv${sv.base.lv}`:"新規"}</div><div class="st">${CLASSES[k].desc}</div>`;
+    tapEl(d,()=>k===S.cls?openCharacterChoices(k):switchClass(k,()=>openCharacterChoices(k)));c.appendChild(d);}
+  const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);$("itPop").classList.add("on");}
+function openCharacterChoices(k){const c=$("itC"),list=CHARACTERS[k];
+  c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:10px">${CLASSES[k].name}のキャラクター</div>`;
   for(const ch of list){const d=document.createElement("div"),on=currentCharacter().id===ch.id;
     d.className="card tap";d.innerHTML=`<div class="row"><div><div class="nm" style="color:${ch.col}">● ${ch.n}</div><div class="ty">${ch.trait}</div></div>${on?'<span class="tag">選択中</span>':""}</div><div class="st">${ch.d}</div>`;
     tapEl(d,()=>{S.avatars[S.cls]=ch.id;S.p=newPlayer();save();$("itPop").classList.remove("on");openTown();});c.appendChild(d);}
+  const back=document.createElement("div");back.className="btn gh";back.textContent="職業選択へ戻る";tapEl(back,openCharacterPick);c.appendChild(back);
   const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);$("itPop").classList.add("on");}
 function statLine(nm,total,opt,pct){
   const base=total-opt;
@@ -2034,6 +2037,11 @@ function statBlock(host){
     for(const id of d.pw){const P=POWER(id);if(!P)continue;
       const e=document.createElement("div");e.className="card";
       e.innerHTML=`<div class="nm c4">◆ ${P.n}</div><div class="st">${P.d}</div>`;host.appendChild(e);}}}
+function renderGearTab(host,inDungeon){const panel=document.createElement("div");panel.className="gearPanel";
+  const left=document.createElement("div"),right=document.createElement("div");
+  left.innerHTML="<h3>装備</h3>";right.innerHTML="<h3>能力値</h3>";
+  gearGrid(left,inDungeon);statBlock(right);panel.append(left,right);host.appendChild(panel);}
+function renderAbilityTab(host,after){const h=document.createElement("h3");h.textContent="ステータス";host.appendChild(h);allocBlock(host,after);}
 const STATDEF=[["str","筋力","物理攻撃力"],["mag","魔力","特殊攻撃力"],
   ["def","防御","防御力・状態異常耐性・最大HP"],["agi","素早さ","回避率・移動速度・攻撃速度"],
   ["spi","精神","MP上限と回復"],["luk","運","ドロップ品質・宝箱・獲得金貨"]];
@@ -2094,10 +2102,7 @@ function renderTown(){
     while(d.firstChild)b.appendChild(d.firstChild);};
   const btn=(txt,cls,fn)=>{const d=document.createElement("div");d.className="btn "+(cls||"");
     d.textContent=txt;tapEl(d,fn);b.appendChild(d);return d;};
-  if(S.tab==="gear"){const panel=document.createElement("div");panel.className="gearPanel";
-    const left=document.createElement("div"),right=document.createElement("div");
-    left.innerHTML="<h3>装備</h3>";right.innerHTML="<h3>能力値</h3>";
-    gearGrid(left,false);statBlock(right);panel.append(left,right);b.appendChild(panel);}
+  if(S.tab==="gear")renderGearTab(b,false);
   if(S.tab==="inv")renderInv(b);
   if(S.tab==="shop"){
     const gc=Math.round(200+S.deepest*90);
@@ -2119,7 +2124,7 @@ function renderTown(){
       d.textContent=lbl+"： "+(S.settings[k]?"ON":"OFF");
       tapEl(d,()=>{S.settings[k]=S.settings[k]?0:1;if(k==="eco")resize();save();openTown();});cg.appendChild(d);};
     tg("map","ミニマップ");tg("dmg","ダメージ数値");tg("dps","DPS");tg("loot","取得アイテム");
-    tg("timer","タイマー");tg("shake","画面の揺れ");tg("eco","省電力モード");
+    tg("timer","タイマー");tg("shake","画面の揺れ");tg("stick","移動キー表示");tg("eco","省電力モード");
     add(`<h3>記録・管理</h3>`);const misc=document.createElement("div");misc.className="compactGrid";b.appendChild(misc);
     const rec=document.createElement("div");rec.className="btn gh";rec.textContent="記録を見る";tapEl(rec,openRecords);misc.appendChild(rec);
     const reset=document.createElement("div");reset.className="btn gh";reset.textContent="初期化";tapEl(reset,()=>{
@@ -2129,27 +2134,30 @@ function renderTown(){
       "border:1px solid var(--line);color:var(--ink);font-size:13px";
     b.appendChild(inp);
     const ok=document.createElement("div");ok.className="btn gh";ok.textContent="適用";
-    tapEl(ok,()=>{const code=inp.value.trim();if(code==="pM97342Gamt"||code==="omiomi"){S.admin=true;S.debug=code==="omiomi"||S.debug;SFX.lvl();
-      toast(S.debug?"デバッグモード":"管理者モード");save();openTown();}else{SFX.ng();toast("コードが違う");}});
+    tapEl(ok,()=>{const code=inp.value.trim();if(code==="pM97342Gamt"||code==="omiomi"){
+      if(code==="omiomi")S.debug=true;else S.admin=true;SFX.lvl();toast(code==="omiomi"?"デバッグモード":"管理者モード");save();openTown();
+      }else{SFX.ng();toast("コードが違う");}});
     b.appendChild(ok);
+    if(S.admin||S.debug){const modes=document.createElement("div");modes.className="compactGrid";b.appendChild(modes);
+      const off=(label,key)=>{const d=document.createElement("div");d.className="btn gh";d.textContent=label+"を終了";tapEl(d,()=>{S[key]=false;save();openTown();});modes.appendChild(d);};
+      if(S.admin)off("管理者モード","admin");if(S.debug)off("デバッグモード","debug");
+      add(`<h3>テスト開始階層</h3>`);const floor=document.createElement("input");floor.type="number";floor.min=1;floor.max=999999;floor.value=S.debugFloor||1;
+      floor.style.cssText="width:100%;padding:9px;background:#0a0810;border:1px solid var(--gold);color:var(--ink);border-radius:3px";
+      floor.addEventListener("change",()=>{S.debugFloor=clamp(Math.floor(+floor.value||1),1,999999);save();});b.appendChild(floor);
+      const dive=document.createElement("div");dive.className="btn gold";dive.textContent="指定階層へ潜る";tapEl(dive,()=>confirmDive(S.debugFloor||1));b.appendChild(dive);}
     if(S.admin){
       add(`<h3 style="color:var(--gold)">管理者モード</h3>`);
-      const edit=(label,get,set,min=0,max=9999999)=>{const row=document.createElement("label");row.className="row card";row.style.padding="7px 9px";
-        row.innerHTML=`<span class="ty" style="margin:0">${label}</span>`;const n=document.createElement("input");n.type="number";n.min=min;n.max=max;n.value=get();n.style.cssText="width:92px;padding:6px;background:#0a0810;border:1px solid var(--line);color:var(--ink);border-radius:3px";
-        n.addEventListener("change",()=>{set(clamp(Math.floor(+n.value||0),min,max));S.p.d=derive();recalcHP(S.p);save();openTown();});row.appendChild(n);b.appendChild(row);};
-      edit("ゴールド",()=>S.gold,v=>S.gold=v);edit("レベル",()=>S.base.lv,v=>S.base.lv=v,1,CFG.LV_CAP);
-      edit("経験値",()=>S.base.xp,v=>S.base.xp=v);edit("未割当ポイント",()=>S.base.pts,v=>S.base.pts=v);
-      edit("最深到達階層",()=>S.deepest,v=>S.deepest=v,1);for(const [k,n] of STATDEF)edit(n,()=>S.base[k],v=>S.base[k]=v);
-      btn("金貨 +100000","gold",()=>{S.gold+=100000;save();openTown();});
-      btn("ステータスポイント +100","gh",()=>{S.base.pts+=100;S.alloc=null;save();openTown();});
-      btn("レベル +10","gh",()=>{S.base.lv=Math.min(CFG.LV_CAP,S.base.lv+10);
-        S.base.pts+=10*CFG.STAT_PER_LV;S.p.d=derive();recalcHP(S.p);save();openTown();});
-      btn("最深到達 +10","gh",()=>{S.deepest+=10;save();openTown();});
-      for(let r=0;r<5;r++)btn("装備を5個生成 — "+CFG.RARITY[r][0],"gh",()=>{
-        for(let i=0;i<5;i++)S.stash.push(makeItem(Math.max(1,S.deepest),0,0,r));
-        SFX.chest();save();openTown();});
-      btn("ポーション満タン","gh",()=>{S.pots=CFG.POTION_MAX;save();openTown();});}}
-  if(S.tab==="char"){add(`<h3>ステータス</h3>`);allocBlock(b,openTown);}}
+      const grid=document.createElement("div");grid.className="adminGrid";b.appendChild(grid);
+      const action=(label,fn)=>{const d=document.createElement("div");d.className="btn gh";d.textContent=label;tapEl(d,fn);grid.appendChild(d);};
+      const number=(label,initial,fn,min=0,max=9999999)=>{const v=prompt(label,String(initial));if(v===null)return;fn(clamp(Math.floor(+v||0),min,max));S.p.d=derive();recalcHP(S.p);save();openTown();};
+      action("ゴールド追加",()=>number("追加するゴールド",10000,v=>S.gold+=v));action("ゴールド設定",()=>number("所持ゴールド",S.gold,v=>S.gold=v));
+      action("レベル",()=>number("レベル",S.base.lv,v=>S.base.lv=v,1,CFG.LV_CAP));action("経験値",()=>number("経験値",S.base.xp,v=>S.base.xp=v));
+      action("ポイント",()=>number("未割当ポイント",S.base.pts,v=>S.base.pts=v));action("最深階層",()=>number("最深到達階層",S.deepest,v=>S.deepest=v,1));
+      for(const [k,n] of STATDEF)action(n,()=>number(n,S.base[k],v=>S.base[k]=v));
+      action("装備生成",()=>{const count=clamp(Math.floor(+(prompt("生成数","5")||0)),0,500),rar=clamp(Math.floor(+(prompt("レア度 0〜4","2")||0)),0,4),fl=clamp(Math.floor(+(prompt("装備深度",String(S.deepest))||1)),1,999999);for(let i=0;i<count;i++)S.stash.push(makeItem(fl,0,0,rar));SFX.chest();save();openTown();});
+      action("倉庫を空に",()=>{S.stash=[];save();openTown();});action("ポーション",()=>number("ポーション数",S.pots,v=>S.pots=v,0,CFG.POTION_MAX));
+      action("HP/MP回復",()=>{S.p.hp=S.p.max;S.p.mp=S.p.d.mpMax;save();openTown();});action("全階層解放",()=>{S.deepest=999999;save();openTown();});}}
+  if(S.tab==="char")renderAbilityTab(b,openTown);}
 
 function openRecords(){const r=S.log.runs;invMenu("記録",c=>{
   const d=document.createElement("div");d.className="card";d.innerHTML=`
@@ -2347,7 +2355,7 @@ function openPick(slotK,inDungeon){
 /* ---------- ダンジョン内の一時停止 ---------- */
 /* 職業切替: レベル/ステータス/装備は職業ごと、金貨と倉庫は共有 */
 /* 職業切替: レベルとステータスは職業ごと。装備・金貨・倉庫は共有。 */
-function switchClass(k){
+function switchClass(k,after){
   S.chars[S.cls]={base:S.base};
   const sv=S.chars[k];
   S.base=sv&&sv.base?sv.base
@@ -2357,7 +2365,7 @@ function switchClass(k){
   if(w&&w.wt&&WCLS[w.wt]!==k){S.stash.push(w);S.gear.weapon=null;
     toast(CLASSES[k].name+"は"+(w.wt==="sword"?"剣":"杖")+"を装備できないため外しました");}
   S.p=newPlayer();
-  SFX.lvl();save();openTown();}
+  SFX.lvl();save();if(after)after();else openTown();}
 function openPause(){
   S.paused=true;for(let i=0;i<4;i++)HELD[i]=false;IN.dx=IN.dy=0;
   $("scPause").classList.add("on");
@@ -2378,19 +2386,14 @@ function openPause(){
     note.textContent="未帰還の装備は種類・レア度・深度だけ確認できる。オプションは帰還後に鑑定される。";
     b.appendChild(note);
   }else if(S.ptab==="gear"){
-    const h=document.createElement("div");h.className="card";
-    h.innerHTML=`<div class="st">ここで装備できるのは<b>持ち帰り済み</b>のものだけ。
-      今回拾った ${S.bag.length} 個は帰還するまで使えない。</div>`;
-    b.appendChild(h);
-    gearGrid(b,true);
-    const h2=document.createElement("h3");h2.textContent="能力値";b.appendChild(h2);statBlock(b);
-  }else if(S.ptab==="char"){allocBlock(b,openPause);}
+    renderGearTab(b,true);
+  }else if(S.ptab==="char")renderAbilityTab(b,openPause);
   else{
     const grid=document.createElement("div");grid.className="compactGrid";
     const addToggle=(k,lbl)=>{const d=document.createElement("div");d.className="btn"+(S.settings[k]?" gold":" gh");d.textContent=lbl+"："+(S.settings[k]?"ON":"OFF");
       tapEl(d,()=>{S.settings[k]=S.settings[k]?0:1;if(k==="eco")resize();save();openPause();});grid.appendChild(d);};
     const h=document.createElement("h3");h.textContent="設定";b.appendChild(h);
-    b.appendChild(grid);addToggle("map","ミニマップ");addToggle("dmg","ダメージ数字");addToggle("dps","DPS");addToggle("loot","取得アイテム");addToggle("timer","タイマー");addToggle("shake","画面揺れ");addToggle("eco","省電力");}
+    b.appendChild(grid);addToggle("map","ミニマップ");addToggle("dmg","ダメージ数値");addToggle("dps","DPS");addToggle("loot","取得アイテム");addToggle("timer","タイマー");addToggle("shake","画面の揺れ");addToggle("stick","移動キー表示");addToggle("eco","省電力モード");}
 }
 
 /* ---------- クラス選択 / 潜行 ---------- */
@@ -2414,8 +2417,8 @@ function confirmDive(fl){
     ()=>beginRun(fl));}
 function startDive(){
   // 階層が数百/数千になっても、ページ切り替えで開始地点を選ぶ
-  const st=S.admin?1:CFG.SKIP_STEP;
-  const maxStart=S.debug?Math.max(999,S.deepest):Math.max(1,Math.floor((S.deepest-1)/st)*st+1);
+  const st=CFG.SKIP_STEP;
+  const maxStart=Math.max(1,Math.floor((S.deepest-1)/st)*st+1);
   if(maxStart<=1){confirmDive(1);return;}
   const starts=[];for(let f=1;f<=maxStart;f+=st)starts.push(f);
   const pageSize=6,maxPage=Math.max(0,Math.ceil(starts.length/pageSize)-1);
@@ -2425,11 +2428,9 @@ function startDive(){
   const c=$("itC");
   c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:4px">開始する深度</div>
     <div class="sub" style="margin-bottom:10px">解放済み ${starts.length}地点 / 最大 ${maxStart}F</div>`;
-  if(S.debug){const row=document.createElement("div");row.className="row card";
-    row.innerHTML='<span class="ty">デバッグ指定</span>';const n=document.createElement("input");n.type="number";n.min=1;n.max=999999;n.value=Math.min(S.deepest,999);
-    n.style.cssText="width:110px;padding:7px;background:#0a0810;border:1px solid var(--gold);color:var(--ink);border-radius:3px";
-    const go=document.createElement("div");go.className="btn gold";go.style.margin="0";go.textContent="開始";
-    tapEl(go,()=>{$("itPop").classList.remove("on");confirmDive(clamp(Math.floor(+n.value||1),1,999999));});row.append(n,go);c.appendChild(row);}
+  if(starts.length>12){const row=document.createElement("div");row.className="row card";row.innerHTML='<span class="ty">階層へ移動</span>';
+    const n=document.createElement("input");n.type="number";n.min=1;n.max=maxStart;n.value=maxStart;n.style.cssText="width:100px;padding:7px;background:#0a0810;border:1px solid var(--line);color:var(--ink);border-radius:3px";
+    const go=document.createElement("div");go.className="btn gh";go.style.margin="0";go.textContent="表示";tapEl(go,()=>{const fl=clamp(Math.floor((+n.value-1)/st)*st+1,1,maxStart),idx=starts.indexOf(fl);S.startPage=Math.floor((starts.length-1-idx)/pageSize);startDive();});row.append(n,go);c.appendChild(row);}
   const nav=document.createElement("div");nav.className="g2";
   const newer=document.createElement("div");newer.className="btn gh"+(S.startPage<=0?" no":"");newer.textContent="より深い";
   tapEl(newer,()=>{if(S.startPage<=0)return;S.startPage--;startDive();});nav.appendChild(newer);
@@ -2457,7 +2458,7 @@ function beginRun(fl){
 const KEY="descent_v5";
 function save(){try{localStorage.setItem(KEY,JSON.stringify({cls:S.cls,deepest:S.deepest,
   gold:S.gold,stash:S.stash,gear:S.gear,base:S.base,pots:S.pots,log:S.log,
-  settings:S.settings,admin:S.admin,debug:S.debug,chars:S.chars,avatars:S.avatars}));}catch(e){}}
+  settings:S.settings,admin:S.admin,debug:S.debug,debugFloor:S.debugFloor,chars:S.chars,avatars:S.avatars}));}catch(e){}}
 function load(){try{
   const d=JSON.parse(localStorage.getItem(KEY)||"null");
   if(!d||!d.cls||!CLASSES[d.cls])return false;
@@ -2480,8 +2481,8 @@ function load(){try{
   for(const k in S.gear){const it=fix(S.gear[k]);if(it&&!ng[it.slot])ng[it.slot]=it;}
   S.gear=ng;
   S.pots=d.pots==null?CFG.POTION_BASE:Math.min(CFG.POTION_MAX,d.pots);S.log=d.log||{runs:[]};
-  S.settings=Object.assign({map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,eco:0},d.settings||{});
-  S.admin=!!d.admin;S.debug=!!d.debug;S.chars=d.chars||{};S.avatars=d.avatars||{};
+  S.settings=Object.assign({map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0},d.settings||{});
+  S.admin=!!d.admin;S.debug=!!d.debug;S.debugFloor=d.debugFloor||1;S.chars=d.chars||{};S.avatars=d.avatars||{};
   if(!S.avatars[S.cls])S.avatars[S.cls]=CHARACTERS[S.cls][0].id;
   const nb=Object.assign({lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0},d.base||{});
   delete nb.need;
