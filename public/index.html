@@ -183,7 +183,7 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
   border:1px solid #4a3e70;color:#c8bcf0;font-size:18px;font-weight:900;
   display:flex;align-items:center;justify-content:center}
 .plus.no{opacity:.2}
-#townBody .alloc{padding:4px 0}#townBody .alloc .ad{display:block;font-size:8px;margin-top:1px}#townBody .alloc .plus{width:27px;height:27px}
+#townBody .alloc,#pauseBody .alloc{padding:4px 0}#townBody .alloc .ad,#pauseBody .alloc .ad{display:block;font-size:8px;margin-top:1px}#townBody .alloc .plus,#pauseBody .alloc .plus{width:27px;height:27px}
 #townBody>h3{margin:10px 0 6px}
 .profile{display:grid;grid-template-columns:54px 1fr auto;gap:10px;align-items:center;margin-top:8px}
 .profileIcon{width:52px;height:52px;border:1px solid var(--line2);background:#171321;border-radius:50%;display:grid;place-items:center;font-size:27px}
@@ -194,9 +194,9 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 .formation{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.member{min-height:92px;padding:8px 4px;text-align:center;border:1px solid var(--line);background:var(--panel);border-radius:3px}
 .member.on{border-color:var(--gold)}.member .order{font-size:8px;color:var(--gold)}.member .face{font-size:24px;margin:4px}.member .ty{font-size:8px}
 .prepDepth{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.prepDepth input{width:96px;padding:9px;background:#0a0810;border:1px solid var(--line2);color:var(--ink)}
-.floorStep{display:grid;grid-template-columns:34px 92px 34px;gap:5px}.floorStep .btn{margin:0;padding:8px 2px}.floorStep input{width:92px;text-align:center;font-size:22px;font-weight:950;font-variant-numeric:tabular-nums}.prepDepth>.nm,.prepDepth .nm{font-size:17px;font-weight:950}
+.floorStep{display:grid;grid-template-columns:34px 112px 34px;gap:5px}.floorStep .btn{margin:0;padding:8px 2px}.floorStep input{box-sizing:border-box;width:112px;min-width:0;text-align:center;font-size:18px;font-weight:900;font-variant-numeric:tabular-nums;padding:9px 3px}.prepDepth .nm{font-size:13px;font-weight:800}
 .pointBox{padding:5px 9px!important;margin-bottom:3px}.pointBox .st{margin:0;line-height:1.35}
-.characterIconGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0}.characterIconChoice{aspect-ratio:1;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;border-radius:50%;font-size:28px;position:relative}.characterIconChoice.on{border:2px solid var(--gold);box-shadow:0 0 10px rgba(224,192,64,.35)}.characterIconChoice small{position:absolute;bottom:-13px;font-size:7px;color:var(--ink2);white-space:nowrap}.shopTabs{display:flex;gap:5px;margin-bottom:9px}.shopTabs .btn{flex:1;margin:0;padding:8px 3px;font-size:10px}
+.characterIconGrid{display:grid;grid-template-columns:repeat(5,1fr);column-gap:8px;row-gap:24px;margin:12px 0 22px}.characterIconChoice{aspect-ratio:1;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;border-radius:50%;font-size:28px;position:relative}.characterIconChoice.on{border:2px solid var(--gold);box-shadow:0 0 10px rgba(224,192,64,.35)}.characterIconChoice small{position:absolute;bottom:-17px;font-size:8px;line-height:1.2;color:var(--ink2);white-space:nowrap}.shopTabs{display:flex;gap:5px;margin-bottom:9px}.shopTabs .btn{flex:1;margin:0;padding:8px 3px;font-size:10px}
 .sellDock{margin:10px -15px -20px;padding:9px 15px calc(env(safe-area-inset-bottom) + 9px);background:var(--bg2);border-top:1px solid var(--line);display:grid;grid-template-columns:auto 1fr auto;gap:7px;align-items:center}.sellDock .btn{margin:0;padding:9px}.sellDock .amount{text-align:center;color:var(--gold);font-size:11px;font-weight:900}
 .sellSheet .sellSummary{position:sticky;top:-20px;z-index:2;background:#191424;border-bottom:1px solid var(--line2);padding-bottom:10px}.sellChoices{display:grid;grid-template-columns:1fr 1fr;gap:7px}.sellChoices .btn{margin:0}
 
@@ -211,8 +211,8 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
   background:linear-gradient(180deg,var(--panel),var(--panel2))}
 .cell:active{filter:brightness(1.5)}
 .cell.sel{outline:2px solid var(--gold);outline-offset:-2px}
-.cell .eq{position:absolute;top:2px;right:3px;font-size:8px;font-weight:900;color:var(--gold)}
-.cell .lvl{position:absolute;bottom:1px;right:3px;font-size:8px;color:var(--ink3);font-weight:700}
+.cell .eq{position:absolute;top:2px;right:3px;font-size:16px;line-height:1;font-weight:900;color:var(--gold)}
+.cell .lvl{position:absolute;bottom:1px;right:3px;font-size:16px;line-height:1;color:var(--ink3);font-weight:700}
 #sellBar{position:sticky;bottom:-20px;background:var(--bg2);border-top:1px solid var(--line);
   margin:10px -15px -20px;padding:10px 15px calc(env(safe-area-inset-bottom) + 12px);z-index:5;
   box-shadow:0 -10px 20px rgba(8,7,12,.9)}
@@ -262,7 +262,7 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
 .qd{border:1px solid var(--line);background:#100d18;border-radius:3px;padding:7px 8px;font-size:10px}
 .qd b{display:block;font-size:13px;color:#efe8ff}.qd .up{color:#6ae86a}.qd .dn{color:#ff7070}
 .optBox{max-height:180px;overflow-y:auto;touch-action:pan-y;border-top:1px solid var(--line);margin-top:8px;padding-top:8px}
-.bagList{display:flex;flex-direction:column;gap:7px}.bagRow{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);background:#100e18;border-radius:3px;padding:9px 10px;font-size:11px;font-weight:800}
+.lootPanel{font-size:10px}.lootPanel h3{font-size:10px;line-height:1.3;letter-spacing:.12em;margin:10px 0 6px}.lootPanel .card{padding:9px}.lootPanel .st{font-size:10px;line-height:1.5;margin-top:5px}.bagList{display:flex;flex-direction:column;gap:5px}.bagRow{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);background:#100e18;border-radius:3px;padding:7px 9px;font-size:10px;line-height:1.3;font-weight:700}
 .gearPanel{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:8px;align-items:start}
 .gearPanel h3{margin:4px 0 6px}.gearPanel .g3{grid-template-columns:repeat(4,1fr);gap:5px}
 .gearPanel .slot{min-height:58px;padding:5px 3px}.gearPanel .slot .si{font-size:8px}.gearPanel .slot .sl{font-size:8px}
@@ -601,35 +601,36 @@ const SLOTK=SLOTS.map(s=>s.k);
 const SLOTN=k=>(SLOTS.find(s=>s.k===k)||{n:"?"}).n;
 const ACLS=["warrior","mage"];
 const BASEN={weapon:null,
-  helm:{warrior:["兜","面頬"],mage:["フード","額冠"]},
-  armor:{warrior:["鎧","胸当て"],mage:["法衣","外套"]},
-  glove:{warrior:["手甲","篭手"],mage:["布手袋","指抜き"]},
-  boot:{warrior:["鉄靴","脛当て"],mage:["軽靴","沓"]},
-  ring:["指輪","印章"],amulet:["首飾り","護符"]};
+  helm:{warrior:["バシネット","サレット","グレートヘルム"],mage:["秘術師のフード","星詠みのサークレット","ルーンの頭巾"]},
+  armor:{warrior:["ブリガンダイン","キュイラス","プレートメイル"],mage:["秘紋のローブ","賢者のマント","呪織の法衣"]},
+  glove:{warrior:["ガントレット","ヴァンブレイス","鎖帷子の手袋"],mage:["術式の手袋","ルーン・グローブ","詠唱者の腕布"]},
+  boot:{warrior:["サバトン","グリーヴ","鎖帷子のブーツ"],mage:["星布のブーツ","旅魔導師の長靴","影縫いの靴"]},
+  ring:["シグネットリング","銀環","宝珠の指輪"],amulet:["メダリオン","タリスマン","ルーンペンダント"]};
 const ACSLOT=k=>["helm","armor","glove","boot"].includes(k);
-const WEAPN={sword:["剣","斧","戦鎚","槍"],staff:["杖","錫杖","魔典"]};
+const WEAPN={sword:["ロングソード","ファルシオン","バトルアックス","ウォーハンマー","パルチザン"],staff:["オークスタッフ","クリスタルワンド","儀式用錫杖","グリモワール"]};
 const WCLS={sword:"warrior",staff:"mage"};   // 剣は戦士専用 / 杖は魔術師専用
+const LEGACY_BASE_NAMES={"剣":"ロングソード","斧":"バトルアックス","戦鎚":"ウォーハンマー","槍":"パルチザン","杖":"オークスタッフ","錫杖":"儀式用錫杖","魔典":"グリモワール","兜":"バシネット","面頬":"サレット","フード":"秘術師のフード","額冠":"星詠みのサークレット","鎧":"キュイラス","胸当て":"ブリガンダイン","法衣":"呪織の法衣","外套":"賢者のマント","手甲":"ヴァンブレイス","篭手":"ガントレット","布手袋":"術式の手袋","指抜き":"ルーン・グローブ","鉄靴":"サバトン","脛当て":"グリーヴ","軽靴":"影縫いの靴","沓":"星布のブーツ","指輪":"銀環","印章":"シグネットリング","首飾り":"メダリオン","護符":"タリスマン"};
 const ICONP={
-  weapon:'M12 2 L14 5 L14 14 L12 17 L10 14 L10 5 Z M7 16 L17 16 M12 17 L12 22',
-  sword:'M12 2 L14 5 L14 14 L12 17 L10 14 L10 5 Z M7 16 L17 16 M12 17 L12 22',
+  weapon:'M12 1 L15 5 L13 15 L11 17 L9 15 L10 5 Z M6 16 L18 16 M9 20 L15 20 M12 17 L12 23',
+  sword:'M12 1 L15 5 L13 15 L11 17 L9 15 L10 5 Z M6 16 L18 16 M9 20 L15 20 M12 17 L12 23',
   axe:'M13 3 L20 5 L18 11 L13 10 M13 3 L10 21 M8 19 L12 21',
   hammer:'M7 4 L19 4 L19 9 L7 9 Z M13 9 L13 22 M10 20 L16 20',
   spear:'M12 2 L15 7 L12 10 L9 7 Z M12 9 L12 22 M9 20 L15 20',
   book:'M4 5 Q8 3 12 6 Q16 3 20 5 L20 19 Q16 17 12 20 Q8 17 4 19 Z M12 6 L12 20',
-  helm:'M4 12 A8 8 0 0 1 20 12 L20 17 L16 17 L16 13 L8 13 L8 17 L4 17 Z',
-  armor:'M6 4 L12 7 L18 4 L20 11 L17 12 L17 20 L7 20 L7 12 L4 11 Z',
-  glove:'M7 9 L7 5 L10 5 L10 9 L13 9 L13 6 L16 6 L16 13 A4 4 0 0 1 12 17 L9 17 A3 3 0 0 1 6 14 L6 10 Z',
-  boot:'M8 3 L13 3 L13 13 L19 16 L19 21 L8 21 Z',
+  helm:'M4 12 A8 9 0 0 1 20 12 L20 19 L16 19 L16 14 L13 14 L12 18 L11 14 L8 14 L8 19 L4 19 Z M7 10 L17 10',
+  armor:'M6 3 L10 5 L12 8 L14 5 L18 3 L22 8 L18 12 L17 21 L7 21 L6 12 L2 8 Z M9 8 L9 18 M15 8 L15 18',
+  glove:'M5 11 L5 6 L8 6 L8 10 L10 10 L10 4 L13 4 L13 10 L15 10 L15 6 L18 6 L18 15 Q17 20 12 21 Q7 20 6 16 Z',
+  boot:'M8 2 L14 2 L14 13 L20 16 L20 21 L7 21 L7 17 L10 14 Z M8 7 L14 7 M8 11 L14 11',
   belt:'M2 9 L22 9 L22 15 L2 15 Z M9 8 L9 16 M15 8 L15 16',
   ring:'M12 8 A5 5 0 1 0 12 18 A5 5 0 1 0 12 8 Z M12 3 L15 7 L9 7 Z',
-  staff:'M8 21 L16 4 M13 3 A3.4 3.4 0 1 0 19 3 A3.4 3.4 0 1 0 13 3',
+  staff:'M8 22 L15 7 M15 7 L12 4 L16 1 L20 4 L17 8 Z M6 22 L11 22 M14 13 L18 15',
   amulet:'M5 3 A10 10 0 0 0 19 3 M12 11 L15 15 L12 20 L9 15 Z M12 8 L12 11',
 };
 const iconKey=it=>{if(!it)return "helm";if(it.slot!=="weapon")return it.slot;
-  if(it.base==="斧")return "axe";if(it.base==="戦鎚")return "hammer";if(it.base==="槍")return "spear";
-  if(it.base==="魔典")return "book";return it.wt==="staff"?"staff":"sword";};
+  if(it.base.includes("アックス"))return "axe";if(it.base.includes("ハンマー"))return "hammer";if(it.base.includes("パルチザン"))return "spear";
+  if(it.base.includes("グリモワール"))return "book";return it.wt==="staff"?"staff":"sword";};
 const icon=(k,sz)=>`<svg viewBox="0 0 24 24" width="${sz||20}" height="${sz||20}" fill="none"
-  stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"
+  stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"
   style="display:block;margin:0 auto"><path d="${ICONP[k]||""}"/></svg>`;
 
 const AFF=[
@@ -2048,7 +2049,7 @@ function openTown(){
 function gearGrid(host,inDungeon){
   const gg=document.createElement("div");gg.className="g3";
   {const ch=currentCharacter(),d=document.createElement("div");d.className="slot"+(inDungeon?" no":"");
-    d.innerHTML=`<div class="ic" style="color:${ch.col};font-size:25px">●</div><div class="sl">キャラクター</div><div class="si">${ch.n}</div>`;
+    d.innerHTML=`<div class="ic" style="color:${ch.col};font-size:25px">●</div><div class="sl">キャラクター</div><div class="si">${ch.n}</div><div class="ty">Lv${S.base.lv}</div>`;
     if(!inDungeon)tapEl(d,openCharacterPick);gg.appendChild(d);}
   for(const s of SLOTS){const it=S.gear[s.k];
     const d=document.createElement("div");d.className="slot"+(it?"":" empty");
@@ -2174,10 +2175,10 @@ function renderTown(){
         SFX.chest();toast(it.name+"を入手");save();showItem(it,false);});});
     }
     else if(S.shopSub==="gacha"){
-      const gacha=(name,cost,fn)=>{add(`<div class="card"><div class="nm">${name}</div><div class="st">課金通貨 ${cost} ◆ で1回引けます。</div></div>`);btn(`1回引く — ${cost} ◆`,S.premium>=cost?"gold":"no",()=>{if(S.premium<cost)return;ask(name,`${cost} ◆ を使ってガチャを引きます。`,()=>{if(S.premium<cost)return;S.premium-=cost;fn();save();openTown();});});};
-      gacha("キャラクターガチャ",300,()=>{const {k,ch}=pick(allRoster());S.profileAvatar=k+":"+ch.id;SFX.lvl();showGachaResult("キャラクター獲得",`<div style="color:${ch.col};font-size:58px">●</div><div class="nm">${ch.n}</div><div class="st">${CLASSES[k].name} / ${ch.trait}</div>`);});
-      gacha("装備ガチャ",200,()=>{const it=makeItem(Math.max(1,S.deepest),.6,S.p.d.luk,Math.max(1,ri(1,4)));S.stash.push(it);SFX.chest();showGachaResult("装備獲得",`<div class="${RC[it.rar]}">${icon(iconKey(it),54)}</div><div class="nm ${RC[it.rar]}">${it.name}</div><div class="st">${CFG.RARITY[it.rar][0]} / ${SLOTN(it.slot)}</div>`);});}
-    else add(`<div class="card"><div class="nm">ジェムショップ</div><div class="st">ジェム購入機能は準備中です。</div></div><div class="g3"><div class="slot empty">ジェム A</div><div class="slot empty">ジェム B</div><div class="slot empty">ジェム C</div></div>`);}
+      const gacha=(name,cost,draw)=>{add(`<div class="card"><div class="nm">${name}</div><div class="st">課金通貨 ${cost} ◆ で1回引けます。</div></div>`);btn(`1回引く — ${cost} ◆`,S.premium>=cost?"gold":"no",()=>{if(S.premium<cost)return;ask(name,`${cost} ◆ を使ってガチャを引きます。`,()=>{if(S.premium<cost)return;S.premium-=cost;const result=draw();save();openTown();showGachaResult(result.title,result.html);});});};
+      gacha("キャラクターガチャ",300,()=>{const {k,ch}=pick(allRoster());S.profileAvatar=k+":"+ch.id;SFX.lvl();return{title:"キャラクター獲得",html:`<div style="color:${ch.col};font-size:58px">●</div><div class="nm">${ch.n}</div><div class="st">${CLASSES[k].name} / ${ch.trait}</div>`};});
+      gacha("装備ガチャ",200,()=>{const it=makeItem(Math.max(1,S.deepest),.6,S.p.d.luk,Math.max(1,ri(1,4)));S.stash.push(it);SFX.chest();return{title:"装備獲得",html:`<div class="${RC[it.rar]}">${icon(iconKey(it),54)}</div><div class="nm ${RC[it.rar]}">${it.name}</div><div class="st">${CFG.RARITY[it.rar][0]} / ${SLOTN(it.slot)}</div>`};});}
+    else add(`<div class="card"><div class="nm">ジェムショップ</div><div class="st">ジェム購入機能は準備中です。</div></div><div class="g3"><div class="slot empty">紅玉ジェム</div><div class="slot empty">蒼玉ジェム</div><div class="slot empty">翠玉ジェム</div></div>`);}
   if(S.tab==="conf")renderSettings(b,openTown,false);
 }
 
@@ -2194,7 +2195,7 @@ function renderPrepTab(b){
   const h=document.createElement("h3");h.textContent="潜入編成（最大4人）";b.appendChild(h);
   const g=document.createElement("div");g.className="formation";
   for(let i=0;i<4;i++){const key=S.formation[i],entry=roster.find(x=>x.k+":"+x.ch.id===key),d=document.createElement("div");d.className="member"+(i===0?" on":"");
-    d.innerHTML=entry?`<div class="order">${i+1}番手</div><div class="face" style="color:${entry.ch.col}">●</div><div class="nm">${entry.ch.n}</div><div class="ty">${CLASSES[entry.k].name}</div>`:`<div class="order">${i+1}番手</div><div class="face">＋</div><div class="ty">空き</div>`;
+    d.innerHTML=entry?`<div class="order">${i+1}番手</div><div class="face" style="color:${entry.ch.col}">●</div><div class="nm">${entry.ch.n}</div><div class="ty">${CLASSES[entry.k].name} / Lv${((S.characterStates[key]||{}).base||{lv:key===activeCharacterKey()?S.base.lv:1}).lv}</div>`:`<div class="order">${i+1}番手</div><div class="face">＋</div><div class="ty">空き</div>`;
     tapEl(d,()=>openFormationPick(i));g.appendChild(d);}b.appendChild(g);
   const note=document.createElement("div");note.className="st";note.textContent="編成は潜入前のみ変更できます。戦闘不能になると次のキャラクターへ交代します。装備品は倉庫で共有され、装備中の品は他のキャラクターが使用できません。";b.appendChild(note);
   const maxStart=Math.max(1,Math.floor((S.deepest-1)/CFG.SKIP_STEP)*CFG.SKIP_STEP+1);S.diveFloor=clamp(S.diveFloor||1,1,maxStart);
@@ -2444,7 +2445,7 @@ function openPause(){
   $("scPause").classList.add("on");
   $("pauseS").textContent=`深度 ${S.floor} / 未帰還 ${S.bag.length}個 / 獲得 ${S.runGold} G`;
   for(const t of document.querySelectorAll("#scPause .tab"))t.classList.toggle("on",t.dataset.p===S.ptab);
-  const b=$("pauseBody");b.innerHTML="";b.classList.toggle("fit",S.ptab==="gear");
+  const b=$("pauseBody");b.innerHTML="";b.classList.toggle("fit",S.ptab==="gear");b.classList.toggle("lootPanel",S.ptab==="drops");
   if(S.ptab==="drops"){
     const gold=document.createElement("div");gold.className="card";gold.innerHTML=`<div class="stat"><span>今回獲得したゴールド</span><b style="color:var(--gold)">${S.runGold} G</b></div>`;b.appendChild(gold);
     const h=document.createElement("h3");h.textContent="今回拾った未鑑定装備";b.appendChild(h);
@@ -2542,6 +2543,7 @@ function load(){try{
       const a=(it.affs&&it.affs.shift())||{id:sd.main,v:1};
       it.main={id:sd.k==="weapon"?"atk":sd.main,v:a.v};}
     if(it.slot==="weapon"&&!it.wt){it.wt="sword";it.base=pick(WEAPN.sword);}
+    if(LEGACY_BASE_NAMES[it.base]){const old=it.base;it.base=LEGACY_BASE_NAMES[old];if(it.name)it.name=it.name.replace(old,it.base);}
     if(!it.lv){it.lv=1;it.xp=0;}
     it.affs=(it.affs||[]).filter(a=>AFF.some(x=>x.id===a.id));
     it.score=iScore(it);return it;};
