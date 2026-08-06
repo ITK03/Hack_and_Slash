@@ -65,9 +65,15 @@ const regressionSnippets = [
   'debugFloor:S.debugFloor',
   'data-t="prep"',
   '装備・能力',
-  '管理者／デバッグコード',
+  'aria-label","モード切替コード',
   '全装備オプション（自由入力）',
   'この編成で潜る',
+  'function openProfileIconPick',
+  'function openFormationChoices',
+  'function confirmSelectedSell',
+  'キャラクターガチャ',
+  'ジェムショップ',
+  '1階層単位のテスト潜入',
 ];
 const missingRegressions = regressionSnippets.filter((snippet) => !index.includes(snippet));
 if (missingRegressions.length) {
