@@ -50,8 +50,10 @@ if (missingGameplayQuality.length) {
 }
 
 const regressionSnippets = [
-  'd.t>=.7&&dist<=1',
+  'd.t>=.3&&dist<=1.5',
   'const pull=Math.min(dist,1.25*dt)',
+  'const sweptD=',
+  'const bossHPScale=',
   'style.visibility=S.settings.stick?"visible":"hidden"',
   '開錠失敗 — 敵が現れた',
   'code==="omiomi"',
