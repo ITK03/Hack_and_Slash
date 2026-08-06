@@ -20,10 +20,6 @@
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:var(--fs);
   color:var(--ink);touch-action:none;user-select:none;-webkit-user-select:none;
   overscroll-behavior:none;font-variant-numeric:tabular-nums}
-body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.2;
-  background:repeating-linear-gradient(117deg,transparent 0 7px,rgba(255,255,255,.018) 8px 9px),
-    radial-gradient(circle at 18% 12%,rgba(112,75,145,.18),transparent 35%),
-    radial-gradient(circle at 82% 88%,rgba(120,55,35,.12),transparent 40%)}
 canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
 
 #hud{position:absolute;top:0;left:0;right:56px;padding:calc(env(safe-area-inset-top) + 7px) 8px 8px 11px;
@@ -53,8 +49,8 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
 #mm{width:88px;height:88px;display:block}
 #mmGuide{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid rgba(80,70,105,.7)}
 .mmDist{height:22px;display:flex;align-items:center;justify-content:center;gap:3px;font-size:9px;font-weight:900;background:rgba(10,8,16,.82)}
-.mmDist i{display:block;width:0;height:0;border-top:4px solid transparent;border-bottom:4px solid transparent;
-  border-left:7px solid currentColor;filter:drop-shadow(0 0 3px currentColor);transform:rotate(var(--dir,0rad))}
+.mmDist i{display:block;width:10px;height:14px;background:currentColor;
+  clip-path:polygon(100% 50%,0 100%,22% 50%,0 0);transform:rotate(var(--dir,0rad))}
 #mmStair{color:#e08830}#mmPortal{color:#5aa0ff}
 #buffs{position:absolute;left:11px;top:calc(env(safe-area-inset-top) + 108px);z-index:11;
   display:flex;flex-direction:column;gap:4px;pointer-events:none}
@@ -256,8 +252,17 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
 .compareStats .after.dn,.compareItem.after .dn{color:#ff6f72;text-shadow:0 0 8px rgba(255,70,75,.18)}
 .deathCause{border-color:#6e2028;background:radial-gradient(circle at 50% 0,rgba(150,35,45,.26),transparent 65%),var(--panel2);text-align:center}
 .deathCause b{display:block;color:#ff8588;font-size:18px;margin:8px 0}.deathCause .skull{font-size:34px;filter:drop-shadow(0 0 12px #9e2630)}
+.adminGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.adminField{display:grid;grid-template-columns:minmax(0,1fr) 76px;align-items:center;gap:5px;
+  border:1px solid var(--line);background:#100e18;border-radius:3px;padding:5px 7px;font-size:9px;color:var(--ink2)}
+.adminField input{width:100%;min-width:0;background:#09070e;border:1px solid var(--line2);border-radius:2px;
+  color:var(--ink);padding:5px;font-size:11px;text-align:right}
+.adminBox{border:1px solid var(--line);border-radius:3px;margin-top:7px;background:#0e0c14}
+.adminBox summary{padding:9px 10px;font-size:10px;font-weight:900;color:var(--gold);cursor:pointer}
+.adminBox>div{padding:0 7px 7px}
 @media(max-width:520px){.gearPanel{grid-template-columns:1fr}.gearPanel .g3{grid-template-columns:repeat(4,1fr)}
-  .gearPanel .slot{min-height:54px}.compareStats{grid-template-columns:1fr}.gearCompare{padding:14px}}
+  .gearPanel .slot{min-height:54px}.compareStats{grid-template-columns:1fr}.gearCompare{padding:14px}
+  .adminGrid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -358,7 +363,7 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
    数値は CFG に集約。
    ========================================================================== */
 const CFG={
-  TILE_W:52,TILE_H:26,DPR_CAP:2,
+  TILE_W:52,TILE_H:26,DPR_CAP:1.5,
   LIGHT_R:1.05,LIGHT_STRETCH:1.45,DARKNESS:.86,CAM_Y:.42,CAM_LERP:.30,
 
   P_SPEED:3.5, ATK_CD:.40, P_RADIUS:.30,
@@ -480,10 +485,10 @@ function buzz(m){if(CFG.VIBRATE&&navigator.vibrate)try{navigator.vibrate(m);}cat
 /* ---------- 画面 ---------- */
 const cv=$("cv"),ctx=cv.getContext("2d",{alpha:false});
 const mmc=$("mm"),mctx=mmc.getContext("2d");
-let VW=0,VH=0,DPR=1;
+let VW=0,VH=0,DPR=1,DARKSPR=null;
 function resize(){DPR=Math.min(devicePixelRatio||1,CFG.DPR_CAP);
   VW=innerWidth;VH=innerHeight;cv.width=Math.floor(VW*DPR);cv.height=Math.floor(VH*DPR);
-  ctx.setTransform(DPR,0,0,DPR,0,0);ctx.imageSmoothingEnabled=false;SPR.clear();TSPR=null;}
+  ctx.setTransform(DPR,0,0,DPR,0,0);ctx.imageSmoothingEnabled=false;SPR.clear();TSPR=null;DARKSPR=null;}
 addEventListener("resize",resize);
 
 /* ---------- 入力 ---------- */
@@ -789,7 +794,7 @@ const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   bag:[],stash:[],gear:{},
   runT:0,hitstop:0,shake:0,shakeT:0,flash:0,paused:true,
   log:{runs:[]},tab:"gear",ptab:"drops",pots:CFG.POTION_BASE,lvlQ:0,
-  settings:{map:1,dmg:1,shake:1},admin:false,chars:{},
+  settings:{map:1,dmg:1,shake:1},admin:false,adminCfg:{},chars:{},
   combo:0,comboT:0,dmgLog:[],dps:0,startFloor:1,
   inv:{filters:[],sort:"score",sellSel:[],sellRar:1},
   alloc:null,
@@ -1042,19 +1047,27 @@ function killE(e){
   else{const dm=p.mDrop*p.sDrop*(hasPw("greed")?1.8:1)*(1+p.d.mf);
     if(rnd()<CFG.DROP_CHANCE*dm)dropItem(e.x,e.y);
     if(rnd()<CFG.GOLD_CHANCE)dropGold(e.x,e.y,Math.round((6+S.floor*3)*rr(.6,1.6)*(1+luk*.012)));
-    if(rnd()<CFG.POTION_DROP)S.drops.push({x:e.x,y:e.y,pot:1,t:0});
-    else if(rnd()<CFG.SHARD_DROP)S.drops.push({x:e.x,y:e.y,shard:1,t:0});}}
+    if(rnd()<CFG.POTION_DROP)addDrop(e.x,e.y,{pot:1});
+    else if(rnd()<CFG.SHARD_DROP)addDrop(e.x,e.y,{shard:1});}}
 function dropItem(x,y,forceRar){
   const p=S.p;
   const it=makeItem(S.floor,p.d.mf+(hasPw("greed")?.5:0),p.d.luk,forceRar);
-  S.drops.push({x,y,it,t:0,rar:it.rar});SFX.drop(it.rar);
+  const pos=nearestDropSpot(x,y);
+  S.drops.push({x:pos.x,y:pos.y,it,t:0,rar:it.rar});SFX.drop(it.rar);
   if(it.rar>=4){shk(7);buzz([0,50,60,140]);toast("★★ 伝説");}
   else if(it.rar===3){shk(3);buzz(30);toast("★ 秀逸");}}
-function dropGold(x,y,v){S.drops.push({x,y,gold:v,t:0});}
+function nearestDropSpot(x,y){
+  if(walk(x,y,.18))return{x,y};
+  for(let r=.5;r<=3;r+=.5)for(let i=0;i<16;i++){
+    const a=TAU*i/16,nx=x+Math.cos(a)*r,ny=y+Math.sin(a)*r;
+    if(walk(nx,ny,.18))return{x:nx,y:ny};}
+  return{x:S.p.x,y:S.p.y};}
+function addDrop(x,y,data){const p=nearestDropSpot(x,y);S.drops.push({x:p.x,y:p.y,t:0,...data});}
+function dropGold(x,y,v){addDrop(x,y,{gold:v});}
 function autoRefillPots(){if(S.pots<CFG.POTION_BASE){S.pots=CFG.POTION_BASE;toast("ポーション自動補充");}}
 function barrelDrop(x,y){
-  if(rnd()<CFG.POTION_POT_DROP){S.drops.push({x,y,pot:1,t:0});return;}
-  if(rnd()<CFG.SHARD_DROP*.5){S.drops.push({x,y,shard:1,t:0});return;}
+  if(rnd()<CFG.POTION_POT_DROP){addDrop(x,y,{pot:1});return;}
+  if(rnd()<CFG.SHARD_DROP*.5){addDrop(x,y,{shard:1});return;}
   if(rnd()<CFG.GOLD_CHANCE*.5)dropGold(x,y,Math.round((6+S.floor*3)*rr(.6,1.6)));
   if(rnd()<CFG.DROP_CHANCE*.5)dropItem(x,y);}
 function breakPot(q){if(!q||q.t!=="barrel"||q.hp<=0)return false;
@@ -1349,7 +1362,10 @@ function update(dt){
 
   for(let i=S.drops.length-1;i>=0;i--){
     const d=S.drops[i];d.t+=dt;
-    const pr=d.gold?1.6:(d.pot||d.shard)?1.0:.65;
+    const dist=Math.hypot(p.x-d.x,p.y-d.y);
+    if(d.it&&dist<3&&dist>.01){const pull=Math.min(dist,5*dt);
+      d.x+=(p.x-d.x)/dist*pull;d.y+=(p.y-d.y)/dist*pull;}
+    const pr=d.gold?1.6:(d.pot||d.shard)?1.0:1.15;
     if(d2(d.x,d.y,p.x,p.y)<pr*pr){
       if(d.shard){if(p.hp>=p.max)continue;
         p.hp=Math.min(p.max,p.hp+p.max*CFG.SHARD_HEAL);
@@ -1455,14 +1471,24 @@ function chestRarity(){
   return roll<.992?3:4;}
 function nextLockTarget(){
   const rar=LK.rar,round=LK.round,luk=S.p.d.luk;
-  LK.center=rr(.18,.82);
-  const earlyEase=clamp((6-S.floor)*.025,0,.12);
-  LK.zone=clamp(.30+earlyEase+luk*.006-rar*.035-round*.045,.09,.50);
-  LK.speed=.62+S.floor*.012+rar*.18+round*.22+rnd()*.28;}
+  const earlyEase=clamp((7-S.floor)*.025,0,.15);
+  const depthPenalty=clamp((S.floor-5)*.003,0,.14);
+  LK.zone=clamp(.34+earlyEase+luk*.006-rar*.035-depthPenalty-round*.055,.085,.52);
+  LK.center=rr(LK.zone/2+.02,1-LK.zone/2-.02);
+  LK.speed=clamp(.58+S.floor*.010+rar*.16+round*.20+rnd()*.24,.58,2.1);}
+function chestAmbush(q){
+  const keys=S.floor>=7?["grunt","swarm","archer","brute","caster"]
+    :S.floor>=4?["grunt","swarm","archer"]:["grunt"];
+  const count=clamp(1+Math.floor(S.floor/12),1,4);
+  let made=0;
+  for(let r=1.8;r<=4&&made<count;r+=.55)for(let i=0;i<12&&made<count;i++){
+    const a=TAU*(i/12)+r,x=q.x+Math.cos(a)*r,y=q.y+Math.sin(a)*r;
+    if(walk(x,y,.4)&&d2(x,y,S.p.x,S.p.y)>1.2){spawnE(pick(keys),x,y,S.floor,false);made++;}}
+  toast("錠前の警報で敵が現れた");}
 function openLock(q){
   S.paused=true;for(let i=0;i<4;i++)HELD[i]=false;
   const luk=S.p.d.luk,rar=q.rar??chestRarity();q.rar=rar;
-  LK={q,rar,round:0,ok:0,pos:rnd(),dir:rnd()<.5?1:-1,center:.5,zone:.3,speed:.8,done:false};
+  LK={q,rar,round:0,ok:0,pos:rnd(),dir:rnd()<.5?1:-1,center:.5,zone:.3,speed:.8,done:false,alarmed:false};
   nextLockTarget();
   $("lockD").textContent=`中身 ${CFG.RARITY[rar][0]} / 運 ${luk} — 成功数で中身は変わらない。判定位置は毎回変化し、3回目ほど難しい`;
   renderLock();$("lockPop").classList.add("on");}
@@ -1482,7 +1508,8 @@ function lockHit(){
   if(!LK||LK.done)return;
   LK.res=LK.res||[];
   const hit=Math.abs(LK.pos-LK.center)<LK.zone/2;
-  LK.res[LK.round]=hit;if(hit){LK.ok++;SFX.ok();buzz(20);}else{SFX.ng();buzz(60);}
+  LK.res[LK.round]=hit;if(hit){LK.ok++;SFX.ok();buzz(20);}else{
+    SFX.ng();buzz(60);if(!LK.alarmed){LK.alarmed=true;chestAmbush(LK.q);}}
   LK.round++;if(LK.round<3)nextLockTarget();
   renderLock();
   if(LK.round>=3){
@@ -1586,6 +1613,16 @@ function enemySprite(k,h,w,body,rim){
   eShape(g,k,c._ox,c._oy,hi,wi,body,rim);
   if(SPR.size>500)SPR.clear();
   SPR.set(key,c);return c;}
+function darknessSprite(){
+  if(DARKSPR)return DARKSPR;
+  const c=document.createElement("canvas");c.width=Math.ceil(VW*DPR);c.height=Math.ceil(VH*DPR);
+  const g=c.getContext("2d");g.setTransform(DPR,0,0,DPR,0,0);
+  const x=VW/2,y=VH*CFG.CAM_Y,lr=VW*CFG.LIGHT_R;
+  g.save();g.translate(x,y);g.scale(1,CFG.LIGHT_STRETCH);
+  const shade=g.createRadialGradient(0,0,lr*.2,0,0,lr);
+  shade.addColorStop(0,"rgba(0,0,0,0)");shade.addColorStop(.5,`rgba(0,0,0,${CFG.DARKNESS*.32})`);
+  shade.addColorStop(.8,`rgba(0,0,0,${CFG.DARKNESS*.76})`);shade.addColorStop(1,`rgba(0,0,0,${CFG.DARKNESS})`);
+  g.fillStyle=shade;g.fillRect(-VW*2,-VH*2,VW*4,VH*4);g.restore();DARKSPR=c;return c;}
 
 function draw(){
   const p=S.p;if(!p||!map)return;
@@ -1649,28 +1686,9 @@ function draw(){
     const yy=s.sy-22-k*28,tx=n.txt||n.v;
     ctx.strokeText(tx,s.sx,yy);ctx.fillStyle=n.c;ctx.fillText(tx,s.sx,yy);}
   ctx.globalAlpha=1;ctx.restore();
-  const pc=iso(p.x,p.y),lx=pc.sx+ox,ly=pc.sy+oy,LR=VW*CFG.LIGHT_R;
-  ctx.save();ctx.translate(lx,ly);ctx.scale(1,CFG.LIGHT_STRETCH);
-  const g=ctx.createRadialGradient(0,0,LR*.2,0,0,LR);
-  g.addColorStop(0,"rgba(0,0,0,0)");
-  g.addColorStop(.5,`rgba(0,0,0,${CFG.DARKNESS*.32})`);
-  g.addColorStop(.8,`rgba(0,0,0,${CFG.DARKNESS*.76})`);
-  g.addColorStop(1,`rgba(0,0,0,${CFG.DARKNESS})`);
-  ctx.fillStyle=g;ctx.fillRect(-VW*2,-VH*2,VW*4,VH*4);ctx.restore();
+  const dark=darknessSprite();ctx.drawImage(dark,0,0,dark.width,dark.height,0,0,VW,VH);
   if(S.flash>0){ctx.fillStyle=`rgba(190,30,40,${S.flash*.9})`;ctx.fillRect(0,0,VW,VH);}
   drawMM();}
-function guide(ox,oy,tg,col,al,idx,label){
-  const p=S.p,s=iso(tg.x,tg.y),pc=iso(p.x,p.y);
-  const a=Math.atan2((s.sy+oy)-(pc.sy+oy),(s.sx+ox)-(pc.sx+ox));
-  const px=VW-48,py=Math.max(178,Math.min(VH-286,178+idx*58));
-  ctx.save();ctx.globalCompositeOperation="source-over";
-  ctx.fillStyle="rgba(8,7,14,.66)";ctx.strokeStyle=col+".45)";ctx.lineWidth=1;
-  ctx.beginPath();ctx.roundRect(px-31,py-24,62,48,6);ctx.fill();ctx.stroke();
-  ctx.globalCompositeOperation="lighter";ctx.translate(px,py-6);ctx.rotate(a);ctx.fillStyle=col+al;
-  ctx.beginPath();ctx.moveTo(15,0);ctx.lineTo(-9,8);ctx.lineTo(-5,0);ctx.lineTo(-9,-8);ctx.closePath();ctx.fill();
-  ctx.restore();
-  ctx.fillStyle=col+".82)";ctx.font="800 10px sans-serif";ctx.textAlign="center";
-  ctx.fillText(label+" "+Math.round(Math.hypot(tg.x-p.x,tg.y-p.y))+"m",px,py+18);}
 function shadow(sx,sy,w){ctx.fillStyle="rgba(0,0,0,.42)";
   ctx.beginPath();ctx.ellipse(sx,sy,w,w*.5,0,0,TAU);ctx.fill();}
 function dPlayer(){
@@ -2035,81 +2053,98 @@ function allocBlock(host,after){
     S.alloc=null;S.p.d=derive();recalcHP(S.p);
     SFX.shrine();toast("振り直しました");save();after();});
   host.appendChild(r);}
+function uiButton(host,text,cls,fn){const d=document.createElement("div");d.className="btn "+(cls||"");
+  d.textContent=text;tapEl(d,fn);host.appendChild(d);return d;}
+function gearTab(host,inDungeon){
+  if(inDungeon){const note=document.createElement("div");note.className="card";
+    note.innerHTML=`<div class="st">ここに表示されるのは<b>持ち帰り済み</b>の装備だけです。未帰還の戦利品 ${S.bag.length} 個は「戦利品」でのみ確認できます。</div>`;
+    host.appendChild(note);}
+  const panel=document.createElement("div");panel.className="gearPanel";
+  const left=document.createElement("div"),right=document.createElement("div");
+  left.innerHTML="<h3>装備</h3>";right.innerHTML="<h3>能力値</h3>";
+  gearGrid(left,inDungeon);statBlock(right);panel.append(left,right);host.appendChild(panel);}
+function charTab(host,after,inDungeon){
+  const h=document.createElement("h3");h.textContent="ステータス";host.appendChild(h);allocBlock(host,after);
+  const d=document.createElement("div");d.innerHTML=`<h3>記録</h3><div class="card">
+    <div class="stat"><span>最深到達</span><b>${S.deepest}</b></div>
+    <div class="stat"><span>潜行回数</span><b>${S.log.runs.length}</b></div>
+    <div class="stat"><span>生還</span><b>${S.log.runs.filter(r=>r.alive).length}</b></div>
+    <div class="stat"><span>累計撃破</span><b>${S.log.runs.reduce((a,r)=>a+(r.kills||0),0)}</b></div>
+    <div class="stat"><span>次のレベルまで</span><b>${S.base.lv>=CFG.LV_CAP?"—":(xpNeed(S.base.lv)-S.base.xp)+" exp"}</b></div></div>`;
+  while(d.firstChild)host.appendChild(d.firstChild);
+  uiButton(host,"プレイログを表示","gh",()=>{const r=S.log.runs,w=document.createElement("div");
+    w.innerHTML=`<textarea readonly>${JSON.stringify({runs:r.length,extracted:r.filter(x=>x.alive).length,deepest:S.deepest,detail:r},null,1)}</textarea>`;
+    host.appendChild(w);const c=uiButton(host,"コピー","gh",()=>{const t=w.querySelector("textarea");t.select();
+      try{navigator.clipboard.writeText(t.value);}catch(e){document.execCommand("copy");}toast("コピーしました");});w.appendChild(c);});
+  const reset=uiButton(host,"ゲームを最初からやり直す","gh"+(inDungeon?" no":""),()=>{
+    if(inDungeon)return;ask("ゲームをリセット","すべての進行・装備・金貨が消えます。元に戻せません。",()=>{localStorage.removeItem(KEY);location.reload();});});
+  if(inDungeon)reset.title="拠点でのみ実行できます";}
+function numberField(host,label,value,onchange,step=1){
+  const row=document.createElement("label");row.className="adminField";row.textContent=label;
+  const input=document.createElement("input");input.type="number";input.step=String(step);input.value=Number.isFinite(value)?value:0;
+  input.addEventListener("change",()=>{const v=Number(input.value);if(Number.isFinite(v))onchange(v);});row.appendChild(input);host.appendChild(row);}
+function cfgNumberEntries(obj=CFG,prefix=""){const out=[];for(const [k,v] of Object.entries(obj)){
+  const path=prefix?prefix+"."+k:k;if(typeof v==="number")out.push([path,v]);
+  else if(v&&typeof v==="object")out.push(...cfgNumberEntries(v,path));}return out;}
+function setCfg(path,value){const keys=path.split(".");let o=CFG;for(let i=0;i<keys.length-1;i++)o=o[keys[i]];
+  o[keys.at(-1)]=value;S.adminCfg[path]=value;DARKSPR=null;TSPR=null;save();}
+function adminPanel(host,after,inDungeon){
+  const main=document.createElement("details");main.className="adminBox";main.open=true;main.innerHTML="<summary>管理者 — 進行・所持値</summary>";
+  const mg=document.createElement("div");mg.className="adminGrid";main.appendChild(mg);
+  numberField(mg,"所持金",S.gold,v=>{S.gold=Math.max(0,Math.round(v));save();after();});
+  numberField(mg,"最深到達",S.deepest,v=>{S.deepest=Math.max(1,Math.round(v));save();after();});
+  numberField(mg,"ポーション",S.pots,v=>{S.pots=clamp(Math.round(v),0,CFG.POTION_MAX);save();after();});
+  numberField(mg,"レベル",S.base.lv,v=>{S.base.lv=clamp(Math.round(v),1,CFG.LV_CAP);S.p.d=derive();recalcHP(S.p);save();after();});
+  numberField(mg,"経験値",S.base.xp,v=>{S.base.xp=Math.max(0,Math.round(v));save();after();});
+  numberField(mg,"未割当pt",S.base.pts,v=>{S.base.pts=Math.max(0,Math.round(v));S.alloc=null;save();after();});
+  if(inDungeon)numberField(mg,"現在の階層",S.floor,v=>{const fl=Math.max(1,Math.round(v));$("scPause").classList.remove("on");S.paused=false;enterFloor(fl);});
+  host.appendChild(main);
+  const stats=document.createElement("details");stats.className="adminBox";stats.innerHTML="<summary>基礎ステータス</summary>";
+  const sg=document.createElement("div");sg.className="adminGrid";stats.appendChild(sg);
+  for(const [k,nm] of STATDEF)numberField(sg,nm,S.base[k],v=>{S.base[k]=Math.max(0,Math.round(v));S.alloc=null;S.p.d=derive();recalcHP(S.p);save();after();});host.appendChild(stats);
+  const items=document.createElement("details");items.className="adminBox";items.innerHTML="<summary>アイテム生成</summary>";
+  const ig=document.createElement("div");ig.className="adminGrid";items.appendChild(ig);
+  for(let r=0;r<5;r++)uiButton(ig,CFG.RARITY[r][0]+"装備 ×5","gh",()=>{for(let i=0;i<5;i++)S.stash.push(makeItem(Math.max(1,S.deepest),0,0,r));SFX.chest();save();after();});
+  uiButton(ig,"ポーション満タン","gh",()=>{S.pots=CFG.POTION_MAX;save();after();});host.appendChild(items);
+  const cfg=document.createElement("details");cfg.className="adminBox";cfg.innerHTML="<summary>ゲーム数値（CFG 全項目）</summary>";
+  const cg=document.createElement("div");cg.className="adminGrid";cfg.appendChild(cg);
+  for(const [path,value] of cfgNumberEntries())numberField(cg,path,value,v=>{setCfg(path,v);after();},Number.isInteger(value)?1:.001);host.appendChild(cfg);}
+function settingsTab(host,after,inDungeon){
+  const h=document.createElement("h3");h.textContent="表示";host.appendChild(h);
+  for(const [k,label] of [["map","ミニマップ"],["dmg","ダメージ数値"],["shake","画面の揺れ"]])
+    uiButton(host,label+"： "+(S.settings[k]?"ON":"OFF"),S.settings[k]?"":"gh",()=>{S.settings[k]=S.settings[k]?0:1;save();after();});
+  const ch=document.createElement("div");ch.innerHTML=`<h3>職業</h3><div class="card"><div class="st">レベルとステータスは職業ごとに保存される。装備と金貨は共有。${inDungeon?" 職業変更は拠点でのみ可能。":""}</div></div>`;
+  while(ch.firstChild)host.appendChild(ch.firstChild);
+  for(const k of CKEYS){const cur=k===S.cls,sv=S.chars[k],disabled=cur||inDungeon;
+    uiButton(host,CLASSES[k].name+(cur?"（使用中）":(sv&&sv.base)?` Lv${sv.base.lv} に切替`:" を新規作成"),disabled?"no":"",()=>{if(!disabled)switchClass(k);});}
+  if(!S.admin){
+    const ah=document.createElement("h3");ah.textContent="その他";host.appendChild(ah);
+    const inp=document.createElement("input");inp.placeholder="コード";inp.style.cssText="width:100%;padding:11px;border-radius:3px;background:#0a0810;border:1px solid var(--line);color:var(--ink);font-size:13px";host.appendChild(inp);
+    uiButton(host,"適用","gh",()=>{if(inp.value.trim()==="pM97342Gamt"){S.admin=true;SFX.lvl();toast("管理者モード");save();after();}else{SFX.ng();toast("コードが違う");}});
+  }else{const ah=document.createElement("h3");ah.textContent="管理者モード";ah.style.color="var(--gold)";host.appendChild(ah);adminPanel(host,after,inDungeon);}}
 function renderTown(){
   const b=$("townBody");b.innerHTML="";
   const add=h=>{const d=document.createElement("div");d.innerHTML=h;
     while(d.firstChild)b.appendChild(d.firstChild);};
   const btn=(txt,cls,fn)=>{const d=document.createElement("div");d.className="btn "+(cls||"");
     d.textContent=txt;tapEl(d,fn);b.appendChild(d);return d;};
-  if(S.tab==="gear"){const panel=document.createElement("div");panel.className="gearPanel";
-    const left=document.createElement("div"),right=document.createElement("div");
-    left.innerHTML="<h3>装備</h3>";right.innerHTML="<h3>能力値</h3>";
-    gearGrid(left,false);statBlock(right);panel.append(left,right);b.appendChild(panel);}
+  if(S.tab==="gear")gearTab(b,false);
   if(S.tab==="inv")renderInv(b);
   if(S.tab==="shop"){
     const gc=Math.round(200+S.deepest*90);
     add(`<h3>商店</h3><div class="card"><div class="nm">掘り出し物</div>
       <div class="st">深度 ${S.deepest} 相当の装備を1つ買う。</div></div>`);
     btn("買う — "+gc+" G",S.gold>=gc?"gold":"no",()=>{
-      if(S.gold<gc)return;S.gold-=gc;
-      const it=makeItem(Math.max(1,S.deepest),.3,S.p.d.luk);S.stash.push(it);
-      SFX.chest();toast(it.name+"を入手");save();showItem(it,false);});
+      if(S.gold<gc)return;
+      ask("掘り出し物を購入する",`${gc} G を支払って、深度 ${S.deepest} 相当の装備を1つ購入します。\n購入後の所持金: ${S.gold-gc} G`,()=>{
+        if(S.gold<gc)return;
+        S.gold-=gc;
+        const it=makeItem(Math.max(1,S.deepest),.3,S.p.d.luk);S.stash.push(it);
+        SFX.chest();toast(it.name+"を入手");save();showItem(it,false);});});
     add(`<div class="card" style="margin-top:12px"><div class="nm">ポーション</div>
       <div class="st">ポーション購入は撤廃。5層ごとに自動で${CFG.POTION_BASE}個まで補充されます。壺から出た分だけ最大${CFG.POTION_MAX}個まで持てます。</div></div>`);}
-  if(S.tab==="conf"){
-    add(`<h3>表示</h3>`);
-    const tg=(k,lbl)=>{const d=document.createElement("div");
-      d.className="btn"+(S.settings[k]?"":" gh");
-      d.textContent=lbl+"： "+(S.settings[k]?"ON":"OFF");
-      tapEl(d,()=>{S.settings[k]=S.settings[k]?0:1;save();openTown();});b.appendChild(d);};
-    tg("map","ミニマップ");tg("dmg","ダメージ数値");tg("shake","画面の揺れ");
-    add(`<h3>職業</h3><div class="card"><div class="st">
-      レベルとステータスは職業ごとに保存される。装備と金貨は共有。</div></div>`);
-    for(const k of CKEYS){
-      const cur=k===S.cls,sv=S.chars[k];
-      const d=document.createElement("div");d.className="btn"+(cur?" no":"");
-      d.textContent=CLASSES[k].name+(cur?"（使用中）":(sv&&sv.base)?` Lv${sv.base.lv} に切替`:" を新規作成");
-      tapEl(d,()=>{if(!cur)switchClass(k);});b.appendChild(d);}
-    add(`<h3>その他</h3>`);
-    const inp=document.createElement("input");inp.placeholder="コード";
-    inp.style.cssText="width:100%;padding:11px;border-radius:3px;background:#0a0810;"+
-      "border:1px solid var(--line);color:var(--ink);font-size:13px";
-    b.appendChild(inp);
-    const ok=document.createElement("div");ok.className="btn gh";ok.textContent="適用";
-    tapEl(ok,()=>{if(inp.value.trim()==="pM97342Gamt"){S.admin=true;SFX.lvl();
-      toast("管理者モード");save();openTown();}else{SFX.ng();toast("コードが違う");}});
-    b.appendChild(ok);
-    if(S.admin){
-      add(`<h3 style="color:var(--gold)">管理者モード</h3>`);
-      btn("金貨 +100000","gold",()=>{S.gold+=100000;save();openTown();});
-      btn("ステータスポイント +100","gh",()=>{S.base.pts+=100;S.alloc=null;save();openTown();});
-      btn("レベル +10","gh",()=>{S.base.lv=Math.min(CFG.LV_CAP,S.base.lv+10);
-        S.base.pts+=10*CFG.STAT_PER_LV;S.p.d=derive();recalcHP(S.p);save();openTown();});
-      btn("最深到達 +10","gh",()=>{S.deepest+=10;save();openTown();});
-      for(let r=0;r<5;r++)btn("装備を5個生成 — "+CFG.RARITY[r][0],"gh",()=>{
-        for(let i=0;i<5;i++)S.stash.push(makeItem(Math.max(1,S.deepest),0,0,r));
-        SFX.chest();save();openTown();});
-      btn("ポーション満タン","gh",()=>{S.pots=CFG.POTION_MAX;save();openTown();});}}
-  if(S.tab==="char"){
-    add(`<h3>ステータス</h3>`);allocBlock(b,openTown);
-    add(`<h3>記録</h3><div class="card">
-      <div class="stat"><span>最深到達</span><b>${S.deepest}</b></div>
-      <div class="stat"><span>潜行回数</span><b>${S.log.runs.length}</b></div>
-      <div class="stat"><span>生還</span><b>${S.log.runs.filter(r=>r.alive).length}</b></div>
-      <div class="stat"><span>累計撃破</span><b>${S.log.runs.reduce((a,r)=>a+(r.kills||0),0)}</b></div>
-      <div class="stat"><span>次のレベルまで</span><b>${S.base.lv>=CFG.LV_CAP?"—":(xpNeed(S.base.lv)-S.base.xp)+" exp"}</b></div></div>`);
-    btn("プレイログを表示","gh",()=>{
-      const r=S.log.runs,w=document.createElement("div");
-      w.innerHTML=`<textarea readonly>${JSON.stringify({runs:r.length,
-        extracted:r.filter(x=>x.alive).length,deepest:S.deepest,detail:r},null,1)}</textarea>`;
-      b.appendChild(w);
-      const c=document.createElement("div");c.className="btn gh";c.textContent="コピー";
-      tapEl(c,()=>{const t=w.querySelector("textarea");t.select();
-        try{navigator.clipboard.writeText(t.value);}catch(e){document.execCommand("copy");}
-        toast("コピーしました");});b.appendChild(c);});
-    btn("ゲームを最初からやり直す","gh",()=>{
-      ask("ゲームをリセット","すべての進行・装備・金貨が消えます。元に戻せません。",
-        ()=>{localStorage.removeItem(KEY);location.reload();});});}}
+  if(S.tab==="conf")settingsTab(b,openTown,false);
+  if(S.tab==="char")charTab(b,openTown,false);}
 
 /* ---------- 倉庫: アイコン格子 + フィルタ/並べ替え + 固定売却バー ---------- */
 function invFiltered(){
@@ -2241,6 +2276,7 @@ function openFuse(target){
   $("itPop").classList.add("on");}
 
 function equip(it){
+  if(!S.stash.includes(it)&&!Object.values(S.gear).includes(it)){toast("未帰還の戦利品は装備できません");return;}
   if(it.wt&&WCLS[it.wt]!==S.cls){toast(WCLS[it.wt]==="warrior"?"剣は戦士専用":"杖は魔術師専用");return;}
   const old=S.gear[it.slot];
   S.gear[it.slot]=it;
@@ -2336,18 +2372,9 @@ function openPause(){
     note.textContent="未帰還の装備は種類・レア度・深度だけ確認できる。オプションは帰還後に鑑定される。";
     b.appendChild(note);
   }else if(S.ptab==="gear"){
-    const h=document.createElement("div");h.className="card";
-    h.innerHTML=`<div class="st">ここで装備できるのは<b>持ち帰り済み</b>のものだけ。
-      今回拾った ${S.bag.length} 個は帰還するまで使えない。</div>`;
-    b.appendChild(h);
-    gearGrid(b,true);
-    const h2=document.createElement("h3");h2.textContent="能力値";b.appendChild(h2);statBlock(b);
-  }else if(S.ptab==="char"){allocBlock(b,openPause);}
-  else{
-    const addToggle=(k,lbl)=>{const d=document.createElement("div");d.className="btn"+(S.settings[k]?" gold":" gh");d.textContent=lbl+"："+(S.settings[k]?"ON":"OFF");
-      tapEl(d,()=>{S.settings[k]=S.settings[k]?0:1;save();openPause();});b.appendChild(d);};
-    const h=document.createElement("h3");h.textContent="設定";b.appendChild(h);
-    addToggle("map","ミニマップ");addToggle("dmg","ダメージ数字");addToggle("shake","画面揺れ");}
+    gearTab(b,true);
+  }else if(S.ptab==="char"){charTab(b,openPause,true);}
+  else settingsTab(b,openPause,true);
   if(S.ptab!=="drops")addGiveUp();}
 
 /* ---------- クラス選択 / 潜行 ---------- */
@@ -2371,7 +2398,7 @@ function confirmDive(fl){
     ()=>beginRun(fl));}
 function startDive(){
   // 階層が数百/数千になっても、ページ切り替えで開始地点を選ぶ
-  const st=CFG.SKIP_STEP;
+  const st=S.admin?1:CFG.SKIP_STEP;
   const maxStart=Math.max(1,Math.floor((S.deepest-1)/st)*st+1);
   if(maxStart<=1){confirmDive(1);return;}
   const starts=[];for(let f=1;f<=maxStart;f+=st)starts.push(f);
@@ -2409,7 +2436,7 @@ function beginRun(fl){
 const KEY="descent_v5";
 function save(){try{localStorage.setItem(KEY,JSON.stringify({cls:S.cls,deepest:S.deepest,
   gold:S.gold,stash:S.stash,gear:S.gear,base:S.base,pots:S.pots,log:S.log,
-  settings:S.settings,admin:S.admin,chars:S.chars}));}catch(e){}}
+  settings:S.settings,admin:S.admin,adminCfg:S.adminCfg,chars:S.chars}));}catch(e){}}
 function load(){try{
   const d=JSON.parse(localStorage.getItem(KEY)||"null");
   if(!d||!d.cls||!CLASSES[d.cls])return false;
@@ -2433,7 +2460,12 @@ function load(){try{
   S.gear=ng;
   S.pots=d.pots==null?CFG.POTION_BASE:Math.min(CFG.POTION_MAX,d.pots);S.log=d.log||{runs:[]};
   S.settings=Object.assign({map:1,dmg:1,shake:1},d.settings||{});
-  S.admin=!!d.admin;S.chars=d.chars||{};
+  S.admin=!!d.admin;S.adminCfg=d.adminCfg||{};
+  for(const [path,value] of Object.entries(S.adminCfg)){
+    const keys=path.split(".");let o=CFG,valid=true;
+    for(let i=0;i<keys.length-1;i++){if(!o||!(keys[i] in o)){valid=false;break;}o=o[keys[i]];}
+    if(valid&&typeof o[keys.at(-1)]==="number"&&typeof value==="number")o[keys.at(-1)]=value;}
+  S.chars=d.chars||{};
   const nb=Object.assign({lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0},d.base||{});
   delete nb.need;
   if(nb.dex!==undefined||nb.vit!==undefined){   // 旧スキーマは全部振り直しにして返す
@@ -2458,7 +2490,7 @@ hook($("lockHit"),lockHit);
 for(const t of document.querySelectorAll("#scTown .tab"))tapEl(t,()=>{S.tab=t.dataset.t;openTown();});
 for(const t of document.querySelectorAll("#scPause .tab"))tapEl(t,()=>{S.ptab=t.dataset.p;openPause();});
 
-if(load()){S.p=newPlayer();openTown();}else openClass();
+if(load()){resize();S.p=newPlayer();openTown();}else openClass();
 
 let last=performance.now(),acc=0;const STEP=1/60;
 function frame(now){
@@ -2466,11 +2498,11 @@ function frame(now){
   let dt=(now-last)/1000;last=now;
   if(dt>.25)dt=.25;
   if(LK&&!LK.done)lockTick(dt);
-  if(S.scene==="dungeon"){
+  if(S.scene==="dungeon"&&!S.paused){
     acc+=dt;let n=0;
     while(acc>=STEP&&n++<4){update(STEP);acc-=STEP;}
     if(acc>STEP*4)acc=0;
-    draw();}}
+    draw();}else acc=0;}
 requestAnimationFrame(frame);
 </script>
 </body>
