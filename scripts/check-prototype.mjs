@@ -80,6 +80,23 @@ if (missingRegressions.length) {
   throw new Error(`Gameplay regression fixes are incomplete: ${missingRegressions.join(', ')}`);
 }
 
+const tutorialRegressionSnippets = [
+  'id="tutorialConfirm">確認',
+  '.tutorialMask{display:none!important}',
+  '{k:"gear_equip",msg:',
+  '{k:"shop_gacha",msg:',
+  'if($("tutorialBanner").style.display!=="none")return false',
+];
+const missingTutorialRegressions = tutorialRegressionSnippets.filter((snippet) => !index.includes(snippet));
+if (missingTutorialRegressions.length) {
+  throw new Error(`Tutorial regressions are incomplete: ${missingTutorialRegressions.join(', ')}`);
+}
+for (const forbidden of ['position:relative!important;z-index:92', '0 0 0 9999px']) {
+  if (index.includes(forbidden)) {
+    throw new Error(`Tutorial highlighting must not move or obscure the original UI: ${forbidden}`);
+  }
+}
+
 const wrangler = await readFile('wrangler.jsonc', 'utf8');
 if (!wrangler.includes('"directory": "./public"')) {
   throw new Error('wrangler.jsonc must keep assets.directory set to ./public');

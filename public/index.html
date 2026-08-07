@@ -193,7 +193,8 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 .innerTabs{display:flex;gap:6px;margin-top:7px}.innerTabs .btn{flex:1;margin:0;padding:8px;font-size:10px}
 .gearPanel{margin-top:10px}
 .tutorialBanner{position:fixed;z-index:95;left:14px;right:14px;top:calc(env(safe-area-inset-top) + 72px);padding:13px 15px;background:#132038;border:1px solid #5aa0ff;border-radius:4px;color:#e4f1ff;font-size:12px;font-weight:800;line-height:1.65;text-align:center;box-shadow:0 8px 32px #000}
-.tutorialBanner b{color:#82c4ff}.tutorialBanner .skip{margin:8px auto 0;width:max-content;padding:5px 12px;border:1px solid #66809e;color:#b9cbe0;font-size:10px}.tutorialMask{position:fixed;inset:0;z-index:90;background:rgba(2,3,8,.76);pointer-events:none}.tutorialTarget{position:relative!important;z-index:92!important;box-shadow:0 0 0 3px #72b8ff,0 0 0 9999px rgba(2,3,8,.76),0 0 22px #54a8ff!important;pointer-events:auto!important}
+.tutorialBanner.bottom{top:auto;bottom:calc(env(safe-area-inset-bottom) + 82px)}
+.tutorialBanner b{color:#82c4ff}.tutorialActions{display:flex;justify-content:center;gap:8px;margin-top:8px}.tutorialBanner .confirm,.tutorialBanner .skip{padding:6px 14px;border:1px solid #66809e;color:#b9cbe0;font-size:10px}.tutorialBanner .confirm{border-color:#82c4ff;background:#203c61;color:#fff}.tutorialMask{display:none!important}.tutorialTarget{outline:3px solid #72b8ff!important;outline-offset:3px;filter:drop-shadow(0 0 8px #54a8ff);pointer-events:auto!important}
 .formation{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.member{min-height:92px;padding:8px 4px;text-align:center;border:1px solid var(--line);background:var(--panel);border-radius:3px}
 .member.on{border-color:var(--gold)}.member .order{font-size:8px;color:var(--gold)}.member .face{font-size:24px;margin:4px}.member .ty{font-size:8px}
 .prepDepth{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.prepDepth input{width:96px;padding:9px;background:#0a0810;border:1px solid var(--line2);color:var(--ink)}
@@ -561,7 +562,7 @@ function holdBtn(el,i){
 /* ---------- クラス（盗賊は一旦削除） ---------- */
 const CLASSES={
   warrior:{name:"戦士",desc:"高耐久の近接。MPを技に注ぎ込んで戦う。",
-    hp:170,mp:80,defMul:1,atk:[14,20],range:2.4,arc:1.6,proj:null,
+    hp:119,mp:80,defMul:1,atk:[14,20],range:2.4,arc:1.6,proj:null,
     atkStat:"str",atkName:"物理攻撃力",mpRegMul:1.2,dodgeMul:.3,msMul:1,
     str:16,mag:2,def:14,agi:8,spi:6,luk:6,col:"#e07038",
     skills:[
@@ -851,22 +852,24 @@ function tutorialItem(slot){
   if(slot==="weapon"){it.wt="sword";it.base="ロングソード";it.main={id:"atk",v:6};}
   else{it.ac=ACSLOT(slot)?"warrior":null;it.base=Array.isArray(BASEN[slot])?BASEN[slot][0]:BASEN[slot].warrior[0];it.main={id:sd.main,v:sd.lo};}
   it.name="訓練用"+it.base;it.score=iScore(it);return it;}
-function tutorialTarget(selector,message,mask=true){
+function tutorialTarget(selector,message,onConfirm){
   document.querySelectorAll(".tutorialTarget").forEach(x=>x.classList.remove("tutorialTarget"));
   const banner=$("tutorialBanner"),shade=$("tutorialMask"),el=selector&&document.querySelector(selector);
-  banner.innerHTML=message+'<div class="skip" id="tutorialSkip">チュートリアルをスキップ</div>';banner.style.display="block";shade.style.display=mask&&!el?"block":"none";
+  banner.innerHTML=message+(el?'<div><b>確認後、青く光っている場所をタップしてください。</b></div>':"")+'<div class="tutorialActions"><div class="confirm" id="tutorialConfirm">確認</div><div class="skip" id="tutorialSkip">スキップ</div></div>';
+  banner.classList.toggle("bottom",!!el&&el.getBoundingClientRect().top<innerHeight*.48);banner.style.display="block";shade.style.display="none";
+  tapEl($("tutorialConfirm"),()=>{banner.style.display="none";if(onConfirm)onConfirm();});
   tapEl($("tutorialSkip"),skipTutorial);
   if(el)el.classList.add("tutorialTarget");
 }
-function hideTutorial(){document.querySelectorAll(".tutorialTarget").forEach(x=>x.classList.remove("tutorialTarget"));$("tutorialBanner").style.display=$("tutorialMask").style.display="none";}
+function hideTutorial(){document.querySelectorAll(".tutorialTarget").forEach(x=>x.classList.remove("tutorialTarget"));$("tutorialBanner").classList.remove("bottom");$("tutorialBanner").style.display=$("tutorialMask").style.display="none";}
 function refreshTutorial(){
   const t=S.tutorial||{};hideTutorial();
-  if(t.phase==="training_cleave")tutorialTarget("#s1","<b>薙ぎ払い</b>：強めの攻撃をしたい時に使います。出現した敵へ使ってみましょう。スキルはMPを消費します。",false);
-  else if(t.phase==="training_dash")tutorialTarget("#s2","<b>突進斬り</b>：攻撃を避ける時や、素早い移動手段として使えます。敵へ使ってみましょう。",false);
-  else if(t.phase==="training_slam")tutorialTarget("#s3","<b>大地砕き</b>：複数の敵をまとめて攻撃したい時に使います。3体へ使ってみましょう。",false);
-  else if(t.phase==="training_potion")tutorialTarget("#pot","HPが減ったら<b>ポーション</b>で回復できます。潜入のたび3個支給され、探索中は最大6個。4個以上持ち帰っても次回は3個からです。",false);
-  else if(t.phase==="training_return")tutorialTarget("#mmW","ミニマップには<b>橙の階段</b>と<b>青の帰還ポータル</b>への矢印が出ます。練習部屋の階段は使用できません。青矢印をたどって帰還してください。",false);
-  else if(t.phase==="return")tutorialTarget(null,"ミニマップ下の<b>青い矢印</b>をたどり、帰還ポータルから拠点へ戻りましょう。",false);
+  if(t.phase==="training_cleave")tutorialTarget("#s1","<b>薙ぎ払い</b>：強めの攻撃をしたい時に使います。出現した敵へ使ってみましょう。スキルはMPを消費します。");
+  else if(t.phase==="training_dash")tutorialTarget("#s2","<b>突進斬り</b>：攻撃を避ける時や、素早い移動手段として使えます。敵へ使ってみましょう。");
+  else if(t.phase==="training_slam")tutorialTarget("#s3","<b>大地砕き</b>：複数の敵をまとめて攻撃したい時に使います。3体へ使ってみましょう。");
+  else if(t.phase==="training_potion")tutorialTarget("#pot","HPが減ったら<b>ポーション</b>で回復できます。潜入のたび3個支給され、探索中は最大6個。4個以上持ち帰っても次回は3個からです。");
+  else if(t.phase==="training_return")tutorialTarget("#mmW","ミニマップには<b>橙の階段</b>と<b>青の帰還ポータル</b>への矢印が出ます。練習部屋の階段は使用できません。確認後、青矢印をたどって帰還してください。");
+  else if(t.phase==="return")tutorialTarget(null,"ミニマップ下の<b>青い矢印</b>をたどり、帰還ポータルから拠点へ戻りましょう。");
   else if(t.phase==="equip_tab")tutorialTarget('#scTown .tab[data-t="gear"]',"まず下の<b>装備タブ</b>を開きます。");
   else if(t.phase==="equip")tutorialTarget(`.slot[data-slot="${TUTORIAL_SLOTS[t.gearIndex]}"]`,`訓練用装備を順番に装備します。<b>${SLOTN(TUTORIAL_SLOTS[t.gearIndex])}</b>をタップしてください。`);
   else if(t.phase==="shop")tutorialTarget('#scTown .tab[data-t="shop"]',"次は<b>商店タブ</b>へ進みましょう。");
@@ -880,22 +883,39 @@ function refreshTutorial(){
 function skipTutorial(){hideTutorial();ask("チュートリアルをスキップ","スキップすると、チュートリアルで入手する予定の装備や無料ガチャ報酬は受け取れません。本当にスキップしますか？",()=>{
   S.stash=S.stash.filter(x=>!x.tutorial);S.bag=S.bag.filter(x=>!x.tutorial);S.tutorial={phase:"done",gearIndex:0};S.returnInvulnerable=false;
   if(S.training){S.training=false;endRun(true);}else{save();openTown();}});}
-function trainingEnemies(count){S.enemies.length=0;for(let i=0;i<count;i++)spawnE("zombie",S.p.x+3+Math.cos(i*TAU/count)*1.5,S.p.y+Math.sin(i*TAU/count)*1.5,1,false);}
+function trainingEnemies(count){
+  S.enemies.length=0;
+  for(let i=0;i<count;i++){
+    const a=count===1?0:(i/count*TAU),e=spawnE("grunt",S.p.x+Math.cos(a)*2.4,S.p.y+Math.sin(a)*2.4,1,false);
+    e.hp=e.max=150;e.sp=0;e.dmg=0;e.agro=true;e.training=true;
+  }
+}
 function beginTraining(){
   $("scTown").classList.remove("on");S.scene="dungeon";S.paused=false;S.training=true;S.floor=1;S.p=newPlayer();S.p.mAtk=20;S.p.trainingAtk=200;S.pots=3;
   map=new Uint8Array(MW*MH);seen=new Uint8Array(MW*MH);rooms=[{x:28,y:28,w:32,h:32,cx:44,cy:44}];rooms.stairIdx=0;for(let y=28;y<60;y++)for(let x=28;x<60;x++)map[y*MW+x]=1;
   S.p.x=44;S.p.y=44;S.enemies=[];S.drops=[];S.props=[];S.bullets=[];S.parts=[];S.nums=[];S.fx=[];S.corpses=[];S.boss=null;S.stairs={x:55,y:55,t:0,training:true};S.portal={x:33,y:33,t:0};MMBG=null;mmSeen=-1;
   $("pauseB").classList.add("show");for(let i=0;i<3;i++){const sk=CLASSES.warrior.skills[i];$("s"+(i+1)).querySelector("span").textContent=sk.n;$("s"+(i+1)).querySelector(".cost").textContent=sk.c;}$("s0").querySelector("span").textContent="攻撃";updHUD();draw();
   ask("練習部屋へようこそ","ここではガイの3つの技、ポーション、ミニマップ、階段と帰還ポータルを練習します。\n練習中はダメージを受けず、物理攻撃力は200です。この補正は部屋を出ると解除されます。",()=>{S.tutorial.phase="training_cleave";trainingEnemies(1);S.paused=false;refreshTutorial();});}
-function trainingSkillUsed(i){const p=(S.tutorial||{}).phase;if(p==="training_cleave"&&i===0){S.tutorial.phase="training_dash";trainingEnemies(1);}
+function trainingSkillUsed(i){const p=(S.tutorial||{}).phase;if(S.enemies.length)return;
+  if(p==="training_cleave"&&i===0){S.tutorial.phase="training_dash";trainingEnemies(1);}
   else if(p==="training_dash"&&i===1){S.tutorial.phase="training_slam";trainingEnemies(3);}
-  else if(p==="training_slam"&&i===2){S.enemies.length=0;S.p.hp=S.p.max*.55;S.tutorial.phase="training_potion";}else return;
+  else if(p==="training_slam"&&i===2){S.p.hp=S.p.max*.55;S.tutorial.phase="training_potion";}else return;
   S.p.mp=S.p.d.mpMax;save();setTimeout(refreshTutorial,300);}
-const TOUR=["prep","gear_equip","gear_ability","inv","shop_gacha","shop_gem","shop_store","conf"];
-function refreshTownTour(){const p=S.tutorial.phase,key=p.slice(5),messages={prep:"拠点では編成と開始階層を決めます。次は装備タブへ。",gear_equip:"装備内の<b>装備</b>ではキャラクターと装備枠、能力値を確認します。",gear_ability:"装備内の<b>能力</b>では獲得した能力ポイントを割り振ります。",inv:"倉庫では装備の確認、並び替え、売却ができます。",shop_gacha:"商店の<b>ガチャ</b>では装備やキャラクターを獲得します。",shop_gem:"商店の<b>ジェム</b>ではジェム商品を確認します。",shop_store:"商店の<b>ゴールド</b>では掘り出し物を購入します。",conf:"設定では表示、省電力、記録などを変更できます。これで拠点案内は完了です。"};
-  const selectors={prep:'[data-t="gear"]',gear_equip:'.innerTabs .btn:nth-child(2)',gear_ability:'[data-t="inv"]',inv:'[data-t="shop"]',shop_gacha:'.shopTabs .btn:nth-child(2)',shop_gem:'.shopTabs .btn:nth-child(3)',shop_store:'[data-t="conf"]',conf:'[data-t="prep"]'};tutorialTarget(selectors[key],messages[key]);}
-function advanceTour(target,sub){const key=(S.tutorial.phase||"").slice(5),i=TOUR.indexOf(key);if(i<0)return false;const expected=[["gear"],["gear","ability"],["inv"],["shop"],["shop","gem"],["shop","store"],["conf"],["prep"]][i];if(target!==expected[0]||(expected[1]&&sub!==expected[1]))return true;
-  if(i===TOUR.length-1){S.tutorial.phase="boss";toast("拠点案内完了","ok");}else S.tutorial.phase="tour_"+TOUR[i+1];save();return false;}
+const TOWN_TOUR=[
+  {k:"prep",sel:'[data-t="gear"]',msg:"拠点では編成と開始階層を決めます。次は下部の<b>装備・能力</b>を開きます。",act:["gear"]},
+  {k:"gear_equip",msg:"装備・能力画面は、最初から<b>装備</b>が開いています。ここではキャラクター、装備枠、能力値を確認できます。"},
+  {k:"gear_ability",sel:'.innerTabs .btn:nth-child(2)',msg:"次に、装備・能力画面内の<b>能力</b>を開いてください。",act:["gear","ability"]},
+  {k:"gear_ability_info",sel:'[data-t="inv"]',msg:"<b>能力</b>では獲得した能力ポイントを割り振れます。次は下部の<b>倉庫</b>を開きます。",act:["inv"]},
+  {k:"inv",sel:'[data-t="shop"]',msg:"<b>倉庫</b>では装備の確認、並び替え、売却ができます。次は下部の<b>商店</b>を開きます。",act:["shop"]},
+  {k:"shop_gacha",msg:"商店は、最初から<b>ガチャ</b>が開いています。ここでは装備やキャラクターを獲得できます。"},
+  {k:"shop_gem",sel:'.shopTabs .btn:nth-child(2)',msg:"次に、商店内の<b>ジェム</b>を開いてください。",act:["shop","gem"]},
+  {k:"shop_gem_info",sel:'.shopTabs .btn:nth-child(3)',msg:"<b>ジェム</b>ではジェム商品を確認できます。次に商店内の<b>ゴールド</b>を開いてください。",act:["shop","store"]},
+  {k:"shop_store",sel:'[data-t="conf"]',msg:"<b>ゴールド</b>では掘り出し物を購入できます。次は下部の<b>設定</b>を開きます。",act:["conf"]},
+  {k:"conf",sel:'[data-t="prep"]',msg:"<b>設定</b>では表示、省電力、記録などを変更できます。確認後、拠点へ戻れば案内完了です。",act:["prep"]},
+];
+function nextTownTour(i){if(i>=TOWN_TOUR.length-1){S.tutorial.phase="boss";toast("拠点案内完了","ok");}else S.tutorial.phase="tour_"+TOWN_TOUR[i+1].k;save();refreshTutorial();}
+function refreshTownTour(){const key=S.tutorial.phase.slice(5),i=TOWN_TOUR.findIndex(x=>x.k===key),step=TOWN_TOUR[i];if(!step)return;tutorialTarget(step.sel||null,step.msg,step.act?null:()=>nextTownTour(i));}
+function advanceTour(target,sub){const key=(S.tutorial.phase||"").slice(5),i=TOWN_TOUR.findIndex(x=>x.k===key),step=TOWN_TOUR[i];if(!step||!step.act)return i>=0;if(target!==step.act[0]||(step.act[1]&&sub!==step.act[1]))return true;nextTownTour(i);return false;}
 
 const armorDR=a=>Math.min(.45,a/(a+120+S.floor*22));
 function derive(){
@@ -1137,6 +1157,7 @@ function hurtE(e,dmg,crit,kx,ky,quiet){
 function killE(e){
   const i=S.enemies.indexOf(e);if(i<0)return;
   S.enemies.splice(i,1);
+  if(S.training&&e.training)setTimeout(()=>trainingSkillUsed(e.trainingSkill),0);
   const p=S.p;p.kills++;S.combo++;S.comboT=2.2;
   if(S.corpses.length<34)S.corpses.push({x:e.x,y:e.y,t:0,col:e.col,sz:e.sz});
   burst(e.x,e.y,e.col,e.boss?60:e.elite?26:12,e.boss?3:e.elite?2.4:1.9);
@@ -1289,7 +1310,7 @@ function useSkill(i){
       let ang=Math.atan2(e.y-p.y,e.x-p.x)-a;
       while(ang>Math.PI)ang-=TAU;while(ang<-Math.PI)ang+=TAU;
       if(Math.abs(ang)>sk.arc)continue;
-      const[v,c]=dmg();hurtE(e,v,c,Math.cos(a),Math.sin(a),h++>0);}
+      const[v,c]=dmg();if(e.training)e.trainingSkill=i;hurtE(e,v,c,Math.cos(a),Math.sin(a),h++>0);}
     for(let i2=0;i2<12;i2++){const ang=a+rr(-sk.arc,sk.arc);
       S.parts.push({x:p.x+Math.cos(ang)*R*.75,y:p.y+Math.sin(ang)*R*.75,
         vx:Math.cos(ang)*4,vy:Math.sin(ang)*4,t:0,life:.16,col:"#ffd9a0",sz:3});}
@@ -1300,14 +1321,14 @@ function useSkill(i){
     const hs=new Set();
     p.dashHit=()=>{for(const e of S.enemies.slice()){if(hs.has(e))continue;
       if(d2(p.x,p.y,e.x,e.y)<Math.pow(sk.w*mul+e.r,2)){hs.add(e);
-        const[v,c]=dmg();hurtE(e,v,c,Math.cos(a),Math.sin(a));}}};
+        const[v,c]=dmg();if(e.training)e.trainingSkill=i;hurtE(e,v,c,Math.cos(a),Math.sin(a));}}};
     const oldHit=p.dashHit;p.dashHit=()=>{oldHit();hitPotsCircle(p.x,p.y,sk.w*mul+.35);};
     SFX.cast(300);shk(3);break;}
   case "slam":{
     const R=sk.r*mul*p.mRange;
     for(const e of S.enemies.slice()){
       const d=Math.hypot(e.x-p.x,e.y-p.y);if(d>R+e.r)continue;
-      const[v,c]=dmg();hurtE(e,v,c,(e.x-p.x)/(d||1)*2,(e.y-p.y)/(d||1)*2);
+      const[v,c]=dmg();if(e.training)e.trainingSkill=i;hurtE(e,v,c,(e.x-p.x)/(d||1)*2,(e.y-p.y)/(d||1)*2);
       if(e.hp>0)e.stun=Math.max(e.stun,sk.stun);}
     hitPotsCircle(p.x,p.y,R);S.fx.push({t:"ring",x:p.x,y:p.y,tm:0,R,col:"#ffa040"});
     SFX.nova();shk(10);buzz([0,50,40,60]);break;}
@@ -1339,7 +1360,7 @@ function useSkill(i){
         if(d<nd&&d<sk.range*sk.range){nd=d;nx=e;}}
       cur=nx;}
     SFX.cast(880);shk(4);break;}}
-  if(S.training)trainingSkillUsed(i);updHUD();}
+  updHUD();}
 function usePotion(){const p=S.p;
   if(S.pots<=0||p.hp>=p.max)return;
   S.pots--;p.hp=Math.min(p.max,p.hp+p.max*CFG.POTION_HEAL);
@@ -2642,7 +2663,8 @@ function load(){try{
 
 /* ---------- 起動 ---------- */
 resize();
-function tutorialAllows(el){if(el.closest("#tutorialSkip")||$("itPop").classList.contains("on")||$("askPop").classList.contains("on"))return true;const p=(S.tutorial||{}).phase;
+function tutorialAllows(el){if(el.closest("#tutorialSkip,#tutorialConfirm,#btnBack")||$("itPop").classList.contains("on")||$("askPop").classList.contains("on"))return true;const p=(S.tutorial||{}).phase;
+  if($("tutorialBanner").style.display!=="none")return false;
   if(p&&p.startsWith("tour_"))return !!el.closest(".tutorialTarget,#tutorialSkip");
   if(!["equip_tab","equip","shop","equip_gacha","char_gacha","formation","formation_slot"].includes(p))return true;
   const selectors={equip_tab:'#scTown .tab[data-t="gear"]',equip:`.slot[data-slot="${TUTORIAL_SLOTS[S.tutorial.gearIndex]}"]`,shop:'#scTown .tab[data-t="shop"]',equip_gacha:'[data-tutorial="equip-gacha"]',char_gacha:'[data-tutorial="char-gacha"]',formation:'#scTown .tab[data-t="prep"]',formation_slot:'.member[data-index="0"]'};

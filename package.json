@@ -4,6 +4,7 @@
   "scripts": {
     "serve": "python3 -m http.server 8000 -d public",
     "check": "node scripts/check-prototype.mjs",
+    "check:tutorial": "node scripts/check-tutorial.mjs",
     "check:pr12": "node scripts/check-pr12-merge.mjs",
     "deploy": "wrangler deploy"
   },
