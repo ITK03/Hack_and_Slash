@@ -788,7 +788,9 @@ function rarRoll(fl,mf,luk){
   for(let i=0;i<w.length;i++){v-=w[i];if(v<=0)return i;}return 0;}
 const SW={atk:5,matk:5,atkP:4,hp:1,armor:1.4,crit:7,cdmg:2,as:5,ms:3,ls:9,cdr:4,dr:5,
   mf:1.2,mreg:1.5,luk:3,rng:4,agiF:3,mpF:1,lukF:3};
-const iScore=it=>((it.main?it.main.v*(SW[it.main.id]||1)*(1+((it.lv||1)-1)*.14):0)
+const ENHANCE_PER_LV=.14; // 基礎主能力への加算。複利にはしない
+const itemMaxLv=it=>10+Math.floor(Math.sqrt(Math.max(1,Number(it&&it.ilvl)||1)));
+const iScore=it=>((it.main?it.main.v*(SW[it.main.id]||1)*(1+((it.lv||1)-1)*ENHANCE_PER_LV):0)
   +it.affs.reduce((s,a)=>s+a.v*(SW[a.id]||1),0))+(it.pw?80:0);
 function makeItem(fl,mf,luk,forceRar){
   let rar=rarRoll(fl,mf,luk);
@@ -815,11 +817,10 @@ function makeItem(fl,mf,luk,forceRar){
     :"《"+pick(PRE)+pick(SUF)+"》"+it.base;
   it.score=iScore(it);return it;}
 // 職業に合わない防具は主ステが6割しか出ない
-const mainV=it=>Math.round(it.main.v*(1+(it.lv-1)*.14)*((it.ac&&it.ac!==S.cls)?.6:1));   // 合成でレベルを上げると主ステが伸びる
+const mainV=it=>Math.round(it.main.v*(1+(it.lv-1)*ENHANCE_PER_LV)*((it.ac&&it.ac!==S.cls)?.6:1)); // 基礎値の固定割合を段階数ぶん加算
 const fuseNeed=it=>Math.round(60*Math.pow(1.35,it.lv-1));
 const fuseGold=it=>Math.round((25+it.ilvl*7)*[1,1.4,2.2,3.6,7][it.rar]);
 const fuseXP=f=>Math.round((14+f.ilvl*2.4)*(1+f.rar*.55)*(1+(f.lv-1)*.32));
-const MAXLV=10;
 function statsHTML(it,cmp){
   let h="";
   if(it.main)h+=`<b style="color:#f0e6d0">${AFN(it.main.id)} +${mainV(it)}</b>`+
@@ -1209,7 +1210,11 @@ function hitPotsCone(x,y,face,range,arc){let hit=false;for(const q of S.props){
   let a=Math.atan2(q.y-y,q.x-x)-face;while(a>Math.PI)a-=TAU;while(a<-Math.PI)a+=TAU;
   if(Math.abs(a)<=arc)hit=breakPot(q)||hit;}return hit;}
 function gainXP(v){const b=S.base;
-  if(b.lv>=CFG.LV_CAP){b.para++;return;}
+  if(b.lv>=CFG.LV_CAP){
+    b.xp=(b.xp||0)+v;const need=xpNeed(CFG.LV_CAP-1);let gained=0;
+    while(b.xp>=need){b.xp-=need;b.para=(b.para||0)+1;b.pts++;gained++;}
+    if(gained){S.p.d=derive();recalcHP(S.p);SFX.lvl();save();toast(`パラゴン +${gained}：能力ポイント +${gained}`);}
+    updHUD();return;}
   b.xp+=v;
   while(b.lv<CFG.LV_CAP&&b.xp>=xpNeed(b.lv)){
     b.xp-=xpNeed(b.lv);b.lv++;b.pts+=CFG.STAT_PER_LV;
@@ -2030,7 +2035,7 @@ function updHUD(){
   $("mpF").style.width=(p.mp/p.d.mpMax*100)+"%";
   $("mpT").textContent="MP "+Math.floor(p.mp)+"/"+p.d.mpMax;
   const b=S.base;
-  $("xpF").style.width=(b.lv>=CFG.LV_CAP?100:b.xp/xpNeed(b.lv)*100)+"%";
+  $("xpF").style.width=(b.xp/(b.lv>=CFG.LV_CAP?xpNeed(CFG.LV_CAP-1):xpNeed(b.lv))*100)+"%";
   $("lvT").textContent="Lv"+b.lv+(b.para?"+"+b.para:"");
   const dg=dangerOf(S.floor);
   $("flT").innerHTML=S.floor+' <span style="color:'+dg.c+';font-size:9px">'+dg.n+'</span>';
@@ -2408,7 +2413,7 @@ function showItem(it,inDungeon){
   }
   const st=document.createElement("div");st.className="st optBox";st.style.textAlign="center";st.style.fontSize="13px";st.style.lineHeight="1.9";
   st.innerHTML=statsHTML(it);c.appendChild(st);
-  if(!inDungeon&&it.lv<MAXLV){
+  if(!inDungeon&&it.lv<itemMaxLv(it)){
     const need=fuseNeed(it),gold=fuseGold(it);
     mk(`強化する（Lv${it.lv} / ${it.xp}exp）`,"gold",()=>{$("itPop").classList.remove("on");openFuse(it);});}
   if(equippedHere)mk("外す","gh",()=>{if(!S.stash.includes(it))S.stash.push(it);S.gear[it.slot]=null;S.p.d=derive();recalcHP(S.p);
@@ -2422,7 +2427,8 @@ function showItem(it,inDungeon){
 /* 合成: 同部位の装備をまとめて食わせてレベルを上げる */
 let fuseTarget=null,fuseSel=[];
 function fusePreview(target,xp){let lv=target.lv,cur=target.xp+xp,up=0;
-  while(lv<MAXLV&&cur>=fuseNeed({lv})){cur-=fuseNeed({lv});lv++;up++;}
+  const maxLv=itemMaxLv(target);
+  while(lv<maxLv&&cur>=fuseNeed({lv})){cur-=fuseNeed({lv});lv++;up++;}
   return {lv,xp:cur,up};}
 function openFuse(target){
   if(fuseTarget!==target){fuseTarget=target;fuseSel=[];}
@@ -2434,9 +2440,10 @@ function openFuse(target){
   c.innerHTML=`<div style="font-size:15px;font-weight:800">${target.name} を強化</div>
     <div class="sub" style="margin:4px 0 10px">Lv${target.lv} — 経験値 ${target.xp}/${need}</div>`;
   const box=document.createElement("div");box.className="card";
-  const nxt=Object.assign({},target,{lv:Math.min(MAXLV,target.lv+1),affs:target.affs,main:target.main});
+  const maxLv=itemMaxLv(target),nxt=Object.assign({},target,{lv:Math.min(maxLv,target.lv+1),affs:target.affs,main:target.main});
   const eq=isEquipped(target);
   box.innerHTML=`<div class="ty" style="margin:0 0 6px">選択中 ${fuseSel.length}個 / +${totalXP}exp / 費用 ${cost}G</div>
+    <div class="stat"><span>強化上限</span><b>Lv${maxLv}</b></div>
     <div class="stat"><span>強化後予測</span><b>Lv${prev.lv}${prev.up?` <span class="up">(+${prev.up})</span>`:""}</b></div>
     <div class="stat"><span>${AFN(target.main.id)}（次Lv基礎）</span><b>${mainV(nxt)} <span class="up">(+${mainV(nxt)-mainV(target)})</span></b></div>`+
     (eq?deltaHTML(target.slot,nxt):"");
@@ -2446,7 +2453,7 @@ function openFuse(target){
   tapEl(go,()=>{if(!fuseSel.length)return;if(S.gold<cost){toast("金貨が足りない");return;}
     S.gold-=cost;target.xp+=totalXP;
     for(const f of fuseSel){const k=S.stash.indexOf(f);if(k>=0)S.stash.splice(k,1);}
-    let up=0;while(target.lv<MAXLV&&target.xp>=fuseNeed(target)){target.xp-=fuseNeed(target);target.lv++;up++;}
+    let up=0;while(target.lv<maxLv&&target.xp>=fuseNeed(target)){target.xp-=fuseNeed(target);target.lv++;up++;}
     fuseSel=[];target.score=iScore(target);S.p.d=derive();recalcHP(S.p);up?SFX.lvl():SFX.ok();toast(up?`強化成功 Lv${target.lv}`:`経験値 +${totalXP}`);save();openFuse(target);});
   c.appendChild(go);
   if(!list.length){const d=document.createElement("div");d.className="card";d.innerHTML='<div class="st">素材にできる同部位の装備がない。</div>';c.appendChild(d);}
@@ -2650,14 +2657,17 @@ function load(){try{
   S.unlockedCharacters=d.unlockedCharacters||["warrior:gai"];S.tutorial=d.tutorial||{phase:"done",gearIndex:0};S.returnInvulnerable=!!d.returnInvulnerable;
   S.formation=(d.formation||[]).filter(k=>S.unlockedCharacters.includes(k)).slice(0,formationCapacity());S.diveFloor=d.diveFloor||1;S.stamina=d.stamina==null?100:d.stamina;S.premium=d.premium||0;S.profileAvatar=d.profileAvatar||null;S.shopSub=d.shopSub||"gacha";S.gearSub=d.gearSub||"equip";
   if(!S.avatars[S.cls])S.avatars[S.cls]=CHARACTERS[S.cls][0].id;
-  const nb=Object.assign({lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0},d.base||{});
+  const normalizeBase=raw=>{const b=Object.assign({lv:1,xp:0,pts:0,para:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0},raw||{});
+    // 旧版の para は効果のない累計値だったため、初回ロード時だけ未使用能力点へ返す。
+    if(!b.paraConverted&&b.para>0){b.pts+=b.para;b.paraConverted=true;}return b;};
+  const nb=normalizeBase(d.base);
   delete nb.need;
   if(nb.dex!==undefined||nb.vit!==undefined){   // 旧スキーマは全部振り直しにして返す
     nb.pts+=(nb.str|0)+(nb.dex|0)+(nb.vit|0)+(nb.ene|0)+(nb.luk|0);
     nb.str=nb.mag=nb.def=nb.agi=nb.spi=nb.luk=0;
     delete nb.dex;delete nb.vit;delete nb.ene;delete nb.para;}
   S.base=nb;
-  for(const st of Object.values(S.characterStates)){st.base=Object.assign({lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0},st.base||{});const fixed=emptyGear();for(const it of Object.values(st.gear||{})){const x=fix(it);if(x&&!fixed[x.slot])fixed[x.slot]=x;}st.gear=fixed;}
+  for(const st of Object.values(S.characterStates)){st.base=normalizeBase(st.base);const fixed=emptyGear();for(const it of Object.values(st.gear||{})){const x=fix(it);if(x&&!fixed[x.slot])fixed[x.slot]=x;}st.gear=fixed;}
   const active=S.characterStates[activeCharacterKey()];if(active){S.base=active.base;S.gear=active.gear;}else S.characterStates[activeCharacterKey()]={base:S.base,gear:S.gear};
   return true;}catch(e){return false;}}
 
