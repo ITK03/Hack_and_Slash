@@ -791,9 +791,9 @@ const SW={atk:5,matk:5,atkP:4,hp:1,armor:1.4,crit:7,cdmg:2,as:5,ms:3,ls:9,cdr:4,
   mf:1.2,mreg:1.5,luk:3,rng:4,agiF:3,mpF:1,lukF:3};
 const ENHANCE_PER_LV=.14; // 基礎主能力への加算。複利にはしない
 const itemMaxLv=it=>10+Math.floor(Math.sqrt(Math.max(1,Number(it&&it.ilvl)||1)));
-// 仕様の境界例（10/30/70…）と深度1000=階梯8をともに満たす。
-const materialTier=depth=>1+Math.ceil(Math.log2(Math.max(1,Number(depth)||1)/10+1));
-const MAT_QTY=[1,2,5,12,30],crystalQty=it=>MAT_QTY[clamp(it.rar|0,0,4)];
+const materialTier=depth=>Math.max(1,Math.ceil(Math.log2(Math.max(1,Number(depth)||1)/10+1)));
+const materialScale=depth=>Math.max(1,Math.ceil(Math.sqrt(Math.max(1,Number(depth)||1)/10)));
+const MAT_QTY=[1,2,5,12,30],crystalQty=it=>MAT_QTY[clamp(it.rar|0,0,4)]*materialScale(it.ilvl);
 const matBucket=kind=>S.mats[kind]||(S.mats[kind]={});
 const addMat=(kind,tier,n=1)=>{const b=matBucket(kind),k=Math.max(1,tier|0);b[k]=(b[k]||0)+n;};
 const matCapacity=(kind,minTier)=>Object.entries(matBucket(kind)).reduce((sum,[tier,n])=>
@@ -805,7 +805,8 @@ function spendMat(kind,minTier,units){
     const have=b[tier]||0,value=Math.pow(4,tier-minTier),take=Math.min(have,Math.ceil(left/value));
     if(take){b[tier]-=take;left-=take*value;if(!b[tier])delete b[tier];}tier++;}
   return true;}
-const crystalNeed=it=>Math.max(1,Math.ceil(fuseNeed(it)/12));
+// 深度別の収量スケールを強化上限の段数で均し、1枚の完成までの周回数を一定に保つ。
+const crystalNeed=it=>Math.max(1,Math.round(240*materialScale(it.ilvl)/(itemMaxLv(it)-1)));
 const coreNeeded=it=>it.lv+1>1+Math.floor((itemMaxLv(it)-1)*2/3);
 function upgradeMatCost(it,addedXP){let lv=it.lv,xp=it.xp+addedXP,crystal=0,core=0;
   while(lv<itemMaxLv(it)&&xp>=fuseNeed({lv})){const step={ilvl:it.ilvl,lv};xp-=fuseNeed(step);crystal+=crystalNeed(step);if(coreNeeded(step))core++;lv++;}
@@ -838,7 +839,7 @@ function makeItem(fl,mf,luk,forceRar){
   it.score=iScore(it);return it;}
 // 職業に合わない防具は主ステが6割しか出ない
 const mainV=it=>Math.round(it.main.v*(1+(it.lv-1)*ENHANCE_PER_LV)*((it.ac&&it.ac!==S.cls)?.6:1)); // 基礎値の固定割合を段階数ぶん加算
-const fuseNeed=it=>Math.round(60*Math.pow(1.35,it.lv-1));
+const fuseNeed=it=>Math.round(56+4*Math.sqrt(Math.max(1,Number(it&&it.ilvl)||1)));
 const fuseGold=it=>Math.round((25+it.ilvl*7)*[1,1.4,2.2,3.6,7][it.rar]);
 const fuseXP=f=>Math.round((14+f.ilvl*2.4)*(1+f.rar*.55)*(1+(f.lv-1)*.32));
 function statsHTML(it,cmp){
@@ -1205,7 +1206,7 @@ function killE(e){
     dropGold(e.x,e.y,300+S.floor*50);if(S.floor!==5||!["boss_message","return"].includes((S.tutorial||{}).phase))toast("ボス撃破 — 深度 "+(S.floor+1)+" 開始を解放");}
   else if(e.elite){if(rnd()<.5)dropItem(e.x,e.y,1);dropGold(e.x,e.y,50+S.floor*10);}
   else{const dm=p.mDrop*p.sDrop*(hasPw("greed")?1.8:1)*(1+p.d.mf);
-    if(rnd()<CFG.CRYSTAL_ENEMY_DROP)S.drops.push({x:e.x,y:e.y,mat:"crystal",tier:materialTier(S.floor),n:1,t:0});
+    if(rnd()<CFG.CRYSTAL_ENEMY_DROP)S.drops.push({x:e.x,y:e.y,mat:"crystal",tier:materialTier(S.floor),n:materialScale(S.floor),t:0});
     if(rnd()<CFG.DROP_CHANCE*dm)dropItem(e.x,e.y);
     if(rnd()<CFG.GOLD_CHANCE)dropGold(e.x,e.y,Math.round((6+S.floor*3)*rr(.6,1.6)*(1+luk*.012)));
     if(rnd()<CFG.POTION_DROP)S.drops.push({x:e.x,y:e.y,pot:1,t:0});
@@ -1219,7 +1220,7 @@ function dropItem(x,y,forceRar){
 function dropGold(x,y,v){S.drops.push({x,y,gold:v,t:0});}
 function autoRefillPots(){if(S.pots<CFG.POTION_BASE){S.pots=CFG.POTION_BASE;toast("ポーション自動補充");}}
 function barrelDrop(x,y){
-  if(rnd()<CFG.CRYSTAL_BARREL_DROP)S.drops.push({x,y,mat:"crystal",tier:materialTier(S.floor),n:1,t:0});
+  if(rnd()<CFG.CRYSTAL_BARREL_DROP)S.drops.push({x,y,mat:"crystal",tier:materialTier(S.floor),n:materialScale(S.floor),t:0});
   if(rnd()<CFG.POTION_POT_DROP){S.drops.push({x,y,pot:1,t:0});return;}
   if(rnd()<CFG.SHARD_DROP*.5){S.drops.push({x,y,shard:1,t:0});return;}
   if(rnd()<CFG.GOLD_CHANCE*.5)dropGold(x,y,Math.round((6+S.floor*3)*rr(.6,1.6)));
@@ -2666,12 +2667,14 @@ function beginRun(fl){
 const KEY="descent_v5";
 function save(){storeActiveCharacter();try{localStorage.setItem(KEY,JSON.stringify({cls:S.cls,deepest:S.deepest,
   gold:S.gold,stash:S.stash,gear:S.gear,base:S.base,pots:S.pots,log:S.log,mats:S.mats,
+  matTierVersion:2,
   settings:S.settings,admin:S.admin,debug:S.debug,debugFloor:S.debugFloor,adminOpts:S.adminOpts,chars:S.chars,characterStates:S.characterStates,avatars:S.avatars,formation:S.formation,diveFloor:S.diveFloor,stamina:S.stamina,premium:S.premium,profileAvatar:S.profileAvatar,shopSub:S.shopSub,gearSub:S.gearSub,unlockedCharacters:S.unlockedCharacters,tutorial:S.tutorial,returnInvulnerable:S.returnInvulnerable}));}catch(e){}}
 function load(){try{
   const d=JSON.parse(localStorage.getItem(KEY)||"null");
   if(!d||!d.cls||!CLASSES[d.cls])return false;
   S.cls=d.cls;S.deepest=d.deepest||1;S.gold=d.gold||0;S.stash=d.stash||[];
   S.mats={crystal:Object.assign({},d.mats&&d.mats.crystal||{}),core:Object.assign({},d.mats&&d.mats.core||{})};
+  if((d.matTierVersion||1)<2)for(const kind of ["crystal","core"]){const old=S.mats[kind],moved={};for(const [tier,n] of Object.entries(old))moved[Math.max(1,(+tier||1)-1)]=(moved[Math.max(1,(+tier||1)-1)]||0)+n;S.mats[kind]=moved;}
   const fix=it=>{
     if(!it)return null;
     if(it.slot==="belt")return null;                 // ベルトは廃止
