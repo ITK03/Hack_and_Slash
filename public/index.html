@@ -101,6 +101,7 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   font-size:8px;font-weight:700;color:#ffb0b4}
 #pot b{font-size:17px;line-height:1;font-weight:900}
+#itemFan{position:absolute;left:-8px;bottom:5px;width:210px;height:170px;pointer-events:none;display:none}#itemFan.on{display:block}.fanItem{position:absolute;width:54px;height:54px;border-radius:50%;display:grid;place-items:center;text-align:center;font-size:8px;font-weight:900;background:#181322;border:1px solid var(--line2);pointer-events:none}.fanItem.sel{border-color:var(--gold);box-shadow:0 0 12px var(--gold)}.loadout{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.loadSlot{min-height:70px;padding:6px 3px;text-align:center;border:1px solid var(--line);background:var(--panel);font-size:9px}.recipe{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center}
 #pot.no{opacity:.3;filter:grayscale(.7)}
 #act{position:absolute;left:50%;transform:translateX(-50%);
   bottom:calc(env(safe-area-inset-bottom) + 112px);z-index:22;padding:12px 20px;border-radius:3px;
@@ -314,7 +315,7 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
   <div class="sk" id="s1"><span></span><em class="cost"></em><div class="cd"></div></div>
   <div class="sk" id="s2"><span></span><em class="cost"></em><div class="cd"></div></div>
   <div class="sk" id="s3"><span></span><em class="cost"></em><div class="cd"></div></div>
-  <div id="pot"><b id="potN">0</b>ポーション</div>
+  <div id="pot"><b id="potN">0</b><span id="potLabel">アイテム</span><div id="itemFan"></div></div>
 </div>
 <div id="act"></div>
 
@@ -430,7 +431,6 @@ const CFG={
   XP_TAIL:1.1128,   // Lv40 以降は1レベルごとにこの倍率
   SKIP_STEP:5,        // 何層ごとにスキップ開始地点を選べるか
   SHRINE_CHANCE:.30,  // フロアに祭壇が出る確率
-  POTION_HEAL:.20, POTION_BASE:3, POTION_MAX:6, POTION_POT_DROP:.01,
   SHARD_DROP:.13, SHARD_HEAL:.045,   // 拾った瞬間に少し回復する欠片
   CRYSTAL_ENEMY_DROP:.025, CRYSTAL_BARREL_DROP:.08,
   PICKUP_DELAY:.10, PICKUP_RADIUS:.50, MAGNET_RADIUS:1.5, MAGNET_SPEED:2.5,
@@ -697,6 +697,15 @@ const ET={
 };
 const EKEYS=Object.keys(ET);
 /* 状態異常。自分にも敵にも乗る。防御が高いほど自分は入りにくい。 */
+const CONSUMABLES={
+  heal:{n:"回復薬",icon:"♥",crystal:3,max:3,d:"HPを最大値の25%回復"},
+  healG:{n:"回復薬グレード",icon:"💖",crystal:7,core:1,max:2,d:"HPを45%回復（半分は3秒継続）"},
+  power:{n:"力の丸薬",icon:"力",crystal:5,max:5,d:"物理・特殊攻撃力 +12% / 60秒"},
+  hard:{n:"硬化薬",icon:"盾",crystal:5,max:5,d:"防御 +20%、ノックバック無効 / 60秒"},
+  focus:{n:"気付け薬",icon:"気",crystal:7,core:1,max:2,d:"MP回復速度 +80% / 60秒"},
+  gale:{n:"疾風の粉",icon:"風",crystal:5,max:5,d:"移動速度 +15%、回避 +5% / 60秒"}
+};
+const CONSUMABLE_KEYS=Object.keys(CONSUMABLES);
 const ST={brn:{n:"燃焼",col:"#ff7a3a",dps:.055},psn:{n:"毒",col:"#7ad06a",dps:.022},
   frz:{n:"凍結",col:"#7ad0ff"},par:{n:"麻痺",col:"#e0d040"}};
 function applyST(t,k,dur,isPlayer){
@@ -860,10 +869,10 @@ const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   portal:null,stairs:null,boss:null,
   bag:[],stash:[],gear:{},
   runT:0,hitstop:0,shake:0,shakeT:0,flash:0,paused:true,
-  log:{runs:[]},tab:"prep",gearSub:"equip",ptab:"drops",pots:CFG.POTION_BASE,lvlQ:0,
+  log:{runs:[]},tab:"prep",gearSub:"equip",ptab:"drops",lvlQ:0,
   settings:{map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0},admin:false,debug:false,debugFloor:1,adminOpts:{},chars:{},characterStates:{},avatars:{},
   combo:0,comboT:0,dmgLog:[],dps:0,startFloor:1,runGold:0,
-  inv:{filters:[],sort:"score",sellSel:[],sellRar:1},mats:{crystal:{},core:{}},
+  inv:{filters:[],sort:"score",sellSel:[],sellRar:1},mats:{crystal:{},core:{}},consumables:{},loadout:["heal",null,null,null],runItems:[0,0,0,0],itemSlot:0,
   formation:[],partyIndex:0,diveFloor:1,stamina:3,premium:0,profileAvatar:null,shopSub:"gacha",alloc:null,
   daily:null,dailyMatMul:1,
   unlockedCharacters:["warrior:gai"],tutorial:{phase:"training_intro",gearIndex:0},training:false,returnInvulnerable:false,
@@ -926,7 +935,7 @@ function trainingEnemies(count){
   }
 }
 function beginTraining(){
-  $("scTown").classList.remove("on");S.scene="dungeon";S.paused=false;S.training=true;S.floor=1;S.p=newPlayer();S.p.mAtk=20;S.p.trainingAtk=200;S.pots=3;
+  $("scTown").classList.remove("on");S.scene="dungeon";S.paused=false;S.training=true;S.floor=1;S.p=newPlayer();S.p.mAtk=20;S.p.trainingAtk=200;S.consumables.heal=Math.max(3,S.consumables.heal||0);S.loadout=["heal",null,null,null];S.runItems=[3,0,0,0];
   map=new Uint8Array(MW*MH);seen=new Uint8Array(MW*MH);rooms=[{x:28,y:28,w:32,h:32,cx:44,cy:44}];rooms.stairIdx=0;for(let y=28;y<60;y++)for(let x=28;x<60;x++)map[y*MW+x]=1;
   S.p.x=44;S.p.y=44;S.enemies=[];S.drops=[];S.props=[];S.bullets=[];S.parts=[];S.nums=[];S.fx=[];S.corpses=[];S.boss=null;S.stairs={x:55,y:55,t:0,training:true};S.portal={x:33,y:33,t:0};MMBG=null;mmSeen=-1;
   $("pauseB").classList.add("show");for(let i=0;i<3;i++){const sk=CLASSES.warrior.skills[i];$("s"+(i+1)).querySelector("span").textContent=sk.n;$("s"+(i+1)).querySelector(".cost").textContent=sk.c;}$("s0").querySelector("span").textContent="攻撃";updHUD();draw();
@@ -987,7 +996,7 @@ function derive(){
 /* 回避: 自分と階層の力量差で決まる。格上相手にはほとんど効かない。 */
 function dodgeRate(){const d=S.p.d;
   const gap=(S.base.lv*.5+4)-S.floor;
-  return clamp((.02+d.agiD*.0020+gap*.010)*(d.C.dodgeMul||1),0,.30);}
+  return clamp((.02+d.agiD*.0020+gap*.010)*(d.C.dodgeMul||1)+(S.p.itemBuffs.gale?.05:0),0,.30);}
 function dodgeRateFor(d){const gap=(S.base.lv*.5+4)-S.floor;
   return clamp((.02+d.agiD*.0020+gap*.010)*(d.C.dodgeMul||1),0,.30);}
 function deriveWith(slot,item){
@@ -1043,7 +1052,7 @@ function newPlayer(){const d=derive();
     cd:0,cds:[0,0,0],hurtT:0,invulT:0,dashT:0,dashX:0,dashY:0,dashHit:null,
     mAtk:1,mAs:1,mMs:1,mCrit:0,mCdmg:0,mRange:1,mCd:1,mDrop:1,mLs:0,mDr:0,mHp:0,
     sAtk:1,sDr:0,sMs:1,sAs:1,sDrop:1,shrineT:0,shrine:null,
-    buffT:0,buffAtk:1,buffDr:0,guardS:0,guardT:0,atkN:0,comboStep:0,comboT:0,ups:[],kills:0};}
+    buffT:0,buffAtk:1,buffDr:0,guardS:0,guardT:0,atkN:0,comboStep:0,comboT:0,ups:[],kills:0,itemBuffs:{},itemCd:0,itemLock:0,hot:0,hotT:0};}
 const recalcHP=p=>{p.max=Math.round(p.d.max*(1+p.mHp));p.hp=Math.min(p.hp,p.max);};
 const UPS=[
   {t:"鋭刃",d:"攻撃力 +16%",f:p=>p.mAtk*=1.16},
@@ -1105,7 +1114,6 @@ function spawnBoss(fl){
 /* ---------- フロア ---------- */
 function enterFloor(fl){
   S.floor=fl;S.deepest=Math.max(S.deepest,fl);
-  if((fl-1)%CFG.SKIP_STEP===0)autoRefillPots();
   genFloor(fl);
   S.enemies.length=0;S.drops.length=0;S.bullets.length=0;S.parts.length=0;
   S.nums.length=0;S.props.length=0;S.fx.length=0;S.corpses.length=0;
@@ -1171,7 +1179,7 @@ const shk=v=>{S.shake=Math.max(S.shake,v);S.shakeT=.2;};
 const hasPw=id=>S.p&&S.p.d.pw.includes(id);
 function pDmg(base,mul){const p=S.p;
   if(S.training)return 200*(mul||1);
-  let m=(mul||1)*p.mAtk*p.sAtk*p.buffAtk;
+  let m=(mul||1)*p.mAtk*p.sAtk*p.buffAtk*(p.itemBuffs.power?1.12:1);
   if(hasPw("berserk"))m*=1+(1-p.hp/p.max)*.8;
   return (rr(base[0],base[1])+p.d.atkFlat)*m;}
 function hurtE(e,dmg,crit,kx,ky,quiet){
@@ -1233,7 +1241,6 @@ function dropItem(x,y,forceRar){
   if(it.rar>=4){shk(7);buzz([0,50,60,140]);toast("★★ 伝説");}
   else if(it.rar===3){shk(3);buzz(30);toast("★ 秀逸");}}
 function dropGold(x,y,v){S.drops.push({x,y,gold:v,t:0});}
-function autoRefillPots(){if(S.pots<CFG.POTION_BASE){S.pots=CFG.POTION_BASE;toast("ポーション自動補充");}}
 function barrelDrop(x,y){
   if(rnd()<CFG.CRYSTAL_BARREL_DROP)S.drops.push({x,y,mat:"crystal",tier:materialTier(S.floor),n:materialScale(S.floor),t:0});
   if(rnd()<CFG.POTION_POT_DROP){S.drops.push({x,y,pot:1,t:0});return;}
@@ -1269,14 +1276,14 @@ function hurtP(dm,cause,force){const p=S.p;if(S.training||S.returnInvulnerable||
   if(rnd()<dodgeRate()){p.hurtT=.16;
     S.nums.push({x:p.x,y:p.y,v:0,txt:"回避",t:0,c:"#8ad8ff"});
     tone(900,.06,"sine",.06,1300);return;}
-  const d=dm*(1-Math.min(.8,p.d.dr+p.mDr+p.sDr+p.buffDr+p.guardS*.2));
+  const d=dm*(1-Math.min(.8,p.d.dr+p.mDr+p.sDr+p.buffDr+(p.itemBuffs.hard?(armorDR(p.d.armor*1.2)-armorDR(p.d.armor))*(p.d.C.defMul||1):0)+p.guardS*.2));
   p.hp-=d;p.hurtT=.42;S.flash=.18;shk(CFG.SHAKE_HURT);SFX.hurt();buzz(38);
   dnum(p.x,p.y,d,"#ff6060");
   if(hasPw("guard")){p.guardS=Math.min(3,p.guardS+1);p.guardT=2;}
   if(p.hp<=0){p.hp=0;endRun(false,cause||"敵の攻撃");}}
 
 function basicAttack(){
-  const p=S.p,C=p.d.C,range=C.range*p.mRange*p.d.rng;
+  const p=S.p;if(p.itemLock>0)return;const C=p.d.C,range=C.range*p.mRange*p.d.rng;
   // 向いた方向の扇に敵がいればそいつを狙う。いなければその方向へ撃つ(引き撃ち防止)。
   const CONE=C.proj?.55:C.arc;
   let best=null,bd=1e9;
@@ -1335,6 +1342,7 @@ function blinkForward(p,a,len){
   p.x=nx;p.y=ny;
   S.parts.push({x:p.x,y:p.y,vx:-Math.cos(a)*1.8,vy:-Math.sin(a)*1.8,t:0,life:.22,col:"#8ad8ff",sz:4});}
 function useSkill(i){
+  if(S.p.itemLock>0)return;
   const p=S.p,C=p.d.C,sk=C.skills[i];
   if(!sk||p.cds[i]>0||p.mp<sk.c)return;
   p.mp-=sk.c;p.cds[i]=sk.cd*p.mCd*(1-p.d.cdr);
@@ -1405,10 +1413,16 @@ function useSkill(i){
       cur=nx;}
     SFX.cast(880);shk(4);break;}}
   updHUD();}
-function usePotion(){const p=S.p;
-  if(S.pots<=0||p.hp>=p.max)return;
-  S.pots--;p.hp=Math.min(p.max,p.hp+p.max*CFG.POTION_HEAL);
-  SFX.pot();buzz(18);burst(p.x,p.y,"#ff5060",12,1.2);if(S.training&&S.tutorial.phase==="training_potion"){S.tutorial.phase="training_return";save();setTimeout(refreshTutorial,300);}updHUD();}
+function useItem(slot=S.itemSlot){const p=S.p,key=S.loadout[slot],def=CONSUMABLES[key];
+  if(!def||!S.runItems[slot]||p.itemCd>0||p.itemLock>0)return false;
+  if(key==="heal"&&p.hp>=p.max)return false;
+  S.runItems[slot]--;S.consumables[key]=Math.max(0,(S.consumables[key]||0)-1);S.itemSlot=slot;p.itemCd=8;p.itemLock=.5;
+  if(key==="heal")p.hp=Math.min(p.max,p.hp+p.max*.25);
+  if(key==="healG"){p.hp=Math.min(p.max,p.hp+p.max*.225);p.hot+=p.max*.225;p.hotT=3;}
+  if(["power","hard","focus","gale"].includes(key))p.itemBuffs[key]=60;
+  SFX.pot();buzz(18);burst(p.x,p.y,"#ffb060",12,1.2);if(S.training&&S.tutorial.phase==="training_potion"){S.tutorial.phase="training_return";setTimeout(refreshTutorial,300);}save();updBuffs();updHUD();return true;}
+function usePotion(){return useItem(S.itemSlot);}
+
 
 /* ---------- 更新 ---------- */
 function update(dt){
@@ -1420,21 +1434,24 @@ function update(dt){
   if(S.flash>0)S.flash-=dt;
   if(p.hurtT>0)p.hurtT-=dt;
   if(p.invulT>0)p.invulT-=dt;
+  if(p.itemCd>0)p.itemCd=Math.max(0,p.itemCd-dt);if(p.itemLock>0)p.itemLock=Math.max(0,p.itemLock-dt);
+  for(const k in p.itemBuffs)if((p.itemBuffs[k]-=dt)<=0)delete p.itemBuffs[k];
+  if(p.hotT>0){const tick=Math.min(dt,p.hotT);p.hp=Math.min(p.max,p.hp+p.hot/Math.max(p.hotT,tick)*tick);p.hot-=p.hot/Math.max(p.hotT,tick)*tick;p.hotT-=tick;}
   if(p.buffT>0){p.buffT-=dt;if(p.buffT<=0){p.buffAtk=1;p.buffDr=0;}}
   if(p.guardT>0){p.guardT-=dt;if(p.guardT<=0)p.guardS=0;}
   if(p.comboT>0){p.comboT-=dt;if(p.comboT<=0)p.comboStep=0;}
   if(p.shrineT>0){p.shrineT-=dt;
     if(p.shrineT<=0){p.sAtk=1;p.sDr=0;p.sMs=1;p.sAs=1;p.sDrop=1;p.shrine=null;updBuffs();}}
   p.st=p.st||{};tickST(p,dt,true);if(p.hp<=0)return;
-  p.mp=clamp(p.mp+p.d.mpReg*dt,0,p.d.mpMax);
+  p.mp=clamp(p.mp+p.d.mpReg*(p.itemBuffs.focus?1.8:1)*dt,0,p.d.mpMax);
 
   if(p.dashT>0){p.dashT-=dt;mv(p,p.dashX*dt,p.dashY*dt);
     if(p.dashHit)p.dashHit();
     S.parts.push({x:p.x,y:p.y,vx:rr(-.3,.3),vy:rr(-.3,.3),t:0,life:.2,col:"#cfe6ff",sz:2.2});
     if(p.dashT<=0){p.dashT=0;p.invulT=.18;p.dashHit=null;}}
-  else if((IN.dx||IN.dy)&&!stActive(p,"frz")){
+  else if((IN.dx||IN.dy)&&!stActive(p,"frz")&&p.itemLock<=0){
     const w=s2w(IN.dx,IN.dy),
-      sp=CFG.P_SPEED*p.d.ms*p.mMs*p.sMs*w.mag*(stActive(p,"par")?.55:1);
+      sp=CFG.P_SPEED*p.d.ms*p.mMs*p.sMs*(p.itemBuffs.gale?1.15:1)*w.mag*(stActive(p,"par")?.55:1);
     mv(p,w.x*sp*dt,w.y*sp*dt);
     const fl=Math.hypot(w.x,w.y)||1;p.face=Math.atan2(w.y/fl,w.x/fl);}
 
@@ -1550,7 +1567,7 @@ function update(dt){
     const dist=Math.hypot(p.x-d.x,p.y-d.y);
     // 0.1秒後から吸着。0.5m圏内は足元で拾った時と同じく即時回収する。
     // 回復は満タンでも消費して回収できるため、回収不能な落下物として残らない。
-    if(d.t>=CFG.PICKUP_DELAY&&dist<=CFG.MAGNET_RADIUS&&dist>CFG.PICKUP_RADIUS&&!(d.pot&&S.pots>=CFG.POTION_MAX)){
+    if(d.t>=CFG.PICKUP_DELAY&&dist<=CFG.MAGNET_RADIUS&&dist>CFG.PICKUP_RADIUS&&!(d.pot&&!S.loadout.some((k,j)=>k==="heal"&&S.runItems[j]<CONSUMABLES.heal.max))){
       const pull=Math.min(dist,CFG.MAGNET_SPEED*dt);d.x+=(p.x-d.x)/dist*pull;d.y+=(p.y-d.y)/dist*pull;}
     const pr=CFG.PICKUP_RADIUS;
     if(d.t>=CFG.PICKUP_DELAY&&d2(d.x,d.y,p.x,p.y)<pr*pr){
@@ -1559,7 +1576,7 @@ function update(dt){
         p.hp=Math.min(p.max,p.hp+p.max*CFG.SHARD_HEAL);
         burst(p.x,p.y,"#6ae0a0",6,1);tone(760,.07,"sine",.08,1040);}
       else if(d.gold){S.gold+=d.gold;S.runGold+=d.gold;SFX.gold();}
-      else if(d.pot){if(S.pots>=CFG.POTION_MAX)continue;S.pots++;SFX.pot();}
+      else if(d.pot){const j=S.loadout.findIndex((k,j)=>k==="heal"&&S.runItems[j]<CONSUMABLES.heal.max);if(j<0)continue;S.runItems[j]++;S.consumables.heal=(S.consumables.heal||0)+1;SFX.pot();}
       else{S.bag.push(d.it);SFX.gold();}
       S.drops.splice(i,1);}}
   for(const q of S.props)if(q.t==="shrine")q.tm+=dt;
@@ -2097,8 +2114,9 @@ function updHUD(){
     const full=sk.cd*p.mCd*(1-p.d.cdr);
     el.querySelector(".cd").style.transform="scaleY("+(full>0?p.cds[i-1]/full:0)+")";
     el.classList.toggle("no",p.mp<sk.c);}
-  $("potN").textContent=S.pots;
-  $("pot").classList.toggle("no",S.pots<=0||p.hp>=p.max);
+  $("potN").textContent=S.runItems[S.itemSlot]||0;
+  $("potLabel").textContent=S.loadout[S.itemSlot]?CONSUMABLES[S.loadout[S.itemSlot]].n:"アイテム";
+  $("pot").classList.toggle("no",!S.runItems[S.itemSlot]||p.itemCd>0);
   const cb=$("combo");
   if(S.combo>=4){cb.classList.add("on");cb.innerHTML=S.combo+'<small>COMBO</small>';
     cb.style.fontSize=Math.min(46,24+S.combo*.6)+"px";}
@@ -2107,7 +2125,8 @@ function updHUD(){
 function updBuffs(){const p=S.p,c=$("buffs");c.innerHTML="";
   if(p&&p.shrine){const d=document.createElement("div");d.className="buff";
     d.style.borderLeftColor=p.shrineGood?"#65db78":"#e0525b";
-    d.textContent=p.shrine.n+" "+Math.ceil(p.shrineT)+"s";c.appendChild(d);}}
+    d.textContent=p.shrine.n+" "+Math.ceil(p.shrineT)+"s";c.appendChild(d);}
+  for(const k in p.itemBuffs){const d=document.createElement("div");d.className="buff";d.textContent=CONSUMABLES[k].n+" "+Math.ceil(p.itemBuffs[k])+"s";c.appendChild(d);}}
 let tT=null;
 function toast(m,kind){const el=$("toast");el.textContent=m;el.className=kind||"";el.classList.add("on");
   clearTimeout(tT);tT=setTimeout(()=>{el.classList.remove("on","ok","ng");},1300);}
@@ -2136,7 +2155,6 @@ function endRun(alive,cause){
   const got=S.bag.slice();
   if(alive&&(S.tutorial||{}).phase==="return"){S.tutorial.phase="equip_tab";hideTutorial();}
   if(alive){S.stash.push(...got);SFX.extract();}else SFX.death();
-  S.pots=CFG.POTION_BASE;
   S.log.runs.push({t:Math.round(S.runT),floor:S.floor,start:S.startFloor,alive,
     items:got.length,kills:S.p.kills,lv:S.base.lv,gold:S.gold,ups:S.p.ups.slice()});
   save();
@@ -2346,6 +2364,7 @@ function renderPrepTab(b){
     d.dataset.index=i;d.innerHTML=entry?`<div class="order">${i+1}番手</div><div class="face" style="color:${entry.ch.col}">●</div><div class="nm">${entry.ch.n}</div><div class="ty">${CLASSES[entry.k].name} / Lv${((S.characterStates[key]||{}).base||{lv:key===activeCharacterKey()?S.base.lv:1}).lv}</div>`:`<div class="order">${i+1}番手</div><div class="face">${i<cap?"＋":"🔒"}</div><div class="ty">${i<cap?"空き":i===1?"10Fボスで解放":i===2?"20Fボスで解放":"35Fボスで解放"}</div>`;
     tapEl(d,()=>{if(i<cap)openFormationPick(i);});g.appendChild(d);}b.appendChild(g);
   const note=document.createElement("div");note.className="st";note.textContent="編成は潜入前のみ変更できます。戦闘不能になると次のキャラクターへ交代します。装備品は倉庫で共有され、装備中の品は他のキャラクターが使用できません。";b.appendChild(note);
+  renderLoadout(b);
   const maxStart=Math.max(1,Math.floor((S.deepest-1)/CFG.SKIP_STEP)*CFG.SKIP_STEP+1);S.diveFloor=clamp(S.diveFloor||1,1,maxStart);
   const row=document.createElement("div");row.className="card prepDepth";row.innerHTML=`<div><div class="nm">開始階層</div><div class="ty">5n+1階層 / 解放済み 最大${maxStart}F</div></div>`;
   const controls=document.createElement("div");controls.className="floorStep";const setFloor=v=>{v=clamp(Math.floor(+v||1),1,maxStart);S.diveFloor=Math.floor((v-1)/CFG.SKIP_STEP)*CFG.SKIP_STEP+1;inp.value=S.diveFloor;save();};
@@ -2374,7 +2393,7 @@ function renderSettings(b,after,inDungeon){
   // デバッグモードは検証に必要な3項目だけ。管理者モードでは全項目を開放する。
   action("レベル",()=>number("レベル",S.base.lv,v=>forceLevel(v),1,CFG.LV_CAP));action("ゴールド",()=>number("所持ゴールド",S.gold,v=>S.gold=Math.floor(v),0));action("最深階層",()=>number("最深階層",S.deepest,v=>S.deepest=Math.floor(v),1));
   if(!S.admin)return;
-  action("課金通貨",()=>number("課金通貨",S.premium,v=>S.premium=Math.floor(v),0));action("スタミナ",()=>number("スタミナ",S.stamina,v=>S.stamina=v,0,100));action("経験値",()=>number("経験値",S.base.xp,v=>S.base.xp=v,0));action("能力pt",()=>number("未割当ポイント",S.base.pts,v=>S.base.pts=Math.floor(v),0));action("ポーション",()=>number("ポーション",S.pots,v=>S.pots=Math.floor(v),0,CFG.POTION_MAX));
+  action("課金通貨",()=>number("課金通貨",S.premium,v=>S.premium=Math.floor(v),0));action("スタミナ",()=>number("スタミナ",S.stamina,v=>S.stamina=v,0,100));action("経験値",()=>number("経験値",S.base.xp,v=>S.base.xp=v,0));action("能力pt",()=>number("未割当ポイント",S.base.pts,v=>S.base.pts=Math.floor(v),0));action("回復薬",()=>number("回復薬",S.consumables.heal||0,v=>S.consumables.heal=Math.floor(v),0,999));
   for(const [k,n] of STATDEF)action(n,()=>number(n,S.base[k],v=>S.base[k]=v));
   action("装備獲得",()=>{const count=clamp(Math.floor(+(prompt("生成数","1")||0)),1,500),rar=clamp(Math.floor(+(prompt("レア度 0〜4","2")||0)),0,4),fl=clamp(Math.floor(+(prompt("装備深度",String(S.deepest))||1)),1,999999);for(let i=0;i<count;i++)S.stash.push(makeItem(fl,0,0,rar));SFX.chest();save();after();});
   action("倉庫を空に",()=>{S.stash=[];save();after();});action("HP/MP回復",()=>{S.p.hp=S.p.max;S.p.mp=S.p.d.mpMax;save();after();});action("全階層解放",()=>{S.deepest=999999;save();after();});
@@ -2430,6 +2449,12 @@ function confirmSelectedDismantle(){const F=S.inv,selected=F.sellSel.filter(i=>S
   ask("選択装備を分解",`${selected.length}個を分解して結晶 ${detail} を得ます。よろしいですか？`,()=>{for(const it of selected){const k=S.stash.indexOf(it);if(k>=0)S.stash.splice(k,1);addMat("crystal",materialTier(it.ilvl),crystalQty(it));}dailyProgress("dismantled",selected.length);F.sellSel=[];F.sellMode=false;F.dismantleMode=false;SFX.chest();toast("結晶を獲得");save();openTown();});}
 
 /* ---------- 倉庫: アイコン格子 + フィルタ/並べ替え/売却 ---------- */
+function materialCount(kind){return Object.values(matBucket(kind)).reduce((a,n)=>a+(+n||0),0);}
+function spendAny(kind,n){const b=matBucket(kind);for(const t of Object.keys(b).sort((a,z)=>+a-+z)){const take=Math.min(n,b[t]||0);b[t]-=take;n-=take;if(!n)break;}return n===0;}
+function craftItem(key){const d=CONSUMABLES[key];if(materialCount("crystal")<d.crystal||materialCount("core")<(d.core||0))return;spendAny("crystal",d.crystal);if(d.core)spendAny("core",d.core);S.consumables[key]=(S.consumables[key]||0)+1;SFX.chest();toast(d.n+"を調合","ok");save();openCraft();}
+function openCraft(){invMenu("調合",c=>{const note=document.createElement("div");note.className="sub";note.textContent="結晶は階梯を問わず1個として消費します。上位品のみ核を1個使います。";c.appendChild(note);for(const k of CONSUMABLE_KEYS){const x=CONSUMABLES[k],can=materialCount("crystal")>=x.crystal&&materialCount("core")>=(x.core||0),d=document.createElement("div");d.className="card recipe";d.innerHTML=`<div><div class="nm">${x.icon} ${x.n}（所持 ${S.consumables[k]||0}）</div><div class="st">${x.d}<br>結晶 ${x.crystal}${x.core?" / 核 1":""}</div></div>`;const b=document.createElement("div");b.className="btn "+(can?"gold":"no");b.textContent="作る";tapEl(b,()=>craftItem(k));d.appendChild(b);c.appendChild(d);}},openTown);}
+function openLoadoutSlot(slot){invMenu(`持ち込み枠 ${slot+1}`,c=>{const empty=document.createElement("div");empty.className="btn gh";empty.textContent="空にする";tapEl(empty,()=>{S.loadout[slot]=null;save();$("itPop").classList.remove("on");openTown();});c.appendChild(empty);for(const k of CONSUMABLE_KEYS){const x=CONSUMABLES[k],d=document.createElement("div");d.className="card tap";d.innerHTML=`<div class="nm">${x.icon} ${x.n} ×${Math.min(x.max,S.consumables[k]||0)}</div><div class="st">${x.d} / 上限${x.max}</div>`;tapEl(d,()=>{S.loadout[slot]=k;save();$("itPop").classList.remove("on");openTown();});c.appendChild(d);}},openTown);}
+function renderLoadout(b){const h=document.createElement("h3");h.textContent="持ち込み（4枠）";b.appendChild(h);const g=document.createElement("div");g.className="loadout";for(let i=0;i<4;i++){const k=S.loadout[i],d=document.createElement("div");d.className="loadSlot";d.innerHTML=k?`<b>${CONSUMABLES[k].icon} ${CONSUMABLES[k].n}</b><br>×${Math.min(CONSUMABLES[k].max,S.consumables[k]||0)} / ${CONSUMABLES[k].max}`:`<b>＋</b><br>空き`;tapEl(d,()=>openLoadoutSlot(i));g.appendChild(d);}b.appendChild(g);const n=document.createElement("div");n.className="st";n.textContent="未使用品は死亡・断念時にも倉庫へ残ります。潜行中の補充はできません。";b.appendChild(n);}
 function renderInv(b){
   const F=S.inv;F.filters=F.filters||[];F.sellSel=F.sellSel||[];
   const bar=document.createElement("div");bar.id="invBar";
@@ -2438,6 +2463,7 @@ function renderInv(b){
   mk(F.sort==="score"?"並び替え:強さ":F.sort==="rar"?"並び替え:レア":"並び替え:深度",openInvSort,0);
   mk(F.sellMode?"売却を終了":"売却",()=>{F.sellMode=!F.sellMode;F.dismantleMode=false;if(!F.sellMode)F.sellSel=[];openTown();},F.sellMode);
   mk(F.dismantleMode?"分解を終了":"分解",()=>{F.dismantleMode=!F.dismantleMode;F.sellMode=false;if(!F.dismantleMode)F.sellSel=[];openTown();},F.dismantleMode);
+  mk("調合",openCraft,0);
   if(F.sellMode)mk("低レア一括選択",openInvSell,0);
   if(F.dismantleMode)mk("低レア一括選択",openInvSell,0);
   b.appendChild(bar);
@@ -2680,7 +2706,7 @@ function beginRun(fl){
   $("scTown").classList.remove("on");$("scPause").classList.remove("on");
   beginDailyDive();save();
   S.scene="dungeon";S.paused=false;S.partyIndex=0;S.runT=0;S.runGold=0;S.startFloor=fl;
-  S.pots=CFG.POTION_BASE;
+  {const left=Object.assign({},S.consumables);S.runItems=S.loadout.map(k=>{if(!k)return 0;const n=Math.min(CONSUMABLES[k].max,left[k]||0);left[k]=(left[k]||0)-n;return n;});}
   S.dmgLog.length=0;S.dps=0;
   S.p=newPlayer();S.bag.length=0;
   $("s0").querySelector("span").textContent="攻撃";
@@ -2693,7 +2719,7 @@ function beginRun(fl){
 /* ---------- 保存 ---------- */
 const KEY="descent_v5";
 function save(){storeActiveCharacter();try{localStorage.setItem(KEY,JSON.stringify({cls:S.cls,deepest:S.deepest,
-  gold:S.gold,stash:S.stash,gear:S.gear,base:S.base,pots:S.pots,log:S.log,mats:S.mats,
+  gold:S.gold,stash:S.stash,gear:S.gear,base:S.base,log:S.log,mats:S.mats,consumables:S.consumables,loadout:S.loadout,consumableVersion:1,
   matTierVersion:2,
   settings:S.settings,admin:S.admin,debug:S.debug,debugFloor:S.debugFloor,adminOpts:S.adminOpts,chars:S.chars,characterStates:S.characterStates,avatars:S.avatars,formation:S.formation,diveFloor:S.diveFloor,stamina:S.stamina,daily:S.daily,premium:S.premium,profileAvatar:S.profileAvatar,shopSub:S.shopSub,gearSub:S.gearSub,unlockedCharacters:S.unlockedCharacters,tutorial:S.tutorial,returnInvulnerable:S.returnInvulnerable}));}catch(e){}}
 function load(){try{
@@ -2720,7 +2746,7 @@ function load(){try{
   const ng={};for(const k of SLOTK)ng[k]=null;
   for(const k in S.gear){const it=fix(S.gear[k]);if(it&&!ng[it.slot])ng[it.slot]=it;}
   S.gear=ng;
-  S.pots=d.pots==null?CFG.POTION_BASE:Math.min(CFG.POTION_MAX,d.pots);S.log=d.log||{runs:[]};
+  S.consumables=Object.assign({},d.consumables||{});if(!d.consumableVersion)S.consumables.heal=(S.consumables.heal||0)+3;S.loadout=(d.loadout||["heal",null,null,null]).slice(0,4);while(S.loadout.length<4)S.loadout.push(null);S.runItems=[0,0,0,0];S.log=d.log||{runs:[]};
   S.settings=Object.assign({map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0},d.settings||{});
   S.admin=!!d.admin;S.debug=!!d.debug;S.debugFloor=d.debugFloor||1;S.adminOpts=d.adminOpts||{};S.chars=d.chars||{};S.characterStates=d.characterStates||{};S.avatars=d.avatars||{};
   S.unlockedCharacters=d.unlockedCharacters||["warrior:gai"];S.tutorial=d.tutorial||{phase:"done",gearIndex:0};S.returnInvulnerable=!!d.returnInvulnerable;
@@ -2750,7 +2776,7 @@ function tutorialAllows(el){if(el.closest("#tutorialSkip,#tutorialConfirm,#btnBa
   return !!el.closest(selectors[p]);}
 for(const ev of ["click","mousedown","touchstart"])document.addEventListener(ev,e=>{if(!tutorialAllows(e.target)){e.preventDefault();e.stopImmediatePropagation();}},true);
 for(let i=0;i<4;i++)holdBtn($("s"+i),i);
-hook($("pot"),()=>{if(S.scene==="dungeon"&&!S.paused)usePotion();});
+(()=>{const el=$("pot"),fan=$("itemFan");let timer=null,open=false,sel=0;const layout=[[20,105],[65,55],[120,25],[155,72]];const draw=()=>{fan.innerHTML="";S.loadout.forEach((k,i)=>{const d=document.createElement("div");d.className="fanItem"+(i===sel?" sel":"");d.style.left=layout[i][0]+"px";d.style.top=layout[i][1]+"px";d.textContent=k?CONSUMABLES[k].icon+" "+(S.runItems[i]||0):"—";fan.appendChild(d);});};const point=e=>e.touches?e.touches[0]:e;const down=e=>{if(S.scene!=="dungeon"||S.paused)return;e.preventDefault();open=false;timer=setTimeout(()=>{open=true;fan.classList.add("on");draw();},360);};const move=e=>{if(!open)return;e.preventDefault();const q=point(e),r=el.getBoundingClientRect(),x=q.clientX-r.left,y=q.clientY-r.top;let best=1e9;layout.forEach((v,i)=>{const z=(x-v[0]-27)**2+(y-v[1]-27)**2;if(z<best){best=z;sel=i;}});draw();};const up=e=>{clearTimeout(timer);if(open){e.preventDefault();fan.classList.remove("on");open=false;useItem(sel);}else useItem(S.itemSlot);};el.addEventListener("pointerdown",down);el.addEventListener("pointermove",move);el.addEventListener("pointerup",up);el.addEventListener("pointercancel",()=>{clearTimeout(timer);fan.classList.remove("on");open=false;});})();
 hook($("act"),()=>{if(S.scene==="dungeon"&&!S.paused)doAction();});
 tapEl($("profileIcon"),openProfileIconPick);
 hook($("pauseB"),()=>{if(S.scene==="dungeon"&&!S.paused){S.ptab="drops";openPause();}});
