@@ -6,6 +6,8 @@ for (const snippet of [
   'const ENHANCE_PER_LV=.14',
   'const need=xpNeed(CFG.LV_CAP-1)',
   'b.pts++',
+  'const materialTier=depth=>1+Math.ceil(',
+  'mats:S.mats',
 ]) {
   if (!source.includes(snippet)) throw new Error(`Missing progression rule: ${snippet}`);
 }
@@ -68,3 +70,48 @@ if (Object.values(valuesAt1000).some(value => !Number.isFinite(value))) {
   throw new Error('Depth 1000 produced a non-finite progression value');
 }
 console.log('depth1000', JSON.stringify(valuesAt1000));
+
+const materialTier = depth => 1 + Math.ceil(Math.log2(depth / 10 + 1));
+const materialQuantity = rarity => [1, 2, 5, 12, 30][rarity];
+const dismantled = {};
+for (let i = 0; i < 1000; i++) {
+  const tier = materialTier(3);
+  dismantled[tier] = (dismantled[tier] || 0) + materialQuantity(i % 5);
+}
+if (Object.entries(dismantled).some(([tier, count]) => +tier >= 3 && count !== 0)) {
+  throw new Error('Depth 3 dismantling leaked tier 3+ crystals');
+}
+if (materialTier(1000) !== 8 || materialQuantity(4) !== 30) {
+  throw new Error('Depth 1000 legendary dismantling must yield 30 tier-8 crystals');
+}
+
+// Depth 10 is a boss floor: reproduce its 9 primary spawn attempts, pack and
+// elite rolls, eight rooms of barrels, one core and 1–2 guaranteed rare drops.
+let crystalTotal = 0, directCrystalTotal = 0, dismantleCrystalTotal = 0, coreTotal = 0;
+for (let run = 0; run < 10000; run++) {
+  let direct = 0;
+  for (let enemy = 0; enemy < 9; enemy++) {
+    const elite = random() < .07 * (1 + 10 * .015);
+    if (!elite && random() < .025) direct++;
+    if (!elite && random() < .30) {
+      const pack = random() < .5 ? 2 : 3;
+      for (let member = 0; member < pack; member++) if (random() < .025) direct++;
+    }
+  }
+  for (let room = 1; room < 8; room++) {
+    const barrels = 1 + Math.floor(random() * 3);
+    for (let barrel = 0; barrel < barrels; barrel++) if (random() < .08) direct++;
+  }
+  const equipment = random() < .5 ? 1 : 2;
+  const dismantledCrystals = equipment * materialQuantity(2);
+  directCrystalTotal += direct; dismantleCrystalTotal += dismantledCrystals;
+  crystalTotal += direct + dismantledCrystals; coreTotal++;
+}
+console.log('depth10/materials', JSON.stringify({
+  runs: 10000,
+  crystalPerRun: +(crystalTotal / 10000).toFixed(2),
+  directCrystalPerRun: +(directCrystalTotal / 10000).toFixed(2),
+  dismantleCrystalPerRun: +(dismantleCrystalTotal / 10000).toFixed(2),
+  corePerRun: coreTotal / 10000,
+  level1CrystalCost: Math.ceil(60 / 12),
+}));
