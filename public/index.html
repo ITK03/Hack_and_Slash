@@ -698,12 +698,12 @@ const ET={
 const EKEYS=Object.keys(ET);
 /* 状態異常。自分にも敵にも乗る。防御が高いほど自分は入りにくい。 */
 const CONSUMABLES={
-  heal:{n:"回復薬",icon:"♥",crystal:3,max:3,d:"HPを最大値の25%回復"},
+  heal:{n:"回復薬",icon:"♥",crystal:13,max:3,d:"HPを最大値の20%回復"},
   healG:{n:"回復薬グレード",icon:"💖",crystal:7,core:1,max:2,d:"HPを45%回復（半分は3秒継続）"},
-  power:{n:"力の丸薬",icon:"力",crystal:5,max:5,d:"物理・特殊攻撃力 +12% / 60秒"},
-  hard:{n:"硬化薬",icon:"盾",crystal:5,max:5,d:"防御 +20%、ノックバック無効 / 60秒"},
+  power:{n:"力の丸薬",icon:"力",crystal:5,max:5,d:"物理・特殊攻撃力 +7.5% / 60秒"},
+  hard:{n:"硬化薬",icon:"盾",crystal:5,max:5,d:"防御 +12%、ノックバック無効 / 60秒"},
   focus:{n:"気付け薬",icon:"気",crystal:7,core:1,max:2,d:"MP回復速度 +80% / 60秒"},
-  gale:{n:"疾風の粉",icon:"風",crystal:5,max:5,d:"移動速度 +15%、回避 +5% / 60秒"},
+  gale:{n:"疾風の粉",icon:"風",crystal:5,max:5,d:"移動速度 +7%、回避 +2% / 60秒"},
   sonic:{n:"音爆弾",icon:"音",crystal:6,max:3,d:"周囲の敵を3秒スタン（ダメージなし）"},
   shockTrap:{n:"しびれ罠",icon:"罠",crystal:6,max:2,d:"踏んだ敵を4秒麻痺（同時設置1個）"},
   weaken:{n:"弱体の霧",icon:"霧",crystal:7,max:3,d:"範囲内の敵の防御 -25% / 15秒"},
@@ -804,7 +804,7 @@ function rarRoll(fl,mf,luk){
   for(let i=0;i<w.length;i++){v-=w[i];if(v<=0)return i;}return 0;}
 const SW={atk:5,matk:5,atkP:4,hp:1,armor:1.4,crit:7,cdmg:2,as:5,ms:3,ls:9,cdr:4,dr:5,
   mf:1.2,mreg:1.5,luk:3,rng:4,agiF:3,mpF:1,lukF:3};
-const ENHANCE_PER_LV=.14; // 基礎主能力への加算。複利にはしない
+const ENHANCE_PER_LV=.07; // 基礎主能力への加算。複利にはしない
 const itemMaxLv=it=>10+Math.floor(Math.sqrt(Math.max(1,Number(it&&it.ilvl)||1)));
 const materialTier=depth=>Math.max(1,Math.ceil(Math.log2(Math.max(1,Number(depth)||1)/10+1)));
 const materialScale=depth=>Math.max(1,Math.ceil(Math.sqrt(Math.max(1,Number(depth)||1)/10)));
@@ -821,7 +821,8 @@ function spendMat(kind,minTier,units){
     if(take){b[tier]-=take;left-=take*value;if(!b[tier])delete b[tier];}tier++;}
   return true;}
 // 深度別の収量スケールを強化上限の段数で均し、1枚の完成までの周回数を一定に保つ。
-const crystalNeed=it=>Math.max(1,Math.round(240*materialScale(it.ilvl)/(itemMaxLv(it)-1)));
+const enhancementDiveScale=depth=>curve(depth,[[10,1.17],[50,1.42],[100,1.67],[300,2.57],[1000,6.15]]);
+const crystalNeed=it=>Math.max(1,Math.round(120*Math.max(1,it.ilvl)*materialScale(it.ilvl)*enhancementDiveScale(it.ilvl)/(itemMaxLv(it)-1)));
 const coreNeeded=it=>it.lv+1>1+Math.floor((itemMaxLv(it)-1)*2/3);
 function upgradeMatCost(it,addedXP){let lv=it.lv,xp=it.xp+addedXP,crystal=0,core=0;
   while(lv<itemMaxLv(it)&&xp>=fuseNeed({lv})){const step={ilvl:it.ilvl,lv};xp-=fuseNeed(step);crystal+=crystalNeed(step);if(coreNeeded(step))core++;lv++;}
@@ -839,11 +840,11 @@ function makeItem(fl,mf,luk,forceRar){
   const m=Math.pow(il,.62);
   const mainId=sd.k==="weapon"?(it.wt==="staff"?"matk":"atk"):sd.main;
   it.main={id:mainId,v:Math.max(1,Math.round(rr(sd.lo,sd.hi)*m))};
-  const nA=[0,1,ri(2,3),ri(3,5),ri(5,6)][rar];
+  const nA=[0,1,ri(3,4),ri(4,5),ri(4,5)][rar];
   const pool=AFF.slice();          // 部位に関係なく何でも付く（剣に魔力など）
   for(let i=0;i<nA&&pool.length;i++){
     const a=pool.splice(Math.floor(rnd()*pool.length),1)[0];
-    const q=rr(.5,1.55);           // 当たり外れ。同じ接尾辞でも値が大きく振れる
+    const q=rr(.75,1.35);           // 当たり外れ。同じ接尾辞でも値が大きく振れる
     it.affs.push({id:a.id,v:Math.max(1,Math.round(a.f(il)*q)),q:+q.toFixed(2)});}
   if(rar===4)it.pw=pick(POWERS).id;
   it.name=rar===0?it.base
@@ -1005,7 +1006,7 @@ function derive(){
 /* 回避: 自分と階層の力量差で決まる。格上相手にはほとんど効かない。 */
 function dodgeRate(){const d=S.p.d;
   const gap=(S.base.lv*.5+4)-S.floor;
-  return clamp((.02+d.agiD*.0020+gap*.010)*(d.C.dodgeMul||1)+(S.p.itemBuffs.gale?.05:0),0,.30);}
+  return clamp((.02+d.agiD*.0020+gap*.010)*(d.C.dodgeMul||1)+(S.p.itemBuffs.gale?.02:0),0,.30);}
 function dodgeRateFor(d){const gap=(S.base.lv*.5+4)-S.floor;
   return clamp((.02+d.agiD*.0020+gap*.010)*(d.C.dodgeMul||1),0,.30);}
 function deriveWith(slot,item){
@@ -1085,11 +1086,11 @@ function curve(fl,points){
   const[a,av]=points[points.length-2],[b,bv]=points[points.length-1];
   return bv+(fl-b)*(bv-av)/(b-a);}
 // 裸で遊べる序盤から、5層ごとの装備更新が必要になる後半へ滑らかに接続する。
-const enemyHPScale=fl=>curve(fl,[[1,2.2],[5,3],[10,4],[15,7],[20,11],[25,16],[30,22],[35,29],[40,38],[45,49]]);
-const enemyDMGScale=fl=>curve(fl,[[1,.18],[5,.30],[10,.55],[15,1],[20,1.7],[25,2.6],[30,3.8],[35,5.3],[40,7.2],[45,9.5]]);
+const enemyHPScale=fl=>curve(fl,[[1,2.2],[5,3],[10,4],[20,9],[35,18],[60,38],[80,65],[110,190],[180,360],[300,650]]);
+const enemyDMGScale=fl=>curve(fl,[[1,.18],[5,.30],[10,.55],[20,1.35],[35,2.8],[60,6.8],[80,12],[110,38],[180,72],[300,130]]);
 // 各階層ボスは通常進行曲線に対して HP 2倍、攻撃力 1.5倍。
-const bossHPScale=fl=>2*curve(fl,[[5,.40],[10,.80],[15,1.5],[20,2.5],[25,3.8],[30,5.5],[35,7.5],[40,10],[45,13]]);
-const bossDMGScale=fl=>1.5*curve(fl,[[5,.25],[10,.45],[15,.75],[20,1.15],[25,1.7],[30,2.4],[35,3.3],[40,4.5],[45,6]]);
+const bossHPScale=fl=>2*curve(fl,[[5,.40],[10,.80],[20,1.8],[35,4.2],[60,9.5],[80,16],[110,48],[180,90],[300,162]]);
+const bossDMGScale=fl=>1.5*curve(fl,[[5,.25],[10,.45],[20,.9],[35,1.9],[60,4.5],[80,8],[110,26],[180,48],[300,87]]);
 function spawnE(k,x,y,fl,elite){
   const t=ET[k],hs=enemyHPScale(fl),ds=enemyDMGScale(fl);
   const e={k,n:t.n,x,y,r:t.r,sp:t.sp,aR:t.aR,cd:t.cd,cdT:rr(0,t.cd),xp:t.xp,col:t.col,sz:t.sz,
@@ -1188,7 +1189,7 @@ const shk=v=>{S.shake=Math.max(S.shake,v);S.shakeT=.2;};
 const hasPw=id=>S.p&&S.p.d.pw.includes(id);
 function pDmg(base,mul){const p=S.p;
   if(S.training)return 200*(mul||1);
-  let m=(mul||1)*p.mAtk*p.sAtk*p.buffAtk*(p.itemBuffs.power?1.12:1);
+  let m=(mul||1)*p.mAtk*p.sAtk*p.buffAtk*(p.itemBuffs.power?1.075:1);
   if(hasPw("berserk"))m*=1+(1-p.hp/p.max)*.8;
   return (rr(base[0],base[1])+p.d.atkFlat)*m;}
 function hurtE(e,dmg,crit,kx,ky,quiet){
@@ -1286,7 +1287,7 @@ function hurtP(dm,cause,force){const p=S.p;if(S.training||S.returnInvulnerable||
   if(rnd()<dodgeRate()){p.hurtT=.16;
     S.nums.push({x:p.x,y:p.y,v:0,txt:"回避",t:0,c:"#8ad8ff"});
     tone(900,.06,"sine",.06,1300);return;}
-  const d=dm*(1-Math.min(.8,p.d.dr+p.mDr+p.sDr+p.buffDr+(p.itemBuffs.hard?(armorDR(p.d.armor*1.2)-armorDR(p.d.armor))*(p.d.C.defMul||1):0)+p.guardS*.2));
+  const d=dm*(1-Math.min(.8,p.d.dr+p.mDr+p.sDr+p.buffDr+(p.itemBuffs.hard?(armorDR(p.d.armor*1.12)-armorDR(p.d.armor))*(p.d.C.defMul||1):0)+p.guardS*.2));
   p.hp-=d;p.lastHit=0;if(p.returnCast>0){p.returnCast=0;p.returnSlot=-1;toast("帰還詠唱が中断された","ng");}p.hurtT=.42;S.flash=.18;shk(CFG.SHAKE_HURT);SFX.hurt();buzz(38);
   dnum(p.x,p.y,d,"#ff6060");
   if(hasPw("guard")){p.guardS=Math.min(3,p.guardS+1);p.guardT=2;}
@@ -1428,7 +1429,7 @@ function useItem(slot=S.itemSlot){const p=S.p,key=S.loadout[slot],def=CONSUMABLE
   if(key==="returnScroll"){if(p.lastHit<5||p.returnCast>0)return false;p.returnCast=3;p.returnSlot=slot;p.itemLock=3;toast("帰還を詠唱中…");return true;}
   if(key==="heal"&&p.hp>=p.max)return false;
   S.runItems[slot]--;S.consumables[key]=Math.max(0,(S.consumables[key]||0)-1);S.itemSlot=slot;p.itemCd=8;p.itemLock=.5;
-  if(key==="heal")p.hp=Math.min(p.max,p.hp+p.max*.25);
+  if(key==="heal")p.hp=Math.min(p.max,p.hp+p.max*.20);
   if(key==="healG"){p.hp=Math.min(p.max,p.hp+p.max*.225);p.hot+=p.max*.225;p.hotT=3;}
   if(["power","hard","focus","gale"].includes(key))p.itemBuffs[key]=60;
   if(key==="sonic")for(const e of S.enemies)if(d2(p.x,p.y,e.x,e.y)<=25)e.stun=Math.max(e.stun||0,3);
@@ -1482,7 +1483,7 @@ function update(dt){
     if(p.dashT<=0){p.dashT=0;p.invulT=.18;p.dashHit=null;}}
   else if((IN.dx||IN.dy)&&!stActive(p,"frz")&&p.itemLock<=0){
     const w=s2w(IN.dx,IN.dy),
-      sp=CFG.P_SPEED*p.d.ms*p.mMs*p.sMs*(p.itemBuffs.gale?1.15:1)*w.mag*(stActive(p,"par")?.55:1);
+      sp=CFG.P_SPEED*p.d.ms*p.mMs*p.sMs*(p.itemBuffs.gale?1.07:1)*w.mag*(stActive(p,"par")?.55:1);
     mv(p,w.x*sp*dt,w.y*sp*dt);
     const fl=Math.hypot(w.x,w.y)||1;p.face=Math.atan2(w.y/fl,w.x/fl);}
 
