@@ -103,16 +103,37 @@ const report = await page.evaluate(() => {
     while (lower < upper) { const middle = (lower + upper) >> 1; if (deathRate(middle, mode, full) >= .5) upper = middle; else lower = middle + 1; }
     return { depth: lower, deathRate: deathRate(lower, mode, full, 160) };
   }
+  function operationSample(mode) {
+    S.cls = 'warrior'; S.scene = 'dungeon'; S.paused = false; S.training = false; S.returnInvulnerable = false;
+    S.settings.controlMode = mode; S.settings.autoPreset = 'aggressive'; S.settings.autoRules = null;
+    S.base = { ...base }; equip(12); S.p = newPlayer(); S.loadout = [null, null, null, null]; S.runItems = [0, 0, 0, 0];
+    _s = 120120; enterFloor(12); const initial = S.enemies.length; let stillSeconds = 0, secondDistance = 0, previousX = S.p.x, previousY = S.p.y;
+    for (let tick = 1; tick <= 1200; tick++) {
+      if (mode === 'onehand' && S.enemies.length) {
+        let target = S.enemies[0], best = d2(S.p.x, S.p.y, target.x, target.y);
+        for (const enemy of S.enemies) { const distance = d2(S.p.x, S.p.y, enemy.x, enemy.y); if (distance < best) { best = distance; target = enemy; } }
+        automationInput(target.x - S.p.x, target.y - S.p.y);
+      } else if (mode === 'onehand') IN.dx = IN.dy = 0;
+      update(.05); secondDistance += Math.hypot(S.p.x - previousX, S.p.y - previousY); previousX = S.p.x; previousY = S.p.y;
+      if (tick % 20 === 0) { if (secondDistance < .25) stillSeconds++; secondDistance = 0; }
+    }
+    HELD.fill(false); IN.dx = IN.dy = 0;
+    const killed = initial - S.enemies.length;
+    return { initial, killed, killRate: killed / initial, stillSeconds };
+  }
+  const operation = { auto: operationSample('auto'), onehand: operationSample('onehand') };
   const tacticalNone = boundary('manual', false), tacticalFull = boundary('manual', true);
   const modes = ['manual', 'onehand', 'auto'].map(mode => ({ mode, ...boundary(mode, false) }));
   return {
     features: { blocked, began, interrupted, completed, tactical: Object.keys(CONSUMABLES).filter(key => ['sonic', 'shockTrap', 'weaken', 'torch', 'incense', 'returnScroll'].includes(key)).length, paidHasId: !!paid?.id && paid.source === 'purchase', conditions: AUTOMATION_CONDITIONS.length, actions: AUTOMATION_ACTIONS.length },
-    automation: { delay, skillScale, manualDamage, automaticDamage }, tactical: { none: tacticalNone, full: tacticalFull, difference: tacticalFull.depth - tacticalNone.depth }, modes,
+    automation: { delay, skillScale, manualDamage, automaticDamage }, operation, tactical: { none: tacticalNone, full: tacticalFull, difference: tacticalFull.depth - tacticalNone.depth }, modes,
   };
 });
 
 console.log('\nBundle B 機能実測', report.features);
 console.log('\n自動化実測', report.automation);
+console.log('\n操作機能実測');
+console.table([{ 操作: '完全オート', 開始敵数: report.operation.auto.initial, 討伐数: report.operation.auto.killed, 討伐率: `${(report.operation.auto.killRate * 100).toFixed(1)}%`, '静止秒数 (<0.25/秒)': report.operation.auto.stillSeconds }, { 操作: '片手', 開始敵数: report.operation.onehand.initial, 討伐数: report.operation.onehand.killed, 討伐率: `${(report.operation.onehand.killRate * 100).toFixed(1)}%`, '静止秒数 (<0.25/秒)': '-' }]);
 console.log('\n戦術アイテム込み持ち込み実測');
 console.table([{ 条件: '持ち込みなし', '50%死亡深度': report.tactical.none.depth, 死亡率: `${(report.tactical.none.deathRate * 100).toFixed(1)}%` }, { 条件: '戦術込みフル', '50%死亡深度': report.tactical.full.depth, 死亡率: `${(report.tactical.full.deathRate * 100).toFixed(1)}%` }, { 条件: '差', '50%死亡深度': `+${report.tactical.difference}`, 死亡率: '' }]);
 console.log('\n操作モード別実測');
@@ -120,6 +141,8 @@ console.table(report.modes.map(row => ({ 操作: { manual: 'フル手動', oneha
 for (const [key, value] of Object.entries(report.features)) if (['tactical', 'conditions', 'actions'].includes(key) ? value < 6 : !value) throw new Error(`${key} failed`);
 if (Math.abs(report.automation.delay - .35) > .011) throw new Error(`自動化反応遅延 ${report.automation.delay.toFixed(2)}秒は想定外`);
 if (Math.abs(report.automation.skillScale - .62) > .001) throw new Error(`自動スキル倍率 ${report.automation.skillScale.toFixed(3)}は想定外`);
+if (report.operation.auto.killRate < .5 || report.operation.auto.stillSeconds > 20) throw new Error(`完全オート実測が基準外: 討伐率 ${(report.operation.auto.killRate * 100).toFixed(1)}%, 静止 ${report.operation.auto.stillSeconds}秒`);
+if (report.operation.onehand.killRate < .5) throw new Error(`片手実測の討伐率 ${(report.operation.onehand.killRate * 100).toFixed(1)}% は50%未満`);
 if (report.tactical.difference < 1 || report.tactical.difference > 3) throw new Error(`戦術込み50%死亡深度差 ${report.tactical.difference} は+1〜+3でない`);
 if (!(report.modes[0].depth > report.modes[1].depth && report.modes[1].depth > report.modes[2].depth)) throw new Error(`操作別50%死亡深度が フル手動 > 片手 > 完全オート でない: ${report.modes.map(row => row.depth).join(' / ')}`);
 await browser.close(); await new Promise(resolve => server.close(resolve));
