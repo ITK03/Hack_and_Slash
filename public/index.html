@@ -698,12 +698,18 @@ const ET={
 const EKEYS=Object.keys(ET);
 /* 状態異常。自分にも敵にも乗る。防御が高いほど自分は入りにくい。 */
 const CONSUMABLES={
-  heal:{n:"回復薬",icon:"♥",crystal:3,max:3,d:"HPを最大値の25%回復"},
+  heal:{n:"回復薬",icon:"♥",crystal:13,max:3,d:"HPを最大値の20%回復"},
   healG:{n:"回復薬グレード",icon:"💖",crystal:7,core:1,max:2,d:"HPを45%回復（半分は3秒継続）"},
-  power:{n:"力の丸薬",icon:"力",crystal:5,max:5,d:"物理・特殊攻撃力 +12% / 60秒"},
-  hard:{n:"硬化薬",icon:"盾",crystal:5,max:5,d:"防御 +20%、ノックバック無効 / 60秒"},
+  power:{n:"力の丸薬",icon:"力",crystal:5,max:5,d:"物理・特殊攻撃力 +7.5% / 60秒"},
+  hard:{n:"硬化薬",icon:"盾",crystal:5,max:5,d:"防御 +12%、ノックバック無効 / 60秒"},
   focus:{n:"気付け薬",icon:"気",crystal:7,core:1,max:2,d:"MP回復速度 +80% / 60秒"},
-  gale:{n:"疾風の粉",icon:"風",crystal:5,max:5,d:"移動速度 +15%、回避 +5% / 60秒"}
+  gale:{n:"疾風の粉",icon:"風",crystal:5,max:5,d:"移動速度 +7%、回避 +2% / 60秒"},
+  sonic:{n:"音爆弾",icon:"音",crystal:6,max:3,d:"周囲の敵を3秒スタン（ダメージなし）"},
+  shockTrap:{n:"しびれ罠",icon:"罠",crystal:6,max:2,d:"踏んだ敵を4秒麻痺（同時設置1個）"},
+  weaken:{n:"弱体の霧",icon:"霧",crystal:7,max:3,d:"範囲内の敵の防御 -25% / 15秒"},
+  torch:{n:"松明",icon:"火",crystal:4,max:3,d:"視界を1.6倍 / 90秒"},
+  incense:{n:"探知の香",icon:"香",crystal:5,max:2,d:"そのフロアの宝箱・祭壇・階段を表示"},
+  returnScroll:{n:"帰還の巻物",icon:"巻",crystal:8,core:1,max:1,d:"安全時に3秒詠唱して戦利品を保持し帰還"}
 };
 const CONSUMABLE_KEYS=Object.keys(CONSUMABLES);
 const ST={brn:{n:"燃焼",col:"#ff7a3a",dps:.055},psn:{n:"毒",col:"#7ad06a",dps:.022},
@@ -798,7 +804,7 @@ function rarRoll(fl,mf,luk){
   for(let i=0;i<w.length;i++){v-=w[i];if(v<=0)return i;}return 0;}
 const SW={atk:5,matk:5,atkP:4,hp:1,armor:1.4,crit:7,cdmg:2,as:5,ms:3,ls:9,cdr:4,dr:5,
   mf:1.2,mreg:1.5,luk:3,rng:4,agiF:3,mpF:1,lukF:3};
-const ENHANCE_PER_LV=.14; // 基礎主能力への加算。複利にはしない
+const ENHANCE_PER_LV=.07; // 基礎主能力への加算。複利にはしない
 const itemMaxLv=it=>10+Math.floor(Math.sqrt(Math.max(1,Number(it&&it.ilvl)||1)));
 const materialTier=depth=>Math.max(1,Math.ceil(Math.log2(Math.max(1,Number(depth)||1)/10+1)));
 const materialScale=depth=>Math.max(1,Math.ceil(Math.sqrt(Math.max(1,Number(depth)||1)/10)));
@@ -815,7 +821,8 @@ function spendMat(kind,minTier,units){
     if(take){b[tier]-=take;left-=take*value;if(!b[tier])delete b[tier];}tier++;}
   return true;}
 // 深度別の収量スケールを強化上限の段数で均し、1枚の完成までの周回数を一定に保つ。
-const crystalNeed=it=>Math.max(1,Math.round(240*materialScale(it.ilvl)/(itemMaxLv(it)-1)));
+const enhancementDiveScale=depth=>curve(depth,[[10,1.17],[50,1.42],[100,1.67],[300,2.57],[1000,6.15]]);
+const crystalNeed=it=>Math.max(1,Math.round(120*Math.max(1,it.ilvl)*materialScale(it.ilvl)*enhancementDiveScale(it.ilvl)/(itemMaxLv(it)-1)));
 const coreNeeded=it=>it.lv+1>1+Math.floor((itemMaxLv(it)-1)*2/3);
 function upgradeMatCost(it,addedXP){let lv=it.lv,xp=it.xp+addedXP,crystal=0,core=0;
   while(lv<itemMaxLv(it)&&xp>=fuseNeed({lv})){const step={ilvl:it.ilvl,lv};xp-=fuseNeed(step);crystal+=crystalNeed(step);if(coreNeeded(step))core++;lv++;}
@@ -833,11 +840,11 @@ function makeItem(fl,mf,luk,forceRar){
   const m=Math.pow(il,.62);
   const mainId=sd.k==="weapon"?(it.wt==="staff"?"matk":"atk"):sd.main;
   it.main={id:mainId,v:Math.max(1,Math.round(rr(sd.lo,sd.hi)*m))};
-  const nA=[0,1,ri(2,3),ri(3,5),ri(5,6)][rar];
+  const nA=[0,1,ri(3,4),ri(4,5),ri(4,5)][rar];
   const pool=AFF.slice();          // 部位に関係なく何でも付く（剣に魔力など）
   for(let i=0;i<nA&&pool.length;i++){
     const a=pool.splice(Math.floor(rnd()*pool.length),1)[0];
-    const q=rr(.5,1.55);           // 当たり外れ。同じ接尾辞でも値が大きく振れる
+    const q=rr(.75,1.35);           // 当たり外れ。同じ接尾辞でも値が大きく振れる
     it.affs.push({id:a.id,v:Math.max(1,Math.round(a.f(il)*q)),q:+q.toFixed(2)});}
   if(rar===4)it.pw=pick(POWERS).id;
   it.name=rar===0?it.base
@@ -874,9 +881,12 @@ const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   combo:0,comboT:0,dmgLog:[],dps:0,startFloor:1,runGold:0,
   inv:{filters:[],sort:"score",sellSel:[],sellRar:1},mats:{crystal:{},core:{}},consumables:{},loadout:["heal",null,null,null],runItems:[0,0,0,0],itemSlot:0,
   formation:[],partyIndex:0,diveFloor:1,stamina:3,premium:0,profileAvatar:null,shopSub:"gacha",alloc:null,
+  paidInventory:{catalysts:[],feathers:[],slots:[]},tactical:{trap:null,reveal:false},
   daily:null,dailyMatMul:1,
   unlockedCharacters:["warrior:gai"],tutorial:{phase:"training_intro",gearIndex:0},training:false,returnInvulnerable:false,
   base:{lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0}};
+
+Object.assign(S.settings,{controlMode:"manual",autoPreset:"aggressive",automationEditor:0});
 
 // 4:00の日次更新はこの関数だけで判定する。dailyClock はブラウザ検証で差し替え可能。
 let dailyClock=()=>new Date();
@@ -996,7 +1006,7 @@ function derive(){
 /* 回避: 自分と階層の力量差で決まる。格上相手にはほとんど効かない。 */
 function dodgeRate(){const d=S.p.d;
   const gap=(S.base.lv*.5+4)-S.floor;
-  return clamp((.02+d.agiD*.0020+gap*.010)*(d.C.dodgeMul||1)+(S.p.itemBuffs.gale?.05:0),0,.30);}
+  return clamp((.02+d.agiD*.0020+gap*.010)*(d.C.dodgeMul||1)+(S.p.itemBuffs.gale?.02:0),0,.30);}
 function dodgeRateFor(d){const gap=(S.base.lv*.5+4)-S.floor;
   return clamp((.02+d.agiD*.0020+gap*.010)*(d.C.dodgeMul||1),0,.30);}
 function deriveWith(slot,item){
@@ -1052,7 +1062,7 @@ function newPlayer(){const d=derive();
     cd:0,cds:[0,0,0],hurtT:0,invulT:0,dashT:0,dashX:0,dashY:0,dashHit:null,
     mAtk:1,mAs:1,mMs:1,mCrit:0,mCdmg:0,mRange:1,mCd:1,mDrop:1,mLs:0,mDr:0,mHp:0,
     sAtk:1,sDr:0,sMs:1,sAs:1,sDrop:1,shrineT:0,shrine:null,
-    buffT:0,buffAtk:1,buffDr:0,guardS:0,guardT:0,atkN:0,comboStep:0,comboT:0,ups:[],kills:0,itemBuffs:{},itemCd:0,itemLock:0,hot:0,hotT:0};}
+    buffT:0,buffAtk:1,buffDr:0,guardS:0,guardT:0,atkN:0,comboStep:0,comboT:0,ups:[],kills:0,itemBuffs:{},itemCd:0,itemLock:0,hot:0,hotT:0,lastHit:99,returnCast:0,returnSlot:-1,autoDelay:0};}
 const recalcHP=p=>{p.max=Math.round(p.d.max*(1+p.mHp));p.hp=Math.min(p.hp,p.max);};
 const UPS=[
   {t:"鋭刃",d:"攻撃力 +16%",f:p=>p.mAtk*=1.16},
@@ -1076,11 +1086,11 @@ function curve(fl,points){
   const[a,av]=points[points.length-2],[b,bv]=points[points.length-1];
   return bv+(fl-b)*(bv-av)/(b-a);}
 // 裸で遊べる序盤から、5層ごとの装備更新が必要になる後半へ滑らかに接続する。
-const enemyHPScale=fl=>curve(fl,[[1,2.2],[5,3],[10,4],[15,7],[20,11],[25,16],[30,22],[35,29],[40,38],[45,49]]);
-const enemyDMGScale=fl=>curve(fl,[[1,.18],[5,.30],[10,.55],[15,1],[20,1.7],[25,2.6],[30,3.8],[35,5.3],[40,7.2],[45,9.5]]);
+const enemyHPScale=fl=>curve(fl,[[1,2.2],[5,3],[10,4],[20,9],[35,18],[60,38],[80,65],[110,190],[180,360],[300,650]]);
+const enemyDMGScale=fl=>curve(fl,[[1,.18],[5,.30],[10,.55],[20,1.35],[35,2.8],[60,6.8],[80,12],[110,38],[180,72],[300,130]]);
 // 各階層ボスは通常進行曲線に対して HP 2倍、攻撃力 1.5倍。
-const bossHPScale=fl=>2*curve(fl,[[5,.40],[10,.80],[15,1.5],[20,2.5],[25,3.8],[30,5.5],[35,7.5],[40,10],[45,13]]);
-const bossDMGScale=fl=>1.5*curve(fl,[[5,.25],[10,.45],[15,.75],[20,1.15],[25,1.7],[30,2.4],[35,3.3],[40,4.5],[45,6]]);
+const bossHPScale=fl=>2*curve(fl,[[5,.40],[10,.80],[20,1.8],[35,4.2],[60,9.5],[80,16],[110,48],[180,90],[300,162]]);
+const bossDMGScale=fl=>1.5*curve(fl,[[5,.25],[10,.45],[20,.9],[35,1.9],[60,4.5],[80,8],[110,26],[180,48],[300,87]]);
 function spawnE(k,x,y,fl,elite){
   const t=ET[k],hs=enemyHPScale(fl),ds=enemyDMGScale(fl);
   const e={k,n:t.n,x,y,r:t.r,sp:t.sp,aR:t.aR,cd:t.cd,cdT:rr(0,t.cd),xp:t.xp,col:t.col,sz:t.sz,
@@ -1112,7 +1122,7 @@ function spawnBoss(fl){
   SFX.boss();buzz([0,80,60,80]);toast("★ "+b.n);}
 
 /* ---------- フロア ---------- */
-function enterFloor(fl){
+function enterFloor(fl){S.tactical.trap=null;S.tactical.reveal=false;
   S.floor=fl;S.deepest=Math.max(S.deepest,fl);
   genFloor(fl);
   S.enemies.length=0;S.drops.length=0;S.bullets.length=0;S.parts.length=0;
@@ -1179,11 +1189,12 @@ const shk=v=>{S.shake=Math.max(S.shake,v);S.shakeT=.2;};
 const hasPw=id=>S.p&&S.p.d.pw.includes(id);
 function pDmg(base,mul){const p=S.p;
   if(S.training)return 200*(mul||1);
-  let m=(mul||1)*p.mAtk*p.sAtk*p.buffAtk*(p.itemBuffs.power?1.12:1);
+  let m=(mul||1)*p.mAtk*p.sAtk*p.buffAtk*(p.itemBuffs.power?1.075:1);
   if(hasPw("berserk"))m*=1+(1-p.hp/p.max)*.8;
   return (rr(base[0],base[1])+p.d.atkFlat)*m;}
 function hurtE(e,dmg,crit,kx,ky,quiet){
   if(e.hp<=0)return;
+  if(e.weaken>0)dmg/=.75; // 弱体の霧: 敵防御を25%低下した結果を被ダメージへ反映
   if(e.shield>0){const a=Math.min(e.shield,dmg);e.shield-=a;dmg-=a;
     dnum(e.x,e.y,a,"#d8d040");if(dmg<=0){e.flash=CFG.FLASH_T;return;}}
   e.hp-=dmg;e.flash=CFG.FLASH_T;e.agro=true;
@@ -1276,11 +1287,11 @@ function hurtP(dm,cause,force){const p=S.p;if(S.training||S.returnInvulnerable||
   if(rnd()<dodgeRate()){p.hurtT=.16;
     S.nums.push({x:p.x,y:p.y,v:0,txt:"回避",t:0,c:"#8ad8ff"});
     tone(900,.06,"sine",.06,1300);return;}
-  const d=dm*(1-Math.min(.8,p.d.dr+p.mDr+p.sDr+p.buffDr+(p.itemBuffs.hard?(armorDR(p.d.armor*1.2)-armorDR(p.d.armor))*(p.d.C.defMul||1):0)+p.guardS*.2));
-  p.hp-=d;p.hurtT=.42;S.flash=.18;shk(CFG.SHAKE_HURT);SFX.hurt();buzz(38);
+  const d=dm*(1-Math.min(.8,p.d.dr+p.mDr+p.sDr+p.buffDr+(p.itemBuffs.hard?(armorDR(p.d.armor*1.12)-armorDR(p.d.armor))*(p.d.C.defMul||1):0)+p.guardS*.2));
+  p.hp-=d;p.lastHit=0;if(p.returnCast>0){p.returnCast=0;p.returnSlot=-1;toast("帰還詠唱が中断された","ng");}p.hurtT=.42;S.flash=.18;shk(CFG.SHAKE_HURT);SFX.hurt();buzz(38);
   dnum(p.x,p.y,d,"#ff6060");
   if(hasPw("guard")){p.guardS=Math.min(3,p.guardS+1);p.guardT=2;}
-  if(p.hp<=0){p.hp=0;endRun(false,cause||"敵の攻撃");}}
+  if(p.hp<=0){const feathers=S.paidInventory.feathers||[];if(!S.featherUsed&&feathers.length){feathers.shift();S.featherUsed=true;p.hp=p.max*.5;p.invulT=2;toast("復活の羽で復活","ok");save();}else{p.hp=0;endRun(false,cause||"敵の攻撃");}}}
 
 function basicAttack(){
   const p=S.p;if(p.itemLock>0)return;const C=p.d.C,range=C.range*p.mRange*p.d.rng;
@@ -1352,7 +1363,7 @@ function useSkill(i){
   else{let b=null,bd=1e9;for(const e of S.enemies){const d=d2(p.x,p.y,e.x,e.y);if(d<bd){bd=d;b=e;}}
     if(b)a=Math.atan2(b.y-p.y,b.x-p.x);}
   p.face=a;
-  const dmg=()=>{const c=rnd()<(p.d.crit+p.mCrit);let v=pDmg(sk.dmg);
+  const dmg=()=>{const c=rnd()<(p.d.crit+p.mCrit);let v=pDmg(sk.dmg)*(S.autoSkillCasting?.62:1);
     if(c)v*=(p.d.cdmg+p.mCdmg);return[v,c];};
   switch(sk.k){
   case "cleave":{
@@ -1415,14 +1426,33 @@ function useSkill(i){
   updHUD();}
 function useItem(slot=S.itemSlot){const p=S.p,key=S.loadout[slot],def=CONSUMABLES[key];
   if(!def||!S.runItems[slot]||p.itemCd>0||p.itemLock>0)return false;
+  if(key==="returnScroll"){if(p.lastHit<5||p.returnCast>0)return false;p.returnCast=3;p.returnSlot=slot;p.itemLock=3;toast("帰還を詠唱中…");return true;}
   if(key==="heal"&&p.hp>=p.max)return false;
   S.runItems[slot]--;S.consumables[key]=Math.max(0,(S.consumables[key]||0)-1);S.itemSlot=slot;p.itemCd=8;p.itemLock=.5;
-  if(key==="heal")p.hp=Math.min(p.max,p.hp+p.max*.25);
+  if(key==="heal")p.hp=Math.min(p.max,p.hp+p.max*.20);
   if(key==="healG"){p.hp=Math.min(p.max,p.hp+p.max*.225);p.hot+=p.max*.225;p.hotT=3;}
   if(["power","hard","focus","gale"].includes(key))p.itemBuffs[key]=60;
+  if(key==="sonic")for(const e of S.enemies)if(d2(p.x,p.y,e.x,e.y)<=25)e.stun=Math.max(e.stun||0,3);
+  if(key==="shockTrap")S.tactical.trap={x:p.x,y:p.y};
+  if(key==="weaken")for(const e of S.enemies)if(d2(p.x,p.y,e.x,e.y)<=25)e.weaken=15;
+  if(key==="torch")p.itemBuffs.torch=90;
+  if(key==="incense")S.tactical.reveal=true;
   SFX.pot();buzz(18);burst(p.x,p.y,"#ffb060",12,1.2);if(S.training&&S.tutorial.phase==="training_potion"){S.tutorial.phase="training_return";setTimeout(refreshTutorial,300);}save();updBuffs();updHUD();return true;}
 function usePotion(){return useItem(S.itemSlot);}
 
+
+const AUTO_PRESETS={
+ aggressive:[{condition:"半径R内に敵N体以上",action:"skill1"},{condition:"自MP > N%",action:"skill2"},{condition:"ボス戦中",action:"skill3"}],
+ conserve:[{condition:"ボス戦中",action:"skill3"},{condition:"自HP < N%",action:"item1"},{condition:"状態異常中",action:"item2"}],
+ survival:[{condition:"自HP < N%",action:"item1"},{condition:"直前に被弾した",action:"item2"},{condition:"ボスが予備動作中",action:"skill3"}]
+};
+const AUTOMATION_CONDITIONS=["自HP < N%","自MP > N%","半径R内に敵N体以上","ボス戦中","ボスが予備動作中","状態異常中","バフが切れている","直前に被弾した"];
+const AUTOMATION_ACTIONS=["skill1","skill2","skill3","item1","item2","item3","item4","none"];
+function automationRules(){const key=S.settings.autoPreset||"aggressive",base=AUTO_PRESETS[key]||AUTO_PRESETS.aggressive;return (S.settings.autoRules&&S.settings.autoRules.length?S.settings.autoRules:base).slice(0,6);}
+function autoCondition(c){const p=S.p;if(c==="自HP < N%")return p.hp/p.max<.45;if(c==="自MP > N%")return p.mp/p.d.mpMax>.5;if(c==="半径R内に敵N体以上")return S.enemies.filter(e=>d2(p.x,p.y,e.x,e.y)<25).length>=2;if(c==="ボス戦中")return !!S.boss;if(c==="ボスが予備動作中")return !!(S.boss&&S.boss.wind>0);if(c==="状態異常中")return Object.values(p.st||{}).some(x=>x>0);if(c==="バフが切れている")return !Object.keys(p.itemBuffs).length;if(c==="直前に被弾した")return p.lastHit<2;return false;}
+function autoActionAvailable(a){const p=S.p;if(a.startsWith("skill")){const i=+a.slice(-1)-1,sk=p.d.C.skills[i];return sk&&p.cds[i]<=0&&p.mp>=sk.c;}if(a.startsWith("item")){const i=+a.slice(-1)-1;return !!(S.loadout[i]&&S.runItems[i]&&p.itemCd<=0&&p.itemLock<=0);}return a==="none";}
+function runAutoAction(a){if(a.startsWith("skill")){S.autoSkillCasting=true;useSkill(+a.slice(-1)-1);S.autoSkillCasting=false;}else if(a.startsWith("item"))useItem(+a.slice(-1)-1);}
+function updateAutomation(dt){const mode=S.settings.controlMode||"manual",p=S.p;if(mode==="manual")return;if(mode==="auto"&&S.enemies.length&&!p.dashT){let e=S.enemies[0],bd=d2(p.x,p.y,e.x,e.y);for(const x of S.enemies){const d=d2(p.x,p.y,x.x,x.y);if(d<bd){bd=d;e=x;}}const l=Math.sqrt(bd)||1;IN.dx=(e.x-p.x)/l;IN.dy=(e.y-p.y)/l;HELD[0]=true;}const rule=automationRules().find(r=>autoCondition(r.condition)&&autoActionAvailable(r.action));if(!rule){p.autoDelay=0;return;}p.autoDelay=(p.autoDelay||0)+dt;if(p.autoDelay>=.35){p.autoDelay=0;runAutoAction(rule.action);}}
 
 /* ---------- 更新 ---------- */
 function update(dt){
@@ -1432,10 +1462,12 @@ function update(dt){
   S.runT+=dt;
   if(S.shakeT>0){S.shakeT-=dt;if(S.shakeT<=0)S.shake=0;}
   if(S.flash>0)S.flash-=dt;
-  if(p.hurtT>0)p.hurtT-=dt;
+  if(p.hurtT>0)p.hurtT-=dt;p.lastHit=(p.lastHit||0)+dt;
+  if(p.returnCast>0){p.returnCast-=dt;if(p.returnCast<=0){const slot=p.returnSlot,key=S.loadout[slot];S.runItems[slot]--;S.consumables[key]=Math.max(0,(S.consumables[key]||0)-1);p.returnSlot=-1;endRun(true);return;}}
   if(p.invulT>0)p.invulT-=dt;
   if(p.itemCd>0)p.itemCd=Math.max(0,p.itemCd-dt);if(p.itemLock>0)p.itemLock=Math.max(0,p.itemLock-dt);
   for(const k in p.itemBuffs)if((p.itemBuffs[k]-=dt)<=0)delete p.itemBuffs[k];
+  updateAutomation(dt);
   if(p.hotT>0){const tick=Math.min(dt,p.hotT);p.hp=Math.min(p.max,p.hp+p.hot/Math.max(p.hotT,tick)*tick);p.hot-=p.hot/Math.max(p.hotT,tick)*tick;p.hotT-=tick;}
   if(p.buffT>0){p.buffT-=dt;if(p.buffT<=0){p.buffAtk=1;p.buffDr=0;}}
   if(p.guardT>0){p.guardT-=dt;if(p.guardT<=0)p.guardS=0;}
@@ -1451,7 +1483,7 @@ function update(dt){
     if(p.dashT<=0){p.dashT=0;p.invulT=.18;p.dashHit=null;}}
   else if((IN.dx||IN.dy)&&!stActive(p,"frz")&&p.itemLock<=0){
     const w=s2w(IN.dx,IN.dy),
-      sp=CFG.P_SPEED*p.d.ms*p.mMs*p.sMs*(p.itemBuffs.gale?1.15:1)*w.mag*(stActive(p,"par")?.55:1);
+      sp=CFG.P_SPEED*p.d.ms*p.mMs*p.sMs*(p.itemBuffs.gale?1.07:1)*w.mag*(stActive(p,"par")?.55:1);
     mv(p,w.x*sp*dt,w.y*sp*dt);
     const fl=Math.hypot(w.x,w.y)||1;p.face=Math.atan2(w.y/fl,w.x/fl);}
 
@@ -1477,6 +1509,7 @@ function update(dt){
     e.x+=e.kbx;e.y+=e.kby;e.kbx*=.78;e.kby*=.78;
     if(!walk(e.x,e.y,e.r)){e.x-=e.kbx;e.y-=e.kby;e.kbx=e.kby=0;}
     const d=Math.hypot(p.x-e.x,p.y-e.y);
+    if(e.weaken>0)e.weaken=Math.max(0,e.weaken-dt);if(S.tactical.trap&&d2(e.x,e.y,S.tactical.trap.x,S.tactical.trap.y)<.5){applyST(e,"par",4,false);S.tactical.trap=null;}
     if(!e.agro&&d<11)e.agro=true;
     if(!e.agro)continue;
     const ux=(p.x-e.x)/(d||1),uy=(p.y-e.y)/(d||1);
@@ -1876,7 +1909,7 @@ function draw(){
     const yy=s.sy-22-k*28,tx=n.txt||n.v;
     ctx.strokeText(tx,s.sx,yy);ctx.fillStyle=n.c;ctx.fillText(tx,s.sx,yy);}
   ctx.globalAlpha=1;ctx.restore();
-  const pc=iso(p.x,p.y),lx=pc.sx+ox,ly=pc.sy+oy,LR=VW*CFG.LIGHT_R;
+  const pc=iso(p.x,p.y),lx=pc.sx+ox,ly=pc.sy+oy,LR=VW*CFG.LIGHT_R*(p.itemBuffs.torch?1.6:1);
   ctx.save();ctx.translate(lx,ly);ctx.scale(1,CFG.LIGHT_STRETCH);
   const g=ctx.createRadialGradient(0,0,LR*.2,0,0,LR);
   g.addColorStop(0,"rgba(0,0,0,0)");
@@ -2078,6 +2111,7 @@ function drawMM(){
   for(const e of S.enemies)if(e.agro||e.elite||e.boss){
     mctx.fillStyle=e.boss?"#ff3030":e.elite?e.elite.col:"#a04040";
     mctx.fillRect(e.x*sc-1,e.y*sc-1,e.boss?4:2.2,e.boss?4:2.2);}
+  for(const q of S.props)if(S.tactical.reveal&&(q.t==="chest"||q.t==="shrine")){mctx.fillStyle="#ffd24a";mctx.fillRect(q.x*sc-1.5,q.y*sc-1.5,3,3);}
   for(const d of S.drops)if(d.it){mctx.fillStyle=rarCol(d.rar);
     mctx.fillRect(d.x*sc-1,d.y*sc-1,2.4,2.4);}
   mctx.fillStyle="#fff";mctx.fillRect(p.x*sc-1.5,p.y*sc-1.5,3.5,3.5);}
@@ -2086,7 +2120,7 @@ function drawMM(){
 function updHUD(){
   const p=S.p;if(!p)return;
   // 表示設定はスティックの見た目だけに適用し、入力面は常に有効にする。
-  $("stickZone").style.display="block";
+  $("stickZone").style.display=S.settings.controlMode==="auto"?"none":"block";for(let i=1;i<=3;i++)$("s"+i).style.display=S.settings.controlMode==="manual"?"block":"none";
   $("stick").style.visibility=S.settings.stick?"visible":"hidden";
   $("hpF").style.width=(p.hp/p.max*100)+"%";
   $("hpT").textContent=Math.ceil(p.hp)+"/"+Math.ceil(p.max);
@@ -2332,7 +2366,7 @@ function renderTown(){
       const gacha=(name,cost,kind,draw)=>{const phase=(S.tutorial||{}).phase,free=phase===(kind==="equip"?"equip_gacha":"char_gacha");add(`<div class="card"><div class="nm">${name}</div><div class="st">${free?"チュートリアル初回無料":`課金通貨 ${cost} ◆ で1回引けます。`}</div></div>`);const d=btn(free?"無料で1回引く":`1回引く — ${cost} ◆`,free||S.premium>=cost?"gold":"no",()=>{if(!free&&S.premium<cost)return;const run=()=>{if(!free)S.premium-=cost;const result=draw(free);save();openTown();showGachaResult(result.title,result.html);};free?run():ask(name,`${cost} ◆ を使ってガチャを引きます。`,run);});d.dataset.tutorial=kind+"-gacha";};
       gacha("キャラクターガチャ",300,"char",free=>{const locked=allRoster().filter(x=>!S.unlockedCharacters.includes(x.k+":"+x.ch.id)),entry=free?allRoster().find(x=>x.ch.id==="mira"):pick(locked.length?locked:allRoster()),{k,ch}=entry,key=k+":"+ch.id;if(!S.unlockedCharacters.includes(key))S.unlockedCharacters.push(key);S.profileAvatar=key;if(free)S.tutorial.phase="formation";SFX.lvl();return{title:"キャラクター獲得",html:`<div style="color:${ch.col};font-size:58px">●</div><div class="nm">${ch.n}</div><div class="st">${CLASSES[k].name} / ${ch.trait}</div>`};});
       gacha("装備ガチャ",200,"equip",free=>{const it=makeItem(Math.max(1,S.deepest),.6,S.p.d.luk,free?2:Math.max(1,ri(1,4)));S.stash.push(it);if(free)S.tutorial.phase="char_gacha";SFX.chest();return{title:"装備獲得",html:`<div class="${RC[it.rar]}">${icon(iconKey(it),54)}</div><div class="nm ${RC[it.rar]}">${it.name}</div><div class="st">${CFG.RARITY[it.rar][0]} / ${SLOTN(it.slot)}</div>`};});}
-    else add(`<div class="card"><div class="nm">ジェムショップ</div><div class="st">ジェム購入機能は準備中です。</div></div><div class="g3"><div class="slot empty">紅玉ジェム</div><div class="slot empty">蒼玉ジェム</div><div class="slot empty">翠玉ジェム</div></div>`);}
+    else {add(`<div class="card"><div class="nm">ジェムショップ</div><div class="st">課金限定効果はありません。時短・保険・枠のみ（決済はダミー）。所有物は個体IDで記録されます。</div></div>`);for(const [kind,name,cost,desc] of [["catalysts","純化触媒",120,"下位結晶4個を上位1個へ即時変換"],["feathers","復活の羽",180,"1潜行1回、その場で復活し戦利品保持"],["slots","持ち込み枠+1",500,"恒久。最大6枠（2回まで）"]]){const n=(S.paidInventory[kind]||[]).length,d=document.createElement("div");d.className="card recipe";d.innerHTML=`<div><div class="nm">${name}（所有 ${n}）</div><div class="st">${desc}</div></div>`;const x=document.createElement("div");x.className="btn "+(S.premium>=cost&&(kind!=="slots"||n<2)?"gold":"no");x.textContent=cost+" ◆";tapEl(x,()=>{if(buyPaid(kind,cost)){toast(name+"を購入","ok");openTown();}});d.appendChild(x);b.appendChild(d);}}}
   if(S.tab==="conf")renderSettings(b,openTown,false);
 }
 
@@ -2382,6 +2416,7 @@ function openFormationChoices(slot,k){const c=$("itC");c.innerHTML=`<div class="
 function renderSettings(b,after,inDungeon){
   const h=document.createElement("h3");h.textContent="表示・省電力";b.appendChild(h);const cg=document.createElement("div");cg.className="compactGrid";b.appendChild(cg);
   for(const [k,lbl] of [["map","ミニマップ"],["dmg","ダメージ数値"],["dps","DPS"],["loot","取得アイテム"],["timer","タイマー"],["shake","画面の揺れ"],["stick","移動キー表示"],["eco","省電力モード"]]){const d=document.createElement("div");d.className="btn "+(S.settings[k]?"gold":"gh");d.textContent=lbl+"："+(S.settings[k]?"ON":"OFF");tapEl(d,()=>{S.settings[k]=S.settings[k]?0:1;if(k==="eco")resize();save();after();});cg.appendChild(d);}
+  const controlHead=document.createElement("h3");controlHead.textContent="操作モード";b.appendChild(controlHead);const controlModes=document.createElement("div");controlModes.className="compactGrid";for(const [k,n] of [["manual","フル手動"],["onehand","片手"],["auto","完全オート"]]){const disabled=k==="auto"&&S.diveFloor>=S.deepest,d=document.createElement("div");d.className="btn "+(disabled?"no":S.settings.controlMode===k?"gold":"gh");d.textContent=n;tapEl(d,()=>{if(disabled)return;S.settings.controlMode=k;save();after();});controlModes.appendChild(d);}b.appendChild(controlModes);const presets=document.createElement("div");presets.className="compactGrid";for(const [k,n] of [["aggressive","積極"],["conserve","温存"],["survival","生存優先"]]){const d=document.createElement("div");d.className="btn "+(S.settings.autoPreset===k?"gold":"gh");d.textContent=n;tapEl(d,()=>{S.settings.autoPreset=k;save();after();});presets.appendChild(d);}b.appendChild(presets);const edit=document.createElement("div");edit.className="btn gh";edit.textContent="条件スロット編集（任意）";tapEl(edit,()=>{S.settings.automationEditor=!S.settings.automationEditor;save();after();});b.appendChild(edit);if(S.settings.automationEditor){const note=document.createElement("div");note.className="st";note.textContent="6スロットを上から評価。利用可能な語彙: "+AUTOMATION_CONDITIONS.join(" / ");b.appendChild(note);}
   const mh=document.createElement("h3");mh.textContent="記録・管理";b.appendChild(mh);
   {const misc=document.createElement("div");misc.className="compactGrid";const rec=document.createElement("div");rec.className="btn gh";rec.textContent="プレイ記録を見る";tapEl(rec,()=>openRecords(after));misc.appendChild(rec);const reset=document.createElement("div");reset.className="btn gh";reset.textContent="初期化";tapEl(reset,()=>ask("ゲームをリセット","すべての進行・装備・通貨が消えます。",()=>{localStorage.removeItem(KEY);location.reload();}));misc.appendChild(reset);b.appendChild(misc);}
   const inp=document.createElement("input");inp.setAttribute("aria-label","モード切替コード");inp.autocomplete="off";inp.style.cssText="width:100%;padding:9px;margin-top:7px;background:#0a0810;border:1px solid var(--line);color:var(--ink)";b.appendChild(inp);
@@ -2451,10 +2486,15 @@ function confirmSelectedDismantle(){const F=S.inv,selected=F.sellSel.filter(i=>S
 /* ---------- 倉庫: アイコン格子 + フィルタ/並べ替え/売却 ---------- */
 function materialCount(kind){return Object.values(matBucket(kind)).reduce((a,n)=>a+(+n||0),0);}
 function spendAny(kind,n){const b=matBucket(kind);for(const t of Object.keys(b).sort((a,z)=>+a-+z)){const take=Math.min(n,b[t]||0);b[t]-=take;n-=take;if(!n)break;}return n===0;}
+const paidId=()=>"paid_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2);
+function buyPaid(kind,cost){if(S.premium<cost)return false;if(kind==="slots"&&(S.paidInventory.slots||[]).length>=2)return false;S.premium-=cost;const rec={id:paidId(),kind,source:"purchase",createdAt:Date.now()};S.paidInventory[kind].push(rec);save();return true;}
+function adminGrantPaid(kind){if(!S.admin||!S.paidInventory[kind])return false;S.paidInventory[kind].push({id:paidId(),kind,source:"admin",admin:true,createdAt:Date.now()});save();return true;}
+function useCatalyst(fromTier){const a=S.paidInventory.catalysts;if(!a.length||(S.mats.crystal[fromTier]||0)<4)return false;S.mats.crystal[fromTier]-=4;S.mats.crystal[+fromTier+1]=(S.mats.crystal[+fromTier+1]||0)+1;a.shift();save();return true;}
+function loadoutCapacity(){return Math.min(6,4+(S.paidInventory.slots||[]).length);}
 function craftItem(key){const d=CONSUMABLES[key];if(materialCount("crystal")<d.crystal||materialCount("core")<(d.core||0))return;spendAny("crystal",d.crystal);if(d.core)spendAny("core",d.core);S.consumables[key]=(S.consumables[key]||0)+1;SFX.chest();toast(d.n+"を調合","ok");save();openCraft();}
 function openCraft(){invMenu("調合",c=>{const note=document.createElement("div");note.className="sub";note.textContent="結晶は階梯を問わず1個として消費します。上位品のみ核を1個使います。";c.appendChild(note);for(const k of CONSUMABLE_KEYS){const x=CONSUMABLES[k],can=materialCount("crystal")>=x.crystal&&materialCount("core")>=(x.core||0),d=document.createElement("div");d.className="card recipe";d.innerHTML=`<div><div class="nm">${x.icon} ${x.n}（所持 ${S.consumables[k]||0}）</div><div class="st">${x.d}<br>結晶 ${x.crystal}${x.core?" / 核 1":""}</div></div>`;const b=document.createElement("div");b.className="btn "+(can?"gold":"no");b.textContent="作る";tapEl(b,()=>craftItem(k));d.appendChild(b);c.appendChild(d);}},openTown);}
 function openLoadoutSlot(slot){invMenu(`持ち込み枠 ${slot+1}`,c=>{const empty=document.createElement("div");empty.className="btn gh";empty.textContent="空にする";tapEl(empty,()=>{S.loadout[slot]=null;save();$("itPop").classList.remove("on");openTown();});c.appendChild(empty);for(const k of CONSUMABLE_KEYS){const x=CONSUMABLES[k],d=document.createElement("div");d.className="card tap";d.innerHTML=`<div class="nm">${x.icon} ${x.n} ×${Math.min(x.max,S.consumables[k]||0)}</div><div class="st">${x.d} / 上限${x.max}</div>`;tapEl(d,()=>{S.loadout[slot]=k;save();$("itPop").classList.remove("on");openTown();});c.appendChild(d);}},openTown);}
-function renderLoadout(b){const h=document.createElement("h3");h.textContent="持ち込み（4枠）";b.appendChild(h);const g=document.createElement("div");g.className="loadout";for(let i=0;i<4;i++){const k=S.loadout[i],d=document.createElement("div");d.className="loadSlot";d.innerHTML=k?`<b>${CONSUMABLES[k].icon} ${CONSUMABLES[k].n}</b><br>×${Math.min(CONSUMABLES[k].max,S.consumables[k]||0)} / ${CONSUMABLES[k].max}`:`<b>＋</b><br>空き`;tapEl(d,()=>openLoadoutSlot(i));g.appendChild(d);}b.appendChild(g);const n=document.createElement("div");n.className="st";n.textContent="未使用品は死亡・断念時にも倉庫へ残ります。潜行中の補充はできません。";b.appendChild(n);}
+function renderLoadout(b){const h=document.createElement("h3");h.textContent=`持ち込み（${loadoutCapacity()}枠）`;b.appendChild(h);const g=document.createElement("div");g.className="loadout";for(let i=0;i<loadoutCapacity();i++){const k=S.loadout[i],d=document.createElement("div");d.className="loadSlot";d.innerHTML=k?`<b>${CONSUMABLES[k].icon} ${CONSUMABLES[k].n}</b><br>×${Math.min(CONSUMABLES[k].max,S.consumables[k]||0)} / ${CONSUMABLES[k].max}`:`<b>＋</b><br>空き`;tapEl(d,()=>openLoadoutSlot(i));g.appendChild(d);}b.appendChild(g);const n=document.createElement("div");n.className="st";n.textContent="未使用品は死亡・断念時にも倉庫へ残ります。潜行中の補充はできません。";b.appendChild(n);}
 function renderInv(b){
   const F=S.inv;F.filters=F.filters||[];F.sellSel=F.sellSel||[];
   const bar=document.createElement("div");bar.id="invBar";
@@ -2705,7 +2745,7 @@ function beginRun(fl){
   const first=S.formation&&S.formation[0];if(first){const [k,id]=first.split(":");if(activeCharacterKey()!==first){selectCharacter(k,id,()=>beginRun(fl));return;}}
   $("scTown").classList.remove("on");$("scPause").classList.remove("on");
   beginDailyDive();save();
-  S.scene="dungeon";S.paused=false;S.partyIndex=0;S.runT=0;S.runGold=0;S.startFloor=fl;
+  S.scene="dungeon";S.paused=false;S.partyIndex=0;S.featherUsed=false;S.runT=0;S.runGold=0;S.startFloor=fl;
   {const left=Object.assign({},S.consumables);S.runItems=S.loadout.map(k=>{if(!k)return 0;const n=Math.min(CONSUMABLES[k].max,left[k]||0);left[k]=(left[k]||0)-n;return n;});}
   S.dmgLog.length=0;S.dps=0;
   S.p=newPlayer();S.bag.length=0;
@@ -2721,7 +2761,7 @@ const KEY="descent_v5";
 function save(){storeActiveCharacter();try{localStorage.setItem(KEY,JSON.stringify({cls:S.cls,deepest:S.deepest,
   gold:S.gold,stash:S.stash,gear:S.gear,base:S.base,log:S.log,mats:S.mats,consumables:S.consumables,loadout:S.loadout,consumableVersion:1,
   matTierVersion:2,
-  settings:S.settings,admin:S.admin,debug:S.debug,debugFloor:S.debugFloor,adminOpts:S.adminOpts,chars:S.chars,characterStates:S.characterStates,avatars:S.avatars,formation:S.formation,diveFloor:S.diveFloor,stamina:S.stamina,daily:S.daily,premium:S.premium,profileAvatar:S.profileAvatar,shopSub:S.shopSub,gearSub:S.gearSub,unlockedCharacters:S.unlockedCharacters,tutorial:S.tutorial,returnInvulnerable:S.returnInvulnerable}));}catch(e){}}
+  settings:S.settings,admin:S.admin,debug:S.debug,debugFloor:S.debugFloor,adminOpts:S.adminOpts,chars:S.chars,characterStates:S.characterStates,avatars:S.avatars,formation:S.formation,diveFloor:S.diveFloor,stamina:S.stamina,daily:S.daily,premium:S.premium,paidInventory:S.paidInventory,profileAvatar:S.profileAvatar,shopSub:S.shopSub,gearSub:S.gearSub,unlockedCharacters:S.unlockedCharacters,tutorial:S.tutorial,returnInvulnerable:S.returnInvulnerable}));}catch(e){}}
 function load(){try{
   const d=JSON.parse(localStorage.getItem(KEY)||"null");
   if(!d||!d.cls||!CLASSES[d.cls])return false;
@@ -2746,11 +2786,11 @@ function load(){try{
   const ng={};for(const k of SLOTK)ng[k]=null;
   for(const k in S.gear){const it=fix(S.gear[k]);if(it&&!ng[it.slot])ng[it.slot]=it;}
   S.gear=ng;
-  S.consumables=Object.assign({},d.consumables||{});if(!d.consumableVersion)S.consumables.heal=(S.consumables.heal||0)+3;S.loadout=(d.loadout||["heal",null,null,null]).slice(0,4);while(S.loadout.length<4)S.loadout.push(null);S.runItems=[0,0,0,0];S.log=d.log||{runs:[]};
-  S.settings=Object.assign({map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0},d.settings||{});
+  S.consumables=Object.assign({},d.consumables||{});if(!d.consumableVersion)S.consumables.heal=(S.consumables.heal||0)+3;S.loadout=(d.loadout||["heal",null,null,null]).slice(0,6);while(S.loadout.length<loadoutCapacity())S.loadout.push(null);S.runItems=[0,0,0,0];S.log=d.log||{runs:[]};
+  S.settings=Object.assign({map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0,controlMode:"manual",autoPreset:"aggressive",automationEditor:0},d.settings||{});
   S.admin=!!d.admin;S.debug=!!d.debug;S.debugFloor=d.debugFloor||1;S.adminOpts=d.adminOpts||{};S.chars=d.chars||{};S.characterStates=d.characterStates||{};S.avatars=d.avatars||{};
   S.unlockedCharacters=d.unlockedCharacters||["warrior:gai"];S.tutorial=d.tutorial||{phase:"done",gearIndex:0};S.returnInvulnerable=!!d.returnInvulnerable;
-  S.formation=(d.formation||[]).filter(k=>S.unlockedCharacters.includes(k)).slice(0,formationCapacity());S.diveFloor=d.diveFloor||1;S.daily=d.daily||null;S.stamina=d.daily?clamp(d.stamina==null?3:d.stamina,0,3):3;ensureDaily();S.premium=d.premium||0;S.profileAvatar=d.profileAvatar||null;S.shopSub=d.shopSub||"gacha";S.gearSub=d.gearSub||"equip";
+  S.formation=(d.formation||[]).filter(k=>S.unlockedCharacters.includes(k)).slice(0,formationCapacity());S.diveFloor=d.diveFloor||1;S.daily=d.daily||null;S.stamina=d.daily?clamp(d.stamina==null?3:d.stamina,0,3):3;ensureDaily();S.premium=d.premium||0;S.paidInventory=Object.assign({catalysts:[],feathers:[],slots:[]},d.paidInventory||{});S.profileAvatar=d.profileAvatar||null;S.shopSub=d.shopSub||"gacha";S.gearSub=d.gearSub||"equip";
   if(!S.avatars[S.cls])S.avatars[S.cls]=CHARACTERS[S.cls][0].id;
   const normalizeBase=raw=>{const b=Object.assign({lv:1,xp:0,pts:0,para:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0},raw||{});
     // 旧版の para は効果のない累計値だったため、初回ロード時だけ未使用能力点へ返す。
@@ -2776,6 +2816,7 @@ function tutorialAllows(el){if(el.closest("#tutorialSkip,#tutorialConfirm,#btnBa
   return !!el.closest(selectors[p]);}
 for(const ev of ["click","mousedown","touchstart"])document.addEventListener(ev,e=>{if(!tutorialAllows(e.target)){e.preventDefault();e.stopImmediatePropagation();}},true);
 for(let i=0;i<4;i++)holdBtn($("s"+i),i);
+(()=>{let down=null;const el=$("cv");el.addEventListener("pointerdown",e=>{if(S.settings.controlMode!=="onehand"||S.scene!=="dungeon")return;down={x:e.clientX,y:e.clientY};IN.ox=e.clientX;IN.oy=e.clientY;});el.addEventListener("pointermove",e=>{if(!down||S.settings.controlMode!=="onehand")return;let dx=e.clientX-down.x,dy=e.clientY-down.y,l=Math.hypot(dx,dy)||1;IN.dx=dx/l;IN.dy=dy/l;});el.addEventListener("pointerup",e=>{if(!down)return;if(Math.hypot(e.clientX-down.x,e.clientY-down.y)<12){HELD[0]=true;setTimeout(()=>HELD[0]=false,80);}IN.dx=IN.dy=0;down=null;});})();
 (()=>{const el=$("pot"),fan=$("itemFan");let timer=null,open=false,sel=0;const layout=[[20,105],[65,55],[120,25],[155,72]];const draw=()=>{fan.innerHTML="";S.loadout.forEach((k,i)=>{const d=document.createElement("div");d.className="fanItem"+(i===sel?" sel":"");d.style.left=layout[i][0]+"px";d.style.top=layout[i][1]+"px";d.textContent=k?CONSUMABLES[k].icon+" "+(S.runItems[i]||0):"—";fan.appendChild(d);});};const point=e=>e.touches?e.touches[0]:e;const down=e=>{if(S.scene!=="dungeon"||S.paused)return;e.preventDefault();open=false;timer=setTimeout(()=>{open=true;fan.classList.add("on");draw();},360);};const move=e=>{if(!open)return;e.preventDefault();const q=point(e),r=el.getBoundingClientRect(),x=q.clientX-r.left,y=q.clientY-r.top;let best=1e9;layout.forEach((v,i)=>{const z=(x-v[0]-27)**2+(y-v[1]-27)**2;if(z<best){best=z;sel=i;}});draw();};const up=e=>{clearTimeout(timer);if(open){e.preventDefault();fan.classList.remove("on");open=false;useItem(sel);}else useItem(S.itemSlot);};el.addEventListener("pointerdown",down);el.addEventListener("pointermove",move);el.addEventListener("pointerup",up);el.addEventListener("pointercancel",()=>{clearTimeout(timer);fan.classList.remove("on");open=false;});})();
 hook($("act"),()=>{if(S.scene==="dungeon"&&!S.paused)doAction();});
 tapEl($("profileIcon"),openProfileIconPick);

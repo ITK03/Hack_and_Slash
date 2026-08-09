@@ -2,6 +2,7 @@ import { chromium } from 'playwright';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { installDiveMeasurement } from './measure-dive.mjs';
 
 const gamePath = fileURLToPath(new URL('../public/index.html', import.meta.url));
 const server = createServer(async (_request, response) => {
@@ -13,6 +14,7 @@ const { port } = server.address();
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage();
 await page.goto(`http://127.0.0.1:${port}`);
+await installDiveMeasurement(page);
 
 const report = await page.evaluate(() => {
   const profiles = [
@@ -61,13 +63,13 @@ const report = await page.evaluate(() => {
 
   function deathRate(profile, depth, runs) {
     let deaths = 0;
-    for (let run = 0; run < runs; run++) deaths += trial(profile, depth);
+    for (let run = 0; run < runs; run++) { _s = (depth * 2654435761 + run * 1013904223) >>> 0; deaths += trial(profile, depth); }
     return deaths / runs;
   }
 
   const combat = [];
   for (const profile of profiles) {
-    let lower = 1, upper = 150;
+    let lower = 1, upper = 300;
     while (lower < upper) {
       const middle = Math.floor((lower + upper) / 2);
       if (deathRate(profile, middle, 48) >= .5) upper = middle; else lower = middle + 1;
@@ -76,29 +78,16 @@ const report = await page.evaluate(() => {
     combat.push({ name: profile.name, level: profile.level, depth: lower, deathRate: rate, range: profile.range });
   }
 
-  // A dive sample is produced by the real floor generator and reward handlers.
-  // Every spawned enemy and barrel is resolved through the game's own hit/drop path.
-  function materialDive(depth) {
-    S.cls = 'warrior'; S.base = { lv: 100, xp: 0, pts: 0, str: 500, mag: 0, def: 500, agi: 500, spi: 0, luk: 0 };
-    S.gear = {}; S.p = newPlayer(); S.scene = 'dungeon'; S.paused = false; S.training = false;
-    enterFloor(depth);
-    for (const prop of S.props) if (prop.t === 'barrel') breakPot(prop);
-    while (S.enemies.length) { const enemy = S.enemies[0]; hurtE(enemy, enemy.hp + enemy.shield + 1, false, 0, 0, true); }
-    let crystals = 0;
-    for (const drop of S.drops) {
-      if (drop.mat === 'crystal') crystals += drop.n;
-      if (drop.it) crystals += crystalQty(drop.it);
-    }
-    return crystals;
-  }
+  // A single dive always resolves floors 1..target depth through the shared helper.
   const economy = [10, 50, 100, 300, 1000].map(depth => {
     const item = makeItem(depth, 0, 0, 2); item.lv = 1; item.xp = 0;
     let cost = 0;
     while (item.lv < itemMaxLv(item)) { cost += crystalNeed(item); item.lv++; }
+    const samples = depth <= 10 ? 80 : depth <= 50 ? 30 : depth <= 100 ? 16 : depth <= 300 ? 6 : 3;
     let yieldTotal = 0;
-    for (let run = 0; run < 400; run++) yieldTotal += materialDive(depth);
-    const yieldPerDive = yieldTotal / 400;
-    return { depth, cost, yieldPerDive, dives: cost / yieldPerDive, tier: materialTier(depth), maxLevel: itemMaxLv(item) };
+    for (let run = 0; run < samples; run++) yieldTotal += window.measureMaterialDive(depth);
+    const yieldPerDive = yieldTotal / samples;
+    return { depth, cost, yieldPerDive, dives: cost / yieldPerDive, tier: materialTier(depth), maxLevel: itemMaxLv(item), samples };
   });
   enterFloor(1000);
   const depth1000 = { entered: S.floor === 1000, enemies: S.enemies.length, finite: S.enemies.every(enemy => Number.isFinite(enemy.hp) && Number.isFinite(enemy.dmg)) };
