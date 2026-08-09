@@ -1452,7 +1452,16 @@ function automationRules(){const key=S.settings.autoPreset||"aggressive",base=AU
 function autoCondition(c){const p=S.p;if(c==="自HP < N%")return p.hp/p.max<.45;if(c==="自MP > N%")return p.mp/p.d.mpMax>.5;if(c==="半径R内に敵N体以上")return S.enemies.filter(e=>d2(p.x,p.y,e.x,e.y)<25).length>=2;if(c==="ボス戦中")return !!S.boss;if(c==="ボスが予備動作中")return !!(S.boss&&S.boss.wind>0);if(c==="状態異常中")return Object.values(p.st||{}).some(x=>x>0);if(c==="バフが切れている")return !Object.keys(p.itemBuffs).length;if(c==="直前に被弾した")return p.lastHit<2;return false;}
 function autoActionAvailable(a){const p=S.p;if(a.startsWith("skill")){const i=+a.slice(-1)-1,sk=p.d.C.skills[i];return sk&&p.cds[i]<=0&&p.mp>=sk.c;}if(a.startsWith("item")){const i=+a.slice(-1)-1;return !!(S.loadout[i]&&S.runItems[i]&&p.itemCd<=0&&p.itemLock<=0);}return a==="none";}
 function runAutoAction(a){if(a.startsWith("skill")){S.autoSkillCasting=true;useSkill(+a.slice(-1)-1);S.autoSkillCasting=false;}else if(a.startsWith("item"))useItem(+a.slice(-1)-1);}
-function updateAutomation(dt){const mode=S.settings.controlMode||"manual",p=S.p;if(mode==="manual")return;if(mode==="auto"&&S.enemies.length&&!p.dashT){let e=S.enemies[0],bd=d2(p.x,p.y,e.x,e.y);for(const x of S.enemies){const d=d2(p.x,p.y,x.x,x.y);if(d<bd){bd=d;e=x;}}const l=Math.sqrt(bd)||1;IN.dx=(e.x-p.x)/l;IN.dy=(e.y-p.y)/l;HELD[0]=true;}const rule=automationRules().find(r=>autoCondition(r.condition)&&autoActionAvailable(r.action));if(!rule){p.autoDelay=0;return;}p.autoDelay=(p.autoDelay||0)+dt;if(p.autoDelay>=.35){p.autoDelay=0;runAutoAction(rule.action);}}
+function automationInput(wx,wy){const sx=(wx-wy)*CFG.TILE_W/2,sy=(wx+wy)*CFG.TILE_H/2,l=Math.hypot(sx,sy)||1;IN.dx=sx/l;IN.dy=sy/l;}
+function automationWaypoint(p,target){
+  const start=(p.y|0)*MW+(p.x|0),goal=(target.y|0)*MW+(target.x|0),prev=new Int32Array(MW*MH);prev.fill(-2);prev[start]=-1;
+  if(start===goal)return target;
+  const queue=new Int32Array(MW*MH);let head=0,tail=1;queue[0]=start;
+  while(head<tail&&prev[goal]===-2){const at=queue[head++],x=at%MW,y=(at/MW)|0;
+    for(const next of [at-1,at+1,at-MW,at+MW]){const nx=next%MW,ny=(next/MW)|0;if(nx<0||ny<0||nx>=MW||ny>=MH||Math.abs(nx-x)+Math.abs(ny-y)!==1||map[next]===0||prev[next]!==-2)continue;prev[next]=at;queue[tail++]=next;}}
+  if(prev[goal]===-2)return target;let at=goal,path=[];while(at!==start&&at>=0){path.push(at);at=prev[at];}
+  const step=path[path.length-1],x=step%MW,y=(step/MW)|0;return{x:x+.5,y:y+.5};}
+function updateAutomation(dt){const mode=S.settings.controlMode||"manual",p=S.p;if(mode==="manual")return;HELD[0]=true;if(mode==="auto"&&S.enemies.length&&!p.dashT){let e=S.enemies[0],bd=d2(p.x,p.y,e.x,e.y);for(const x of S.enemies){const d=d2(p.x,p.y,x.x,x.y);if(d<bd){bd=d;e=x;}}p.autoPathT=(p.autoPathT||0)-dt;const moved=Math.hypot(p.x-(p.autoPathX??p.x),p.y-(p.autoPathY??p.y));p.autoStuck=moved<.02?(p.autoStuck||0)+dt:0;p.autoPathX=p.x;p.autoPathY=p.y;if(p.autoPathT<=0||p.autoStuck>.35){p.autoWaypoint=automationWaypoint(p,e);p.autoPathT=.35;p.autoStuck=0;}const waypoint=p.autoWaypoint||e;automationInput(waypoint.x-p.x,waypoint.y-p.y);}const rule=automationRules().find(r=>autoCondition(r.condition)&&autoActionAvailable(r.action));if(!rule){p.autoDelay=0;return;}p.autoDelay=(p.autoDelay||0)+dt;if(p.autoDelay>=.35){p.autoDelay=0;runAutoAction(rule.action);}}
 
 /* ---------- 更新 ---------- */
 function update(dt){
