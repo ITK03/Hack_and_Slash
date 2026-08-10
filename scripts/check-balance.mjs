@@ -1,21 +1,8 @@
-import { chromium } from 'playwright';
-import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
+import { createGame } from './game-env.mjs';
 import { installDiveMeasurement } from './measure-dive.mjs';
-
-const gamePath = fileURLToPath(new URL('../public/index.html', import.meta.url));
-const server = createServer(async (_request, response) => {
-  response.setHeader('content-type', 'text/html; charset=utf-8');
-  response.end(await readFile(gamePath));
-});
-await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-const { port } = server.address();
-const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage();
-await page.goto(`http://127.0.0.1:${port}`);
+const game = await createGame();
+const page = game;
 await installDiveMeasurement(page);
-
 const report = await page.evaluate(() => {
   const profiles = [
     { name: '素手', level: 10, rarity: null, quality: null, enhance: 0, range: [7, 13] },
@@ -100,8 +87,7 @@ await page.evaluate(() => localStorage.setItem('descent_v5', JSON.stringify({
 await page.reload();
 const migratedSave = await page.evaluate(() => ({ scene: S.scene, mats: S.mats }));
 
-await browser.close();
-await new Promise(resolve => server.close(resolve));
+
 console.log('\n到達深度実測');
 console.table(report.combat.map(row => ({ プロファイル: row.name, レベル: row.level, '50%死亡深度': row.depth, 死亡率: `${(row.deathRate * 100).toFixed(1)}%` })));
 console.log('\n強化経済実測');

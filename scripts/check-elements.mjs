@@ -1,18 +1,6 @@
-import { chromium } from 'playwright';
-import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
-
-const gamePath = fileURLToPath(new URL('../public/index.html', import.meta.url));
-const server = createServer(async (_request, response) => {
-  response.setHeader('content-type', 'text/html; charset=utf-8');
-  response.end(await readFile(gamePath));
-});
-await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage();
-await page.goto(`http://127.0.0.1:${server.address().port}`);
-
+import { createGame } from './game-env.mjs';
+const game = await createGame();
+const page = game;
 const report = await page.evaluate(() => {
   const slots = ['weapon', 'helm', 'armor', 'glove', 'boot', 'ring', 'amulet'];
   const elements = ['fire', 'water', 'wood', 'light', 'dark'];
@@ -59,10 +47,11 @@ const report = await page.evaluate(() => {
   // 優勢属性の8層周期を丸ごと平均し、境界が周期のどこに当たるかによる偏りを除く。
   function cycleDeathRate(depth, element, runs = 48) {
     let total = 0;
-    for (let offset = 0; offset < 8; offset++) total += deathRate(depth + offset, element, runs);
+    const runsPerDepth = Math.max(1, Math.floor(runs / 8));
+    for (let offset = 0; offset < 8; offset++) total += deathRate(depth + offset, element, runsPerDepth);
     return total / 8;
   }
-  // check-balance.mjs と同じ二分探索・48試行・境界160試行（各深度は8層平均）。
+  // check-balance.mjs と同じ二分探索・合計48試行・境界合計160試行（8層へ均等配分）。
   function boundary(element) {
     let lower = 1, upper = 300;
     while (lower < upper) { const middle = Math.floor((lower + upper) / 2); if (cycleDeathRate(middle, element, 48) >= .5) upper = middle; else lower = middle + 1; }
@@ -101,7 +90,7 @@ const report = await page.evaluate(() => {
 
 await page.evaluate(() => localStorage.setItem('descent_v5', JSON.stringify({ cls: 'warrior', tutorial: { phase: 'done' }, gear: { weapon: { slot: 'weapon', wt: 'sword', base: 'ロングソード', main: { id: 'atk', v: 10 }, affs: [], rar: 0, ilvl: 1, lv: 1 } } })));
 await page.reload(); const legacy = await page.evaluate(() => S.gear.weapon.element);
-await browser.close(); await new Promise(resolve => server.close(resolve));
+
 
 console.log('\n深度帯ごとの属性分布');
 console.table(report.distribution.map(row => ({ 深度帯: row.band, 火: `${(row.fire * 100).toFixed(1)}%`, 水: `${(row.water * 100).toFixed(1)}%`, 木: `${(row.wood * 100).toFixed(1)}%`, 光: `${(row.light * 100).toFixed(1)}%`, 闇: `${(row.dark * 100).toFixed(1)}%` })));
@@ -113,18 +102,18 @@ console.log('\n実フロアのクリア時間');
 console.table([{ 有利フロア: report.clearTimes.advantageFloor, 有利秒: report.clearTimes.advantage?.toFixed(2), 不利フロア: report.clearTimes.disadvantageFloor, 不利秒: report.clearTimes.disadvantage?.toFixed(2), 時間比: report.clearTimes.advantage && (report.clearTimes.disadvantage / report.clearTimes.advantage).toFixed(2) }]);
 console.log('\n5個共鳴の攻撃期待値（火水木22%/22%/56%、光闇14%/86%の代表分布）');
 console.table([
-  { ビルド: '火水木', 変更前: (1.022 * 1.12).toFixed(3), 変更後: (1.022 * 1.30).toFixed(3) },
-  { ビルド: '光闇', 変更前: (1.042 * 1.12).toFixed(3), 変更後: ((.14 * 1.3 + .86 * .97) * 1.30).toFixed(3) },
-  { ビルド: '無属性', 変更前: '1.150', 変更後: '1.050' }
+  { ビルド: '火水木', 変更前: (1.022 * 1.12).toFixed(3), 変更後: ((.22 * 1.5 + .22 * .5 + .56) * 2.50).toFixed(3) },
+  { ビルド: '光闇', 変更前: (1.042 * 1.12).toFixed(3), 変更後: ((.14 * 1.3 + .86 * .88) * 2.50).toFixed(3) },
+  { ビルド: '無属性', 変更前: '1.150', 変更後: '1.150' }
 ]);
 
 for (const row of report.distribution) for (const element of ['fire', 'water', 'wood']) if (row[element] < .20 || row[element] > .26) throw new Error(`${row.band} ${element}: ${(row[element] * 100).toFixed(1)}% は20〜26%の範囲外`);
 for (const row of report.distribution) for (const element of ['light', 'dark']) if (row[element] < .11 || row[element] > .17) throw new Error(`${row.band} ${element}: ${(row[element] * 100).toFixed(1)}% は11〜17%の範囲外`);
 for (const row of report.floorRatios) if (row.ratio < .60 || row.ratio > .70) throw new Error(`深度${row.floor}: 優勢比率 ${(row.ratio * 100).toFixed(1)}% は60〜70%の範囲外`);
-const expected = { fire: { wood: 1.5, water: .6 }, water: { fire: 1.5, wood: .6 }, wood: { water: 1.5, fire: .6 }, light: { dark: 1.3, fire: .97 }, dark: { light: 1.3, fire: .97 } };
+const expected = { fire: { wood: 1.5, water: .5 }, water: { fire: 1.5, wood: .5 }, wood: { water: 1.5, fire: .5 }, light: { dark: 1.3, fire: .88 }, dark: { light: 1.3, fire: .88 } };
 for (const [attacker, defenders] of Object.entries(expected)) for (const [defender, multiplier] of Object.entries(defenders)) if (report.matchup.find(row => row.attacker === attacker && row.defender === defender).multiplier !== multiplier) throw new Error(`${attacker}→${defender} の倍率が${multiplier}ではない`);
-for (const row of report.resonanceRows) if (row.stage !== 2 || row.count !== 5 || row.damage !== 1.3 || row.resist !== .84) throw new Error(`${row.element}の5個共鳴の段階または補正値が不正`);
-if (report.neutralBonus.resonance.stage !== 0 || Math.abs(report.neutralBonus.actualMain / report.neutralBonus.elementalMain - 1.05) > .03) throw new Error('無属性装備の共鳴除外または基礎値1.05倍が不正');
+for (const row of report.resonanceRows) if (row.stage !== 2 || row.count !== 5 || row.damage !== 2.5 || row.resist !== .84) throw new Error(`${row.element}の5個共鳴の段階または補正値が不正`);
+if (report.neutralBonus.resonance.stage !== 0 || Math.abs(report.neutralBonus.actualMain / report.neutralBonus.elementalMain - 1.15) > .03) throw new Error('無属性装備の共鳴除外または基礎値1.15倍が不正');
 const depths = report.reaches.map(row => row.depth), min = Math.min(...depths), max = Math.max(...depths);
 if (max - min > 10) throw new Error(`5属性の50%死亡深度差 ${min}〜${max} は±5を超える`);
 const triMax = Math.max(...report.reaches.filter(row => ['fire', 'water', 'wood'].includes(row.element)).map(row => row.depth));

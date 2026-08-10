@@ -1,19 +1,6 @@
-import { chromium } from 'playwright';
-import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
-
-const gamePath = fileURLToPath(new URL('../public/index.html', import.meta.url));
-const server = createServer(async (_request, response) => {
-  response.setHeader('content-type', 'text/html; charset=utf-8');
-  response.end(await readFile(gamePath));
-});
-await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-const { port } = server.address();
-const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage();
-await page.goto(`http://127.0.0.1:${port}`);
-
+import { createGame } from './game-env.mjs';
+const game = await createGame();
+const page = game;
 const daily = await page.evaluate(() => {
   dailyClock = () => new Date(2026, 0, 2, 3, 59);
   S.daily = null;
@@ -59,6 +46,3 @@ console.log('日次リセット', { before: daily.beforeReset, after: daily.afte
 console.log('4潜行の報酬倍率', daily.afterFourDives);
 console.log('最深度追従', { shallow: daily.shallow, deep: daily.deep });
 console.log('既存セーブ移行', legacy);
-
-await browser.close();
-await new Promise(resolve => server.close(resolve));

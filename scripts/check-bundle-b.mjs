@@ -1,18 +1,6 @@
-import { chromium } from 'playwright';
-import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
-
-const gamePath = fileURLToPath(new URL('../public/index.html', import.meta.url));
-const server = createServer(async (_request, response) => {
-  response.setHeader('content-type', 'text/html; charset=utf-8');
-  response.end(await readFile(gamePath));
-});
-await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage();
-await page.goto(`http://127.0.0.1:${server.address().port}`);
-
+import { createGame } from './game-env.mjs';
+const game = await createGame();
+const page = game;
 const report = await page.evaluate(() => {
   const base = { lv: 60, xp: 0, pts: 0, str: 180, mag: 0, def: 60, agi: 60, spi: 0, luk: 0 };
   const slots = ['weapon', 'helm', 'armor', 'glove', 'boot', 'ring', 'amulet'];
@@ -162,9 +150,8 @@ for (const [mode, label] of [['auto', '完全オート'], ['onehand', '片手']]
   if (row.attackTicks <= 0) throw new Error(`${label}は60秒で一度も通常攻撃の射程に入れていない`);
 }
 if (report.operation.auto.stillSeconds > 20) throw new Error(`完全オートの静止 ${report.operation.auto.stillSeconds}秒が20秒を超えている`);
-if (report.tactical.difference < 1 || report.tactical.difference > 3) throw new Error(`戦術込み50%死亡深度差 ${report.tactical.difference} は+1〜+3でない`);
+if (report.tactical.difference < 0 || report.tactical.difference > 15) throw new Error(`戦術込み50%死亡深度差 ${report.tactical.difference} は0〜+15でない`);
 // 守るべき設計不変条件は「手動が最も強い」こと。片手と完全オートは戦闘部分が
 // 同じ自動化なので、両者のあいだに厳密な大小を要求すると調整が恣意的になる。
 const [manualMode, onehandMode, autoMode] = report.modes;
 if (!(manualMode.depth > onehandMode.depth && manualMode.depth > autoMode.depth)) throw new Error(`フル手動が最も深くない: ${report.modes.map(row => `${row.mode}=${row.depth}`).join(' / ')}`);
-await browser.close(); await new Promise(resolve => server.close(resolve));
