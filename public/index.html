@@ -298,7 +298,7 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
   <div class="hrow"><div class="bar" style="height:6px"><i id="mpF"></i></div><div class="hval" id="mpT">MP</div></div>
   <div class="hrow"><div class="bar" style="height:4px"><i id="xpF"></i></div><div class="hval" id="lvT">Lv1</div></div>
   <div id="meta">
-    <div>深度 <b id="flT">1</b></div><div id="goldT">0 G</div>
+    <div>深度 <b id="flT">1</b> <b id="floorElement"></b></div><div id="goldT">0 G</div>
     <div id="dpsT">DPS 0</div><div id="tmT">0:00</div>
   </div>
   <div id="loot"></div>
@@ -606,6 +606,14 @@ const SLOTS=[
 ];
 const SLOTK=SLOTS.map(s=>s.k);
 const SLOTN=k=>(SLOTS.find(s=>s.k===k)||{n:"?"}).n;
+const ELEMENTS={fire:{n:"火",col:"#ff684e"},water:{n:"水",col:"#55aaff"},wood:{n:"木",col:"#68c96b"},light:{n:"光",col:"#f4dc72"},dark:{n:"闇",col:"#b681e8"},neutral:{n:"無",col:"#aaa4b5"}};
+const ELEMENT_KEYS=["fire","water","wood","light","dark"];
+const elementName=k=>(ELEMENTS[k]||ELEMENTS.neutral).n;
+// 8層で火水木を2回、光闇を1回ずつ優勢にする。局所は偏り、帯域では全属性が15〜25%に収まる。
+const dominantElement=fl=>["fire","water","wood","light","fire","water","wood","dark"][(Math.max(1,fl)-1)%8];
+const bossElement=fl=>ELEMENT_KEYS[(Math.floor(Math.max(5,fl)/5)-1)%5];
+function resonance(gear=S.gear){const counts={};for(const it of Object.values(gear||{}))if(it&&it.element&&it.element!=="neutral")counts[it.element]=(counts[it.element]||0)+1;let element="neutral",count=0;for(const k of ELEMENT_KEYS)if((counts[k]||0)>count){element=k;count=counts[k];}const stage=count>=7?3:count>=5?2:count>=3?1:0;return{element:stage?element:"neutral",count,stage,damage:[1,1.06,1.12,1.2][stage],resist:[1,.92,.84,.75][stage]};}
+function elementMultiplier(attacker,defender){if(!attacker||!defender||attacker==="neutral"||defender==="neutral")return 1;if(attacker==="light"||attacker==="dark")return defender===(attacker==="light"?"dark":"light")?1.3:1;const beats={fire:"wood",wood:"water",water:"fire"};return beats[attacker]===defender?1.5:beats[defender]===attacker?.6:1;}
 const ACLS=["warrior","mage"];
 const BASEN={weapon:null,
   helm:{warrior:["バシネット","サレット","グレートヘルム"],mage:["秘術師のフード","星詠みのサークレット","ルーンの頭巾"]},
@@ -833,7 +841,7 @@ function makeItem(fl,mf,luk,forceRar){
   let rar=rarRoll(fl,mf,luk);
   if(forceRar!=null)rar=Math.max(rar,forceRar);
   const sd=pick(SLOTS),il=Math.max(1,Math.round(fl));
-  const it={rar,slot:sd.k,ilvl:il,lv:1,xp:0,affs:[],pw:null};
+  const it={rar,slot:sd.k,ilvl:il,lv:1,xp:0,affs:[],pw:null,element:pick([...ELEMENT_KEYS,"neutral"])};
   if(sd.k==="weapon"){it.wt=rnd()<.5?"sword":"staff";it.base=pick(WEAPN[it.wt]);}
   else if(ACSLOT(sd.k)){it.ac=pick(ACLS);it.base=pick(BASEN[sd.k][it.ac]);}
   else it.base=pick(BASEN[sd.k]);
@@ -854,7 +862,8 @@ function makeItem(fl,mf,luk,forceRar){
     :"《"+pick(PRE)+pick(SUF)+"》"+it.base;
   it.score=iScore(it);return it;}
 // 職業に合わない防具は主ステが6割しか出ない
-const mainV=it=>Math.round(it.main.v*(1+(it.lv-1)*ENHANCE_PER_LV)*((it.ac&&it.ac!==S.cls)?.6:1)); // 基礎値の固定割合を段階数ぶん加算
+const itemBaseMultiplier=it=>it&&it.element==="neutral"?1.15:1;
+const mainV=it=>Math.round(it.main.v*(1+(it.lv-1)*ENHANCE_PER_LV)*((it.ac&&it.ac!==S.cls)?.6:1)*itemBaseMultiplier(it)); // 無属性は共鳴しない代わり基礎値+15%
 const fuseNeed=it=>Math.round(56+4*Math.sqrt(Math.max(1,Number(it&&it.ilvl)||1)));
 const fuseGold=it=>Math.round((25+it.ilvl*7)*[1,1.4,2.2,3.6,7][it.rar]);
 const fuseXP=f=>Math.round((14+f.ilvl*2.4)*(1+f.rar*.55)*(1+(f.lv-1)*.32));
@@ -979,7 +988,7 @@ function derive(){
   const pw=[];
   for(const k of SLOTK){const it=S.gear[k];if(!it)continue;
     if(it.main)t[it.main.id]=(t[it.main.id]||0)+mainV(it);
-    for(const a of it.affs)t[a.id]=(t[a.id]||0)+a.v;
+    for(const a of it.affs)t[a.id]=(t[a.id]||0)+a.v*itemBaseMultiplier(it);
     if(it.pw&&!pw.includes(it.pw))pw.push(it.pw);}
   if(S.admin)for(const k in S.adminOpts)t[k]=(t[k]||0)+(Number(S.adminOpts[k])||0);
   const str=C.str+b.str,mag=C.mag+b.mag,def=C.def+b.def,
@@ -1096,7 +1105,8 @@ function spawnE(k,x,y,fl,elite){
   const e={k,n:t.n,x,y,r:t.r,sp:t.sp,aR:t.aR,cd:t.cd,cdT:rr(0,t.cd),xp:t.xp,col:t.col,sz:t.sz,
     ai:t.ai,rng:!!t.rng,keep:t.keep||0,slow:!!t.slow,boom:!!t.boom,heavy:!!t.heavy,
     hp:t.hp*hs,max:t.hp*hs,dmg:t.dmg*ds,hopT:rr(0,1),st:{},touch:t.touch||0,touchT:0,
-    homing:!!t.homing,fuse:t.fuse||0,stKind:t.st||null,
+    homing:!!t.homing,fuse:t.fuse||0,stKind:t.st||null,element:(rnd()<.65?dominantElement(fl):pick(ELEMENT_KEYS.filter(x=>x!==dominantElement(fl)))),
+    eleRes:{fire:1,water:1,wood:1,light:1,dark:1},
     flash:0,kbx:0,kby:0,agro:false,frz:0,stun:0,elite:null,shield:0,regen:0,dot:0,dotT:0,wind:0};
   if(elite){const a=pick(EAFF);
     e.elite=a;e.n=a.n+"の"+t.n;
@@ -1114,7 +1124,7 @@ function spawnBoss(fl){
     sp:b.sp*(slow?CFG.BOSS_SLOW_SP:1),aR:1.8,
     cd:1.6/rate,cdT:1.8/rate,telMul:(slow?CFG.BOSS_SLOW_TEL:1),
     xp:600+fl*60,col:b.col,sz:b.sz,boss:1,ai:"boss",rng:0,keep:0,touch:0,
-    hp:b.hp*hs,max:b.hp*hs,dmg:b.dmg*ds,
+    hp:b.hp*hs,max:b.hp*hs,dmg:b.dmg*ds,element:bossElement(fl),eleRes:null,
     flash:0,kbx:0,kby:0,agro:false,frz:0,stun:0,elite:null,shield:0,regen:0,dot:0,dotT:0,
     wind:0,tel:0,telK:null,telX:0,telY:0,telA:0,phase:1,sumT:8};
   S.enemies.push(e);S.boss=e;
@@ -1157,6 +1167,8 @@ function enterFloor(fl){S.tactical.trap=null;S.tactical.reveal=false;
         if(walk(px2,py2,.4))spawnE(pick(avail),px2,py2,fl,false);}}
   }
   if(isBoss)spawnBoss(fl);
+  // 母数が少ない序盤でも優勢比率がぶれないよう、生成後に通常敵の65%を必ず優勢属性へ揃える。
+  {const normal=S.enemies.filter(e=>!e.boss),major=Math.round(normal.length*.65),dominant=dominantElement(fl),others=ELEMENT_KEYS.filter(k=>k!==dominant);normal.forEach((e,i)=>e.element=i<major?dominant:others[(i-major)%others.length]);}
   for(let i=1;i<rooms.length;i++){
     const rm=rooms[i];
     for(let j=0;j<ri(1,3);j++)
@@ -1168,7 +1180,8 @@ function enterFloor(fl){S.tactical.trap=null;S.tactical.reveal=false;
     const ok=rooms.map((r,i)=>i).filter(i=>!bad.has(i));
     if(ok.length){const rm=rooms[pick(ok)];
       S.props.push({t:"shrine",x:rm.cx+.5,y:rm.cy+.5,used:0,s:pick(SHRINES),tm:0});}}
-  toast("深度 "+fl+" — "+dangerOf(fl).n+(isBoss?" / ボス":""));}
+  const shown=isBoss?bossElement(fl):dominantElement(fl),fe=$("floorElement");fe.textContent="["+elementName(shown)+"]";fe.style.color=ELEMENTS[shown].col;
+  toast("深度 "+fl+" — "+dangerOf(fl).n+" / "+elementName(shown)+"属性優勢"+(isBoss?"ボス":""));}
 
 function dangerOf(fl){
   const gap=fl-(S.base.lv*.55+1);
@@ -1194,13 +1207,16 @@ function pDmg(base,mul){const p=S.p;
   return (rr(base[0],base[1])+p.d.atkFlat)*m;}
 function hurtE(e,dmg,crit,kx,ky,quiet){
   if(e.hp<=0)return;
+  const resonanceNow=resonance(),match=elementMultiplier(resonanceNow.element,e.element),weak=match>1;
+  dmg*=Math.max(.5,match*resonanceNow.damage*(e.boss?1:(e.eleRes&&e.eleRes[resonanceNow.element]||1)));
   if(e.weaken>0)dmg/=.75; // 弱体の霧: 敵防御を25%低下した結果を被ダメージへ反映
   if(e.shield>0){const a=Math.min(e.shield,dmg);e.shield-=a;dmg-=a;
     dnum(e.x,e.y,a,"#d8d040");if(dmg<=0){e.flash=CFG.FLASH_T;return;}}
   e.hp-=dmg;e.flash=CFG.FLASH_T;e.agro=true;
   S.dmgLog.push({t:S.runT,v:dmg});
   if(!e.boss&&!e.heavy){e.kbx+=(kx||0)*CFG.KNOCKBACK;e.kby+=(ky||0)*CFG.KNOCKBACK;}
-  dnum(e.x,e.y,dmg,crit?"#ffd45e":"#fff0e2");
+  dnum(e.x,e.y,dmg,weak?ELEMENTS[resonanceNow.element].col:(crit?"#ffd45e":"#fff0e2"));
+  if(weak){S.hitstop=Math.max(S.hitstop,CFG.HITSTOP_CRIT);shk(CFG.SHAKE_CRIT);}
   if(!quiet){burst(e.x,e.y,crit?"#ffd86a":"#ff7a6a",crit?8:4,crit?1.4:1);
     if(crit){S.hitstop=Math.max(S.hitstop,CFG.HITSTOP_CRIT);shk(CFG.SHAKE_CRIT);SFX.crit();buzz(16);}
     else{S.hitstop=Math.max(S.hitstop,CFG.HITSTOP);shk(CFG.SHAKE_HIT);SFX.hit();buzz(5);}}
@@ -1283,11 +1299,12 @@ function forceLevel(lv){
   S.p.d=derive();recalcHP(S.p);
   if(gained){SFX.lvl();toast(`Lv${next}：能力ポイント +${gained*CFG.STAT_PER_LV}`);}
 }
-function hurtP(dm,cause,force){const p=S.p;if(S.training||S.returnInvulnerable||(p.hurtT>0&&!force)||p.invulT>0)return;
+function hurtP(dm,cause,force,attackerElement="neutral"){const p=S.p;if(S.training||S.returnInvulnerable||(p.hurtT>0&&!force)||p.invulT>0)return;
   if(rnd()<dodgeRate()){p.hurtT=.16;
     S.nums.push({x:p.x,y:p.y,v:0,txt:"回避",t:0,c:"#8ad8ff"});
     tone(900,.06,"sine",.06,1300);return;}
-  const d=dm*(1-Math.min(.8,p.d.dr+p.mDr+p.sDr+p.buffDr+(p.itemBuffs.hard?(armorDR(p.d.armor*1.12)-armorDR(p.d.armor))*(p.d.C.defMul||1):0)+p.guardS*.2));
+  const incoming=attackerElement,r=resonance(),elementGuard=incoming===r.element?r.resist:1;
+  const d=dm*elementGuard*(1-Math.min(.8,p.d.dr+p.mDr+p.sDr+p.buffDr+(p.itemBuffs.hard?(armorDR(p.d.armor*1.12)-armorDR(p.d.armor))*(p.d.C.defMul||1):0)+p.guardS*.2));
   p.hp-=d;p.lastHit=0;if(p.returnCast>0){p.returnCast=0;p.returnSlot=-1;toast("帰還詠唱が中断された","ng");}p.hurtT=.42;S.flash=.18;shk(CFG.SHAKE_HURT);SFX.hurt();buzz(38);
   dnum(p.x,p.y,d,"#ff6060");
   if(hasPw("guard")){p.guardS=Math.min(3,p.guardS+1);p.guardT=2;}
@@ -1541,16 +1558,16 @@ function update(dt){
     if(e.wind>0){
       e.wind-=dt;
       if(e.wind<=0){
-        if(e.boom){S.fx.push({t:"boom",x:e.x,y:e.y,tm:0,R:2.4,col:"#ffd040",dmg:e.dmg,en:1});killE(e);}
+        if(e.boom){S.fx.push({t:"boom",x:e.x,y:e.y,tm:0,R:2.4,col:"#ffd040",dmg:e.dmg,en:1,element:e.element});killE(e);}
         else if(e.rng){S.bullets.push({x:e.x,y:e.y,vx:ux*(e.homing?5.5:8),vy:uy*(e.homing?5.5:8),
           dmg:e.dmg,t:0,col:e.homing?"#e07aa0":e.slow?"#3fa08a":"#c89aff",r:.2,
-          slow:e.slow?1:0,homing:e.homing?1:0,st:e.stKind});tone(340,.08,"square",.06,180);}
-        else if(d<e.aR+p.r+.4)hurtP(e.dmg,e.n+"の攻撃");}
+          slow:e.slow?1:0,homing:e.homing?1:0,st:e.stKind,element:e.element});tone(340,.08,"square",.06,180);}
+        else if(d<e.aR+p.r+.4)hurtP(e.dmg,e.n+"の攻撃",false,e.element);}
       continue;}
     let mx=0,my=0;
     if(e.ai==="tick"){
       if(d<3.4){e.fuseT=(e.fuseT==null?3:e.fuseT-dt);
-        if(e.fuseT<=0){S.fx.push({t:"boom",x:e.x,y:e.y,tm:0,R:3.4,col:"#c0d040",dmg:e.dmg,en:1});killE(e);continue;}
+        if(e.fuseT<=0){S.fx.push({t:"boom",x:e.x,y:e.y,tm:0,R:3.4,col:"#c0d040",dmg:e.dmg,en:1,element:e.element});killE(e);continue;}
         if(rnd()<dt*12)S.parts.push({x:e.x+rr(-.3,.3),y:e.y+rr(-.3,.3),vx:rr(-.4,.4),vy:rr(-.4,.4),t:0,life:.35,col:"#d8e060",sz:2.5});}
       else if(e.fuseT==null){mx=ux;my=uy;}
     }
@@ -1570,9 +1587,9 @@ function update(dt){
     const sweptD=Math.hypot(moveX0+vx*u-e.x,moveY0+vy*u-e.y);
     const contactD=Math.min(Math.hypot(p.x-e.x,p.y-e.y),sweptD);
     if(e.touch&&!skillMoving&&contactD<e.r+p.r+.15){e.touchT-=dt;    // 通常移動の軌跡全体で接触判定
-      if(e.touchT<=0){e.touchT=e.touch;if(p.dashT<=0)hurtP(e.dmg*.75,e.n+"との接触",true);}}
+      if(e.touchT<=0){e.touchT=e.touch;if(p.dashT<=0)hurtP(e.dmg*.75,e.n+"との接触",true,e.element);}}
     if(e.elite&&e.elite.id==="fire"&&rnd()<dt*2.5)
-      S.fx.push({t:"pool",x:e.x,y:e.y,tm:0,dur:2.4,R:.9,col:"#ff7a3a",dmg:e.dmg*.5,en:1,tick:0});
+      S.fx.push({t:"pool",x:e.x,y:e.y,tm:0,dur:2.4,R:.9,col:"#ff7a3a",dmg:e.dmg*.5,en:1,tick:0,element:e.element});
     e.cdT-=dt;
     if(d<e.aR+p.r&&e.cdT<=0){e.cdT=e.cd;e.wind=CFG.WIND*(e.heavy?1.5:1);
       tone(e.rng?520:260,.09,"square",.05,e.rng?700:180);}}
@@ -1595,7 +1612,7 @@ function update(dt){
           if(b.boom)S.fx.push({t:"boom",x:b.x,y:b.y,tm:0,R:b.boom,col:b.col,dmg:b.dmg*.7,hit:new Set()});
           hurtE(e,b.dmg,b.crit,b.vx*.02,b.vy*.02);dead=true;break;}
       }else if(d2(b.x,b.y,p.x,p.y)<.16){
-        hurtP(b.dmg,b.homing?"追尾弾":"敵の投射攻撃");
+        hurtP(b.dmg,b.homing?"追尾弾":"敵の投射攻撃",false,b.element);
         if(b.slow){p.sMs=.65;p.shrineT=Math.max(p.shrineT,2);updBuffs();}
         if(b.st)applyST(p,b.st,2.2,true);
         dead=true;}}
@@ -1605,14 +1622,14 @@ function update(dt){
     const f=S.fx[i];const first=f.tm===0;f.tm+=dt;
     if(f.t==="boom"){
       if(first){burst(f.x,f.y,f.col,18,2);
-        if(f.en){if(d2(f.x,f.y,p.x,p.y)<f.R*f.R)hurtP(f.dmg,"爆発");}
+        if(f.en){if(d2(f.x,f.y,p.x,p.y)<f.R*f.R)hurtP(f.dmg,"爆発",false,f.element);}
         else {hitPotsCircle(f.x,f.y,f.R);for(const e of S.enemies.slice()){
           if(f.hit&&f.hit.has(e))continue;
           if(d2(f.x,f.y,e.x,e.y)<Math.pow(f.R+e.r,2)){if(f.hit)f.hit.add(e);
             hurtE(e,f.dmg,false,0,0,true);}}}}
       if(f.tm>.34)S.fx.splice(i,1);}
     else if(f.t==="pool"){f.tick-=dt;
-      if(f.tick<=0){f.tick=.4;if(d2(f.x,f.y,p.x,p.y)<f.R*f.R){hurtP(f.dmg*.4,"炎上した地面");applyST(p,"brn",2.5,true);}}
+      if(f.tick<=0){f.tick=.4;if(d2(f.x,f.y,p.x,p.y)<f.R*f.R){hurtP(f.dmg*.4,"炎上した地面",false,f.element);applyST(p,"brn",2.5,true);}}
       if(f.tm>f.dur)S.fx.splice(i,1);}
     else if(f.tm>(f.t==="line"?.16:f.t==="slash"?.22:.42))S.fx.splice(i,1);}
 
@@ -1666,7 +1683,7 @@ function bossAI(e,d,ux,uy,dt){
     if(d>5){e.tel=.75*tm;e.telK="charge";e.telA=Math.atan2(uy,ux);}
     else{e.tel=.85*tm;e.telK="slam";e.telX=p.x;e.telY=p.y;}
     tone(140,.3,"sawtooth",.12,90);return;}
-  if(d<e.aR+p.r){e.touch-=dt;if(e.touch<=0){e.touch=1.2*(e.telMul||1);hurtP(e.dmg*.3,e.n+"の攻撃");}}
+  if(d<e.aR+p.r){e.touch-=dt;if(e.touch<=0){e.touch=1.2*(e.telMul||1);hurtP(e.dmg*.3,e.n+"の攻撃",false,e.element);}}
   if(d>e.aR*.9)mv(e,ux*e.sp*eSpeedMul(S.floor)*dt,uy*e.sp*eSpeedMul(S.floor)*dt);}
 
 /* ---------- 行動ボタン ---------- */
@@ -1925,7 +1942,7 @@ function draw(){
   ctx.globalAlpha=1;ctx.globalCompositeOperation="source-over";
   if(S.settings.dmg)for(const n of S.nums){const s=iso(n.x,n.y),k=n.t/.8;
     ctx.globalAlpha=1-k*k;
-    ctx.font=(n.c==="#ffd45e"?"800 21px":"700 14px")+" -apple-system,sans-serif";
+    ctx.font=((n.c==="#ffd45e"||ELEMENT_KEYS.some(k=>ELEMENTS[k].col===n.c))?"800 21px":"700 14px")+" -apple-system,sans-serif";
     ctx.textAlign="center";ctx.lineWidth=3;ctx.strokeStyle="rgba(0,0,0,.75)";
     const yy=s.sy-22-k*28,tx=n.txt||n.v;
     ctx.strokeText(tx,s.sx,yy);ctx.fillStyle=n.c;ctx.fillText(tx,s.sx,yy);}
@@ -2260,7 +2277,7 @@ function gearGrid(host,inDungeon){
   for(const s of SLOTS){const it=S.gear[s.k];
     const d=document.createElement("div");d.className="slot"+(it?"":" empty");
     d.dataset.slot=s.k;
-    d.innerHTML=`<div class="ic ${it?RC[it.rar]:"e"}">${icon(it?iconKey(it):s.k,22)}</div>
+    d.innerHTML=`<div class="ic ${it?RC[it.rar]:"e"}" style="${it?`color:${ELEMENTS[it.element||"neutral"].col}`:""}">${icon(it?iconKey(it):s.k,22)}</div>
       <div class="sl">${s.n}</div>
       <div class="si ${it?RC[it.rar]:""}">${it?it.name:"—"}</div>`;
     tapEl(d,()=>{const t=S.tutorial||{};if(!inDungeon&&t.phase==="equip"&&TUTORIAL_SLOTS[t.gearIndex]===s.k){
@@ -2285,7 +2302,7 @@ function statLine(nm,total,opt,pct){
   return `<div class="stat"><span>${nm}</span><b>${pct?total.toFixed(1)+"%":Math.round(total)}${Math.abs(opt)>0.01?` <small style="color:var(--gold)">+${pct?opt.toFixed(1):Math.round(opt)}</small>`:""}</b></div>`;}
 function statBlock(host){
   const d=derive(),c=document.createElement("div");c.className="card gearStats";
-  c.innerHTML=`<div class="ty" style="margin-bottom:4px">全能力値（装備オプションを含む）</div>`+
+  const resonanceNow=resonance();c.innerHTML=`<div class="ty" style="margin-bottom:4px;color:${ELEMENTS[resonanceNow.element].col}">共鳴：${elementName(resonanceNow.element)} ${["なし","弱","中","強"][resonanceNow.stage]}（${resonanceNow.count}/7）</div><div class="ty" style="margin-bottom:4px">全能力値（装備オプションを含む）</div>`+
     DSHOW.map(([k,nm,mode])=>{const v=k==="dodge"?dodgeRateFor(d):(d[k]||0),
       shown=mode===1?v*100:v,dec=mode===1||mode===2?1:mode===3?2:0,
       pre=mode===3?"×":"",suf=mode===1?"%":mode===2?"/s":"";
@@ -2426,6 +2443,7 @@ function renderPrepTab(b){
   const minus=document.createElement("div");minus.className="btn gh";minus.textContent="−";tapEl(minus,()=>setFloor(S.diveFloor-CFG.SKIP_STEP));
   const inp=document.createElement("input");inp.type="number";inp.inputMode="numeric";inp.min=1;inp.max=maxStart;inp.value=S.diveFloor;inp.addEventListener("change",()=>setFloor(inp.value));
   const plus=document.createElement("div");plus.className="btn gh";plus.textContent="＋";tapEl(plus,()=>setFloor(S.diveFloor+CFG.SKIP_STEP));controls.append(minus,inp,plus);row.appendChild(controls);b.appendChild(row);
+  const preview=document.createElement("div"),refreshPreview=()=>{const start=dominantElement(S.diveFloor),nextBoss=Math.ceil(S.diveFloor/5)*5,boss=bossElement(nextBoss);preview.className="card";preview.innerHTML=`<div class="nm">優勢属性 <b style="color:${ELEMENTS[start].col}">${elementName(start)}</b></div><div class="st">次のボス ${nextBoss}F：<b style="color:${ELEMENTS[boss].col}">${elementName(boss)}属性</b>（属性耐性なし）</div>`;};refreshPreview();b.appendChild(preview);inp.addEventListener("change",refreshPreview);tapEl(minus,refreshPreview);tapEl(plus,refreshPreview);
   const dive=document.createElement("div");dive.className="btn pri";dive.textContent="この編成で潜る";tapEl(dive,()=>confirmDive(S.diveFloor));b.appendChild(dive);
 }
 function openFormationPick(slot){hideTutorial();const c=$("itC"),t=(S.tutorial||{}).phase==="formation_slot";c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:10px">${t?"魔術師を選び、ミラに入れ替えよう":"職業を選択"}</div>`;
@@ -2791,6 +2809,7 @@ function load(){try{
   if((d.matTierVersion||1)<2)for(const kind of ["crystal","core"]){const old=S.mats[kind],moved={};for(const [tier,n] of Object.entries(old))moved[Math.max(1,(+tier||1)-1)]=(moved[Math.max(1,(+tier||1)-1)]||0)+n;S.mats[kind]=moved;}
   const fix=it=>{
     if(!it)return null;
+    if(!ELEMENTS[it.element])it.element="neutral"; // 属性導入前の装備は無属性として安全に移行
     if(it.slot==="belt")return null;                 // ベルトは廃止
     if(it.slot==="ring1"||it.slot==="ring2")it.slot="ring";
     if(!it.main){                                    // 旧: 主ステが affs[0] だった
