@@ -24,6 +24,9 @@ const report = game.run(() => {
         affix.v = Math.max(1, Math.round(rule.f(item.ilvl) * profile.quality));
       }
       item.lv = 1 + Math.floor((itemMaxLv(item) - 1) * profile.enhance);
+      // 属性を主題としない検査では共鳴を必ず0段階にする。neutral に揃えると
+      // 基礎オプション1.15倍が乗るため、5属性を巡回させて散らす。
+      item.element = ELEMENT_KEYS[slots.indexOf(slot) % ELEMENT_KEYS.length];
       item.score = iScore(item);
       S.gear[slot] = item;
     }

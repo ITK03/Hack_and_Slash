@@ -612,8 +612,8 @@ const elementName=k=>(ELEMENTS[k]||ELEMENTS.neutral).n;
 // 8層で火水木を2回、光闇を1回ずつ優勢にする。局所は偏り、帯域では全属性が15〜25%に収まる。
 const dominantElement=fl=>["fire","water","wood","light","fire","water","wood","dark"][(Math.max(1,fl)-1)%8];
 const bossElement=fl=>ELEMENT_KEYS[(Math.floor(Math.max(5,fl)/5)-1)%5];
-function resonance(gear=S.gear){const counts={};for(const it of Object.values(gear||{}))if(it&&it.element&&it.element!=="neutral")counts[it.element]=(counts[it.element]||0)+1;let element="neutral",count=0;for(const k of ELEMENT_KEYS)if((counts[k]||0)>count){element=k;count=counts[k];}const stage=count>=7?3:count>=5?2:count>=3?1:0;return{element:stage?element:"neutral",count,stage,damage:[1,1.06,1.12,1.2][stage],resist:[1,.92,.84,.75][stage]};}
-function elementMultiplier(attacker,defender){if(!attacker||!defender||attacker==="neutral"||defender==="neutral")return 1;if(attacker==="light"||attacker==="dark")return defender===(attacker==="light"?"dark":"light")?1.3:1;const beats={fire:"wood",wood:"water",water:"fire"};return beats[attacker]===defender?1.5:beats[defender]===attacker?.6:1;}
+function resonance(gear=S.gear){const counts={};for(const it of Object.values(gear||{}))if(it&&it.element&&it.element!=="neutral")counts[it.element]=(counts[it.element]||0)+1;let element="neutral",count=0;for(const k of ELEMENT_KEYS)if((counts[k]||0)>count){element=k;count=counts[k];}const stage=count>=7?3:count>=5?2:count>=3?1:0;return{element:stage?element:"neutral",count,stage,damage:[1,1.2,2.5,2.8][stage],resist:[1,.92,.84,.75][stage]};}
+function elementMultiplier(attacker,defender){if(!attacker||!defender||attacker==="neutral"||defender==="neutral")return 1;if(attacker==="light"||attacker==="dark")return defender===(attacker==="light"?"dark":"light")?1.3:.88;const beats={fire:"wood",wood:"water",water:"fire"};return beats[attacker]===defender?1.5:beats[defender]===attacker?.5:1;}
 const ACLS=["warrior","mage"];
 const BASEN={weapon:null,
   helm:{warrior:["バシネット","サレット","グレートヘルム"],mage:["秘術師のフード","星詠みのサークレット","ルーンの頭巾"]},

@@ -45,11 +45,19 @@ const report = game.run(() => {
     return !runCombat().cleared;
   }
   function deathRate(depth, element, runs = 48) { let deaths = 0; for (let run = 0; run < runs; run++) deaths += trial(depth, element, run); return deaths / runs; }
-  // check-balance.mjs と同じ二分探索・48試行・境界160試行。
+  // 優勢属性の8層周期を丸ごと平均し、境界が周期のどこに当たるかによる偏りを除く。
+  // これを入れないと「境界深度の優勢属性が自分にとって有利か」という運が数層ぶん乗る。
+  function cycleDeathRate(depth, element, runs = 48) {
+    let total = 0;
+    const runsPerDepth = Math.max(1, Math.floor(runs / 8));
+    for (let offset = 0; offset < 8; offset++) total += deathRate(depth + offset, element, runsPerDepth);
+    return total / 8;
+  }
+  // check-balance.mjs と同じ二分探索・合計48試行・境界合計160試行（8層へ均等配分）。
   function boundary(element) {
     let lower = 1, upper = 300;
-    while (lower < upper) { const middle = Math.floor((lower + upper) / 2); if (deathRate(middle, element, 48) >= .5) upper = middle; else lower = middle + 1; }
-    return { element, depth: lower, deathRate: deathRate(lower, element, 160) };
+    while (lower < upper) { const middle = Math.floor((lower + upper) / 2); if (cycleDeathRate(middle, element, 48) >= .5) upper = middle; else lower = middle + 1; }
+    return { element, depth: lower, deathRate: cycleDeathRate(lower, element, 160) };
   }
 
   const bands = [[1, 20], [21, 50], [51, 100], [101, 300]], distribution = [], floorRatios = [];
@@ -98,7 +106,7 @@ console.table([{ 有利フロア: report.clearTimes.advantageFloor, 有利秒: r
 for (const row of report.distribution) for (const element of ['fire', 'water', 'wood']) if (row[element] < .20 || row[element] > .26) throw new Error(`${row.band} ${element}: ${(row[element] * 100).toFixed(1)}% は20〜26%の範囲外`);
 for (const row of report.distribution) for (const element of ['light', 'dark']) if (row[element] < .11 || row[element] > .17) throw new Error(`${row.band} ${element}: ${(row[element] * 100).toFixed(1)}% は11〜17%の範囲外`);
 for (const row of report.floorRatios) if (row.ratio < .60 || row.ratio > .70) throw new Error(`深度${row.floor}: 優勢比率 ${(row.ratio * 100).toFixed(1)}% は60〜70%の範囲外`);
-const expected = { fire: { wood: 1.5, water: .6 }, water: { fire: 1.5, wood: .6 }, wood: { water: 1.5, fire: .6 }, light: { dark: 1.3 }, dark: { light: 1.3 } };
+const expected = { fire: { wood: 1.5, water: .5 }, water: { fire: 1.5, wood: .5 }, wood: { water: 1.5, fire: .5 }, light: { dark: 1.3, fire: .88 }, dark: { light: 1.3, fire: .88 } };
 for (const [attacker, defenders] of Object.entries(expected)) for (const [defender, multiplier] of Object.entries(defenders)) if (report.matchup.find(row => row.attacker === attacker && row.defender === defender).multiplier !== multiplier) throw new Error(`${attacker}→${defender} の倍率が${multiplier}ではない`);
 for (const row of report.resonanceRows) if (row.stage !== 2 || row.count !== 5) throw new Error(`${row.element}の5個共鳴が中共鳴にならない`);
 if (report.neutralBonus.resonance.stage !== 0 || Math.abs(report.neutralBonus.actualMain / report.neutralBonus.elementalMain - 1.15) > .03) throw new Error('無属性装備の共鳴除外または基礎値1.15倍が不正');

@@ -52,7 +52,10 @@ const report = game.run(() => {
     for (const slot of slots) {
       let item;
       do item = makeItem(depth, 0, 0, 2); while (item.slot !== slot || item.rar !== 2 || (item.ac && item.ac !== 'warrior'));
-      item.lv = 1 + Math.floor((itemMaxLv(item) - 1) * .5); S.gear[slot] = item;
+      item.lv = 1 + Math.floor((itemMaxLv(item) - 1) * .5);
+      // 属性を主題としない検査では共鳴を必ず0段階にする（5属性を巡回）。
+      item.element = ELEMENT_KEYS[slots.indexOf(slot) % ELEMENT_KEYS.length];
+      S.gear[slot] = item;
     }
   }
   function trial(depth, mode, full) {
