@@ -1461,7 +1461,15 @@ function automationWaypoint(p,target){
     for(const next of [at-1,at+1,at-MW,at+MW]){const nx=next%MW,ny=(next/MW)|0;if(nx<0||ny<0||nx>=MW||ny>=MH||Math.abs(nx-x)+Math.abs(ny-y)!==1||map[next]===0||prev[next]!==-2)continue;prev[next]=at;queue[tail++]=next;}}
   if(prev[goal]===-2)return target;let at=goal,path=[];while(at!==start&&at>=0){path.push(at);at=prev[at];}
   const step=path[path.length-1],x=step%MW,y=(step/MW)|0;return{x:x+.5,y:y+.5};}
-function updateAutomation(dt){const mode=S.settings.controlMode||"manual",p=S.p;if(mode==="manual")return;HELD[0]=true;if(mode==="auto"&&S.enemies.length&&!p.dashT){let e=S.enemies[0],bd=d2(p.x,p.y,e.x,e.y);for(const x of S.enemies){const d=d2(p.x,p.y,x.x,x.y);if(d<bd){bd=d;e=x;}}p.autoPathT=(p.autoPathT||0)-dt;const moved=Math.hypot(p.x-(p.autoPathX??p.x),p.y-(p.autoPathY??p.y));p.autoStuck=moved<.02?(p.autoStuck||0)+dt:0;p.autoPathX=p.x;p.autoPathY=p.y;if(p.autoPathT<=0||p.autoStuck>.35){p.autoWaypoint=automationWaypoint(p,e);p.autoPathT=.35;p.autoStuck=0;}const waypoint=p.autoWaypoint||e;automationInput(waypoint.x-p.x,waypoint.y-p.y);}const rule=automationRules().find(r=>autoCondition(r.condition)&&autoActionAvailable(r.action));if(!rule){p.autoDelay=0;return;}p.autoDelay=(p.autoDelay||0)+dt;if(p.autoDelay>=.35){p.autoDelay=0;runAutoAction(rule.action);}}
+function updateAutomation(dt){const mode=S.settings.controlMode||"manual",p=S.p;if(mode==="manual")return;
+  let e=null,bd=1e9;for(const x of S.enemies){const d=d2(p.x,p.y,x.x,x.y);if(d<bd){bd=d;e=x;}}
+  const attackRange=e?p.d.C.range*p.mRange*p.d.rng+e.r:0,inAttackRange=!!e&&bd<attackRange*attackRange;
+  // 片手は移動だけを手動に残す。通常攻撃は敵が射程に入った間だけ押し続ける。
+  HELD[0]=inAttackRange;
+  if(mode==="auto"&&e&&!p.dashT){
+    if(inAttackRange){IN.dx=IN.dy=0;p.face=Math.atan2(e.y-p.y,e.x-p.x);}
+    else{p.autoPathT=(p.autoPathT||0)-dt;const moved=Math.hypot(p.x-(p.autoPathX??p.x),p.y-(p.autoPathY??p.y));p.autoStuck=moved<.02?(p.autoStuck||0)+dt:0;p.autoPathX=p.x;p.autoPathY=p.y;if(p.autoPathT<=0||p.autoStuck>.35){p.autoWaypoint=automationWaypoint(p,e);p.autoPathT=.35;p.autoStuck=0;}const waypoint=p.autoWaypoint||e;automationInput(waypoint.x-p.x,waypoint.y-p.y);}}
+  const rule=automationRules().find(r=>autoCondition(r.condition)&&autoActionAvailable(r.action));if(!rule){p.autoDelay=0;return;}p.autoDelay=(p.autoDelay||0)+dt;if(p.autoDelay>=.35){p.autoDelay=0;runAutoAction(rule.action);}}
 
 /* ---------- 更新 ---------- */
 function update(dt){
@@ -1502,6 +1510,10 @@ function update(dt){
     if(i*i+j*j<=36)seen[Y*MW+X]=1;}
 
   p.cd-=dt;
+  if(S.settings.controlMode==="onehand"){
+    let target=null,bd=1e9,range=0;for(const e of S.enemies){const d=d2(p.x,p.y,e.x,e.y);if(d<bd){bd=d;target=e;}}
+    if(target){range=p.d.C.range*p.mRange*p.d.rng+target.r;if(bd<range*range)p.face=Math.atan2(target.y-p.y,target.x-p.x);}
+  }
   if(p.cd<=0&&HELD[0]){if(basicAttack())p.cd=CFG.ATK_CD/(p.d.as*p.mAs*p.sAs);else p.cd=.04;}
   for(let i=0;i<3;i++)p.cds[i]=Math.max(0,p.cds[i]-dt);
   for(let i=1;i<=3;i++)if(HELD[i])useSkill(i-1);

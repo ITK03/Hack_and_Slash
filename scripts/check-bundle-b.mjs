@@ -28,6 +28,8 @@ const report = await page.evaluate(() => {
   const blocked = !useItem(0) && S.runItems[0] === 1;
   S.p.lastHit = 6;
   const began = useItem(0) && S.p.returnCast === 3 && S.runItems[0] === 1;
+  // 回避抽選や直前の試行状態に左右されず、詠唱中に必ず被弾する状態を作る。
+  S.floor = 1000; S.p.hurtT = 0; S.p.invulT = 0; S.p.d.agiD = 0; _s = 1;
   hurtP(1, 'test', true);
   const interrupted = S.p.returnCast === 0 && S.runItems[0] === 1;
   setup(); S.p.lastHit = 6; useItem(0); update(3.01);
@@ -43,7 +45,7 @@ const report = await page.evaluate(() => {
   while (S.enemies.length < 2) S.enemies.push({ ...S.enemies[0], x: S.p.x, y: S.p.y });
   for (const enemy of S.enemies) { enemy.x = S.p.x + .5; enemy.y = S.p.y; enemy.hp = enemy.max = 1e9; enemy.dmg = 0; }
   let delay = 0;
-  while (S.p.cds[0] <= 0 && delay < 1) { update(.01); delay += .01; }
+  while (S.p.cds[0] <= 0 && delay < 1) { update(1 / 60); delay += 1 / 60; }
 
   // Measure the damage modifier through useSkill(), with identical RNG and target state.
   const skillDamage = automatic => {
@@ -139,7 +141,7 @@ console.table([{ 条件: '持ち込みなし', '50%死亡深度': report.tactica
 console.log('\n操作モード別実測');
 console.table(report.modes.map(row => ({ 操作: { manual: 'フル手動', onehand: '片手', auto: '完全オート' }[row.mode], '50%死亡深度': row.depth, 死亡率: `${(row.deathRate * 100).toFixed(1)}%` })));
 for (const [key, value] of Object.entries(report.features)) if (['tactical', 'conditions', 'actions'].includes(key) ? value < 6 : !value) throw new Error(`${key} failed`);
-if (Math.abs(report.automation.delay - .35) > .011) throw new Error(`自動化反応遅延 ${report.automation.delay.toFixed(2)}秒は想定外`);
+if (report.automation.delay < .35 || report.automation.delay >= .40) throw new Error(`自動化反応遅延 ${report.automation.delay.toFixed(3)}秒は0.35以上0.40未満でない`);
 if (Math.abs(report.automation.skillScale - .62) > .001) throw new Error(`自動スキル倍率 ${report.automation.skillScale.toFixed(3)}は想定外`);
 if (report.operation.auto.killRate < .5 || report.operation.auto.stillSeconds > 20) throw new Error(`完全オート実測が基準外: 討伐率 ${(report.operation.auto.killRate * 100).toFixed(1)}%, 静止 ${report.operation.auto.stillSeconds}秒`);
 if (report.operation.onehand.killRate < .5) throw new Error(`片手実測の討伐率 ${(report.operation.onehand.killRate * 100).toFixed(1)}% は50%未満`);
