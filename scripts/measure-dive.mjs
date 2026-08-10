@@ -2,8 +2,8 @@
  * One dive starts at floor 1 and resolves every floor through targetDepth.
  * Rewards are generated only by the game's floor/drop functions.
  */
-export async function installDiveMeasurement(page) {
-  await page.evaluate(() => {
+export function installDiveMeasurement(game) {
+  game.run(() => {
     window.measureMaterialDive = targetDepth => {
       let crystals = 0;
       S.cls = 'warrior';

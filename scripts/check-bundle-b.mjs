@@ -1,19 +1,8 @@
-import { chromium } from 'playwright';
-import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
+import { loadGame } from './game-env.mjs';
 
-const gamePath = fileURLToPath(new URL('../public/index.html', import.meta.url));
-const server = createServer(async (_request, response) => {
-  response.setHeader('content-type', 'text/html; charset=utf-8');
-  response.end(await readFile(gamePath));
-});
-await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage();
-await page.goto(`http://127.0.0.1:${server.address().port}`);
+const game = await loadGame();
 
-const report = await page.evaluate(() => {
+const report = game.run(() => {
   const base = { lv: 60, xp: 0, pts: 0, str: 180, mag: 0, def: 60, agi: 60, spi: 0, luk: 0 };
   const slots = ['weapon', 'helm', 'armor', 'glove', 'boot', 'ring', 'amulet'];
   const setup = () => {
@@ -167,4 +156,4 @@ if (report.tactical.difference < 1 || report.tactical.difference > 3) throw new 
 // 同じ自動化なので、両者のあいだに厳密な大小を要求すると調整が恣意的になる。
 const [manualMode, onehandMode, autoMode] = report.modes;
 if (!(manualMode.depth > onehandMode.depth && manualMode.depth > autoMode.depth)) throw new Error(`フル手動が最も深くない: ${report.modes.map(row => `${row.mode}=${row.depth}`).join(' / ')}`);
-await browser.close(); await new Promise(resolve => server.close(resolve));
+
