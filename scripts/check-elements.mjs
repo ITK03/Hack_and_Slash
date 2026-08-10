@@ -56,11 +56,17 @@ const report = await page.evaluate(() => {
     return !runCombat().cleared;
   }
   function deathRate(depth, element, runs = 48) { let deaths = 0; for (let run = 0; run < runs; run++) deaths += trial(depth, element, run); return deaths / runs; }
-  // check-balance.mjs と同じ二分探索・48試行・境界160試行。
+  // 優勢属性の8層周期を丸ごと平均し、境界が周期のどこに当たるかによる偏りを除く。
+  function cycleDeathRate(depth, element, runs = 48) {
+    let total = 0;
+    for (let offset = 0; offset < 8; offset++) total += deathRate(depth + offset, element, runs);
+    return total / 8;
+  }
+  // check-balance.mjs と同じ二分探索・48試行・境界160試行（各深度は8層平均）。
   function boundary(element) {
     let lower = 1, upper = 300;
-    while (lower < upper) { const middle = Math.floor((lower + upper) / 2); if (deathRate(middle, element, 48) >= .5) upper = middle; else lower = middle + 1; }
-    return { element, depth: lower, deathRate: deathRate(lower, element, 160) };
+    while (lower < upper) { const middle = Math.floor((lower + upper) / 2); if (cycleDeathRate(middle, element, 48) >= .5) upper = middle; else lower = middle + 1; }
+    return { element, depth: lower, deathRate: cycleDeathRate(lower, element, 160) };
   }
 
   const bands = [[1, 20], [21, 50], [51, 100], [101, 300]], distribution = [], floorRatios = [];
@@ -105,14 +111,20 @@ console.log('\n共鳴ビルドの到達深度');
 console.table([...report.reaches, report.neutral].map(row => ({ 属性: row.element, '50%死亡深度': row.depth, 死亡率: `${(row.deathRate * 100).toFixed(1)}%` })));
 console.log('\n実フロアのクリア時間');
 console.table([{ 有利フロア: report.clearTimes.advantageFloor, 有利秒: report.clearTimes.advantage?.toFixed(2), 不利フロア: report.clearTimes.disadvantageFloor, 不利秒: report.clearTimes.disadvantage?.toFixed(2), 時間比: report.clearTimes.advantage && (report.clearTimes.disadvantage / report.clearTimes.advantage).toFixed(2) }]);
+console.log('\n5個共鳴の攻撃期待値（火水木22%/22%/56%、光闇14%/86%の代表分布）');
+console.table([
+  { ビルド: '火水木', 変更前: (1.022 * 1.12).toFixed(3), 変更後: (1.022 * 1.30).toFixed(3) },
+  { ビルド: '光闇', 変更前: (1.042 * 1.12).toFixed(3), 変更後: ((.14 * 1.3 + .86 * .97) * 1.30).toFixed(3) },
+  { ビルド: '無属性', 変更前: '1.150', 変更後: '1.050' }
+]);
 
 for (const row of report.distribution) for (const element of ['fire', 'water', 'wood']) if (row[element] < .20 || row[element] > .26) throw new Error(`${row.band} ${element}: ${(row[element] * 100).toFixed(1)}% は20〜26%の範囲外`);
 for (const row of report.distribution) for (const element of ['light', 'dark']) if (row[element] < .11 || row[element] > .17) throw new Error(`${row.band} ${element}: ${(row[element] * 100).toFixed(1)}% は11〜17%の範囲外`);
 for (const row of report.floorRatios) if (row.ratio < .60 || row.ratio > .70) throw new Error(`深度${row.floor}: 優勢比率 ${(row.ratio * 100).toFixed(1)}% は60〜70%の範囲外`);
-const expected = { fire: { wood: 1.5, water: .6 }, water: { fire: 1.5, wood: .6 }, wood: { water: 1.5, fire: .6 }, light: { dark: 1.3 }, dark: { light: 1.3 } };
+const expected = { fire: { wood: 1.5, water: .6 }, water: { fire: 1.5, wood: .6 }, wood: { water: 1.5, fire: .6 }, light: { dark: 1.3, fire: .97 }, dark: { light: 1.3, fire: .97 } };
 for (const [attacker, defenders] of Object.entries(expected)) for (const [defender, multiplier] of Object.entries(defenders)) if (report.matchup.find(row => row.attacker === attacker && row.defender === defender).multiplier !== multiplier) throw new Error(`${attacker}→${defender} の倍率が${multiplier}ではない`);
-for (const row of report.resonanceRows) if (row.stage !== 2 || row.count !== 5) throw new Error(`${row.element}の5個共鳴が中共鳴にならない`);
-if (report.neutralBonus.resonance.stage !== 0 || Math.abs(report.neutralBonus.actualMain / report.neutralBonus.elementalMain - 1.15) > .03) throw new Error('無属性装備の共鳴除外または基礎値1.15倍が不正');
+for (const row of report.resonanceRows) if (row.stage !== 2 || row.count !== 5 || row.damage !== 1.3 || row.resist !== .84) throw new Error(`${row.element}の5個共鳴の段階または補正値が不正`);
+if (report.neutralBonus.resonance.stage !== 0 || Math.abs(report.neutralBonus.actualMain / report.neutralBonus.elementalMain - 1.05) > .03) throw new Error('無属性装備の共鳴除外または基礎値1.05倍が不正');
 const depths = report.reaches.map(row => row.depth), min = Math.min(...depths), max = Math.max(...depths);
 if (max - min > 10) throw new Error(`5属性の50%死亡深度差 ${min}〜${max} は±5を超える`);
 const triMax = Math.max(...report.reaches.filter(row => ['fire', 'water', 'wood'].includes(row.element)).map(row => row.depth));
