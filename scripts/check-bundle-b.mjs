@@ -58,13 +58,26 @@ const report = game.run(() => {
       S.gear[slot] = item;
     }
   }
-  function trial(depth, mode, full) {
+  const loadouts = {
+    none: [],
+    consumables: ['heal', 'power', 'hard', 'gale'],
+    sonic: ['sonic'],
+    shockTrap: ['shockTrap'],
+    weaken: ['weaken'],
+    torch: ['torch'],
+    incense: ['incense'],
+    returnScroll: ['returnScroll'],
+    exploration: ['torch', 'incense', 'returnScroll'],
+    full: ['heal', 'power', 'hard', 'gale', 'sonic', 'weaken'],
+  };
+  function trial(depth, mode, loadoutKey) {
     S.cls = 'warrior'; S.scene = 'dungeon'; S.paused = false; S.training = false; S.returnInvulnerable = false;
     S.settings.controlMode = mode; S.settings.autoPreset = 'aggressive'; S.settings.autoRules = null;
     S.base = { ...base }; equip(depth); S.p = newPlayer();
-    S.loadout = full ? ['heal', 'power', 'hard', 'gale', 'sonic', 'weaken'] : [null, null, null, null, null, null];
+    const selected = loadouts[loadoutKey];
+    S.loadout = [...selected, ...Array(6 - selected.length).fill(null)];
     S.consumables = { heal: 3, power: 5, hard: 5, gale: 5, sonic: 3, weaken: 3 };
-    S.runItems = full ? [3, 5, 5, 5, 3, 3] : [0, 0, 0, 0, 0, 0];
+    S.runItems = S.loadout.map(key => key ? S.consumables[key] : 0);
     // 移動は3モードとも同じ理想化（毎tick最寄りの敵に接敵）で揃える。
     // ここで測るのは戦闘力であって踏破力ではないため、モード差は
     // 「攻撃と技を誰が出しているか」だけに絞る。手動だけが通常攻撃を押し続け、
@@ -76,28 +89,35 @@ const report = game.run(() => {
       const angle = Math.atan2(target.y - S.p.y, target.x - S.p.x);
       S.p.x = target.x - Math.cos(angle) * 1.15; S.p.y = target.y - Math.sin(angle) * 1.15; S.p.face = angle;
       if (mode === 'manual') for (let i = 0; i < 3; i++) if (S.p.cds[i] <= 0 && S.p.mp >= S.p.d.C.skills[i].c) useSkill(i);
-      if (full && S.p.itemCd <= 0) {
-        if (S.p.hp < S.p.max * .7 && S.runItems[0]) useItem(0);
-        else if (S.runItems[1] && !S.p.itemBuffs.power) useItem(1);
-        else if (S.runItems[2] && !S.p.itemBuffs.hard) useItem(2);
-        else if (S.runItems[3] && !S.p.itemBuffs.gale) useItem(3);
-        else if (S.runItems[4] && S.enemies.length >= 2) useItem(4);
-        else if (S.runItems[5]) useItem(5);
+      if (S.p.itemCd <= 0) {
+        const usable = S.loadout.findIndex((key, index) => S.runItems[index] && (
+          (key === 'heal' && S.p.hp < S.p.max * .7) ||
+          (['power', 'hard', 'gale', 'torch'].includes(key) && !S.p.itemBuffs[key]) ||
+          (key === 'sonic' && S.enemies.length >= 2) ||
+          ['shockTrap', 'weaken', 'incense'].includes(key)
+        ));
+        if (usable >= 0) useItem(usable);
       }
       update(.05);
     }
     HELD.fill(false);
     return S.scene !== 'dungeon' || S.p.hp <= 0 || S.enemies.length > 0;
   }
-  function deathRate(depth, mode, full, runs = 48) {
+  function deathRate(depth, mode, loadoutKey, runs = 48) {
     let deaths = 0;
-    for (let run = 0; run < runs; run++) { _s = (depth * 2654435761 + run * 1013904223) >>> 0; deaths += trial(depth, mode, full); }
+    for (let run = 0; run < runs; run++) { _s = (depth * 2654435761 + run * 1013904223) >>> 0; deaths += trial(depth, mode, loadoutKey); }
     return deaths / runs;
   }
-  function boundary(mode, full) {
+  function cycleDeathRate(depth, mode, loadoutKey, runs = 48) {
+    let total = 0;
+    const runsPerDepth = Math.max(1, Math.floor(runs / 8));
+    for (let offset = 0; offset < 8; offset++) total += deathRate(depth + offset, mode, loadoutKey, runsPerDepth);
+    return total / 8;
+  }
+  function boundary(mode, loadoutKey) {
     let lower = 1, upper = 150;
-    while (lower < upper) { const middle = (lower + upper) >> 1; if (deathRate(middle, mode, full) >= .5) upper = middle; else lower = middle + 1; }
-    return { depth: lower, deathRate: deathRate(lower, mode, full, 160) };
+    while (lower < upper) { const middle = (lower + upper) >> 1; if (cycleDeathRate(middle, mode, loadoutKey) >= .5) upper = middle; else lower = middle + 1; }
+    return { depth: lower, deathRate: cycleDeathRate(lower, mode, loadoutKey, 160) };
   }
   function operationSample(mode) {
     S.cls = 'warrior'; S.scene = 'dungeon'; S.paused = false; S.training = false; S.returnInvulnerable = false;
@@ -126,11 +146,13 @@ const report = game.run(() => {
     return { initial, killed, killRate: killed / initial, stillSeconds, attackTicks };
   }
   const operation = { auto: operationSample('auto'), onehand: operationSample('onehand') };
-  const tacticalNone = boundary('manual', false), tacticalFull = boundary('manual', true);
-  const modes = ['manual', 'onehand', 'auto'].map(mode => ({ mode, ...boundary(mode, false) }));
+  const tacticalNone = boundary('manual', 'none'), tacticalFull = boundary('manual', 'full');
+  const contributionKeys = ['sonic', 'shockTrap', 'weaken', 'torch', 'incense', 'returnScroll', 'exploration'];
+  const contributions = contributionKeys.map(key => { const result = boundary('manual', key); return { key, ...result, difference: result.depth - tacticalNone.depth }; });
+  const modes = ['manual', 'onehand', 'auto'].map(mode => ({ mode, ...boundary(mode, 'none') }));
   return {
     features: { blocked, began, interrupted, completed, tactical: Object.keys(CONSUMABLES).filter(key => ['sonic', 'shockTrap', 'weaken', 'torch', 'incense', 'returnScroll'].includes(key)).length, paidHasId: !!paid?.id && paid.source === 'purchase', conditions: AUTOMATION_CONDITIONS.length, actions: AUTOMATION_ACTIONS.length },
-    automation: { delay, skillScale, manualDamage, automaticDamage }, operation, tactical: { none: tacticalNone, full: tacticalFull, difference: tacticalFull.depth - tacticalNone.depth }, modes,
+    automation: { delay, skillScale, manualDamage, automaticDamage }, operation, tactical: { none: tacticalNone, full: tacticalFull, difference: tacticalFull.depth - tacticalNone.depth, contributions }, modes,
   };
 });
 
@@ -140,6 +162,8 @@ console.log('\n操作機能実測');
 console.table([{ 操作: '完全オート', 開始敵数: report.operation.auto.initial, 討伐数: report.operation.auto.killed, 討伐率: `${(report.operation.auto.killRate * 100).toFixed(1)}%`, 攻撃tick: report.operation.auto.attackTicks, '静止秒数 (<0.25/秒)': report.operation.auto.stillSeconds }, { 操作: '片手', 開始敵数: report.operation.onehand.initial, 討伐数: report.operation.onehand.killed, 討伐率: `${(report.operation.onehand.killRate * 100).toFixed(1)}%`, 攻撃tick: report.operation.onehand.attackTicks, '静止秒数 (<0.25/秒)': '-' }]);
 console.log('\n戦術アイテム込み持ち込み実測');
 console.table([{ 条件: '持ち込みなし', '50%死亡深度': report.tactical.none.depth, 死亡率: `${(report.tactical.none.deathRate * 100).toFixed(1)}%` }, { 条件: '戦術込みフル', '50%死亡深度': report.tactical.full.depth, 死亡率: `${(report.tactical.full.deathRate * 100).toFixed(1)}%` }, { 条件: '差', '50%死亡深度': `+${report.tactical.difference}`, 死亡率: '' }]);
+console.log('\n戦術アイテム個別寄与');
+console.table(report.tactical.contributions.map(row => ({ 条件: row.key, '50%死亡深度': row.depth, 寄与: `${row.difference >= 0 ? '+' : ''}${row.difference}`, 死亡率: `${(row.deathRate * 100).toFixed(1)}%` })));
 console.log('\n操作モード別実測');
 console.table(report.modes.map(row => ({ 操作: { manual: 'フル手動', onehand: '片手', auto: '完全オート' }[row.mode], '50%死亡深度': row.depth, 死亡率: `${(row.deathRate * 100).toFixed(1)}%` })));
 for (const [key, value] of Object.entries(report.features)) if (['tactical', 'conditions', 'actions'].includes(key) ? value < 6 : !value) throw new Error(`${key} failed`);
@@ -159,4 +183,3 @@ if (report.tactical.difference < 1 || report.tactical.difference > 3) throw new 
 // 同じ自動化なので、両者のあいだに厳密な大小を要求すると調整が恣意的になる。
 const [manualMode, onehandMode, autoMode] = report.modes;
 if (!(manualMode.depth > onehandMode.depth && manualMode.depth > autoMode.depth)) throw new Error(`フル手動が最も深くない: ${report.modes.map(row => `${row.mode}=${row.depth}`).join(' / ')}`);
-
