@@ -1,6 +1,7 @@
 import { loadGame } from './game-env.mjs';
 
 const game = await loadGame();
+const elementKeys = ['fire', 'water', 'wood', 'light', 'dark'];
 
 const report = game.run(() => {
   const slots = ['weapon', 'helm', 'armor', 'glove', 'boot', 'ring', 'amulet'];
@@ -12,7 +13,7 @@ const report = game.run(() => {
     S.formation = ['warrior:gai']; S.settings.controlMode = 'manual'; S.base = { ...base };
   }
 
-  function equip(depth, element) {
+  function equip(depth, element, resonanceCount = 5) {
     S.gear = Object.fromEntries(slots.map(slot => [slot, null]));
     for (let index = 0; index < slots.length; index++) {
       const slot = slots[index]; let item;
@@ -22,7 +23,7 @@ const report = game.run(() => {
         affix.q = 1; affix.v = Math.max(1, Math.round(rule.f(item.ilvl)));
       }
       item.lv = 1 + Math.floor((itemMaxLv(item) - 1) * .5);
-      item.element = element === 'neutral' || index < 5 ? element : 'neutral';
+      item.element = element === 'neutral' || index < resonanceCount ? element : 'neutral';
       item.score = iScore(item); S.gear[slot] = item;
     }
   }
@@ -76,6 +77,11 @@ const report = game.run(() => {
   const matchup = [];
   for (const attacker of [...elements, 'neutral']) for (const defender of [...elements, 'neutral']) matchup.push({ attacker, defender, multiplier: elementMultiplier(attacker, defender) });
   const resonanceRows = elements.map(element => { prepare(); equip(50, element); return { element, ...resonance() }; });
+  const resonanceStages = elements.flatMap(element => [3, 5, 7].map(count => {
+    prepare(); equip(50, element, count); const current = resonance();
+    const favorableDefender = element === 'fire' ? 'wood' : element === 'water' ? 'fire' : element === 'wood' ? 'water' : element === 'light' ? 'dark' : 'light';
+    return { element, count, stage: current.stage, dealt: resonanceDamageMultiplier(current, favorableDefender, 50), takenAdvantageous: resonanceIncomingMultiplier(current, favorableDefender), takenDisadvantageous: current.danger };
+  }));
   const incoming = resonanceRows.map(row => ({ element: row.element, advantageous: row.guard, disadvantageous: row.danger }));
   prepare(); equip(50, 'neutral');
   const neutralResonance = resonance(), neutralMain = mainV(S.gear.weapon); S.gear.weapon.element = 'fire';
@@ -117,7 +123,7 @@ const report = game.run(() => {
   for (let run = 0; run < 24; run++) { prepare(); _s = (adverseDepth * 2654435761 + run * 1013904223) >>> 0; equip(adverseDepth, 'fire'); S.p = newPlayer(); enterFloor(adverseDepth); const initial = S.enemies.length; runCombat(90); if (S.enemies.length < initial) progressed++; }
   const adverseProgress = { floor: adverseDepth, progressed, runs: 24 };
   const reaches = elements.map(boundary), neutral = boundary('neutral');
-  return { distribution, floorRatios, matchup, resonanceRows, incoming, neutralBonus, reaches, neutral, clearTimes, damage, adverseProgress };
+  return { distribution, floorRatios, matchup, resonanceRows, resonanceStages, incoming, neutralBonus, reaches, neutral, clearTimes, damage, adverseProgress };
 
 });
 
@@ -135,6 +141,8 @@ console.log('\n実フロアのクリア時間');
 console.table([{ 有利帯: report.clearTimes.advantageFloors.join(','), 有利秒: report.clearTimes.advantage?.toFixed(2), 不利帯: report.clearTimes.disadvantageFloors.join(','), 不利秒: report.clearTimes.disadvantage?.toFixed(2), 時間比: report.clearTimes.advantage && (report.clearTimes.disadvantage / report.clearTimes.advantage).toFixed(2), 無属性比: report.clearTimes.neutralAdvantage && (report.clearTimes.neutralDisadvantage / report.clearTimes.neutralAdvantage).toFixed(2) }]);
 console.log('実生成敵への通常攻撃ダメージ', report.damage);
 console.table(report.incoming);
+console.log('\n共鳴段階の実測倍率');
+console.table(report.resonanceStages.map(row => ({ 属性: row.element, 装備数: row.count, 与ダメージ倍率: row.dealt, 有利被ダメージ倍率: row.takenAdvantageous, 不利被ダメージ倍率: row.takenDisadvantageous })));
 console.log('深度150不利帯の進行', report.adverseProgress);
 
 for (const row of report.distribution) for (const element of ['fire', 'water', 'wood']) if (row[element] < .20 || row[element] > .26) throw new Error(`${row.band} ${element}: ${(row[element] * 100).toFixed(1)}% は20〜26%の範囲外`);
@@ -143,8 +151,13 @@ for (const row of report.floorRatios) if (row.ratio < .60 || row.ratio > .70) th
 const expected = { fire: { wood: 1.5, water: .5 }, water: { fire: 1.5, wood: .5 }, wood: { water: 1.5, fire: .5 }, light: { dark: 1.3, fire: 1 }, dark: { light: 1.3, fire: 1 } };
 for (const [attacker, defenders] of Object.entries(expected)) for (const [defender, multiplier] of Object.entries(defenders)) if (report.matchup.find(row => row.attacker === attacker && row.defender === defender).multiplier !== multiplier) throw new Error(`${attacker}→${defender} の倍率が${multiplier}ではない`);
 for (const row of report.resonanceRows) if (row.stage !== 2 || row.count !== 5) throw new Error(`${row.element}の5個共鳴が中共鳴にならない`);
-for (const row of report.incoming) if (row.advantageous !== .75 || row.disadvantageous !== 1.25) throw new Error(`${row.element}の5個共鳴被ダメージ補正は有利0.75・不利1.25でなければならない（実測 ${row.advantageous}/${row.disadvantageous}）`);
-if (report.neutralBonus.resonance.stage !== 0 || Math.abs(report.neutralBonus.actualMain / report.neutralBonus.elementalMain - 1.02) > .01) throw new Error('無属性装備の共鳴除外または基礎値1.02倍が不正');
+for (const element of elementKeys) {
+  const stages = report.resonanceStages.filter(row => row.element === element);
+  if (stages.some((row, index) => row.stage !== index + 1)) throw new Error(`${element}の3/5/7個共鳴段階が不正`);
+  if (!(stages[0].dealt < stages[1].dealt && stages[1].dealt < stages[2].dealt)) throw new Error(`${element}の有利与ダメージ倍率が3個 < 5個 < 7個ではない（${stages.map(row => row.dealt).join(' / ')}）`);
+}
+for (const row of report.incoming) if (row.advantageous !== .05 || row.disadvantageous !== 1.25) throw new Error(`${row.element}の5個共鳴被ダメージ補正は有利0.05・不利1.25でなければならない（実測 ${row.advantageous}/${row.disadvantageous}）`);
+if (report.neutralBonus.resonance.stage !== 0 || Math.abs(report.neutralBonus.actualMain / report.neutralBonus.elementalMain - 1.15) > .01) throw new Error('無属性装備の共鳴除外または基礎値1.15倍が不正');
 const depths = report.reaches.map(row => row.depth), min = Math.min(...depths), max = Math.max(...depths);
 if (max - min > 10) throw new Error(`5属性の50%死亡深度差 ${min}〜${max} は±5（全幅10）を超える`);
 const resonanceAverage = report.reaches.reduce((sum, row) => sum + row.depth, 0) / report.reaches.length, neutralGap = resonanceAverage - report.neutral.depth;
