@@ -8,7 +8,7 @@ const report = game.run(() => {
   const profiles = [
     { name: '素手', level: 10, rarity: null, quality: null, enhance: 0, range: [7, 13] },
     { name: '標準', level: 60, rarity: 2, quality: 1, enhance: .5, range: [55, 70] },
-    { name: '厳選', level: 90, rarity: 4, quality: 1.4, enhance: 1, range: [100, 120] },
+    { name: '厳選', level: 90, rarity: 4, quality: 1.3, enhance: 1, range: [95, 115] },
   ];
   const slots = ['weapon', 'helm', 'armor', 'glove', 'boot', 'ring', 'amulet'];
 
@@ -32,11 +32,12 @@ const report = game.run(() => {
     }
   }
 
-  function trial(profile, depth) {
+  function trial(profile, depth, power = 1) {
     S.cls = 'warrior'; S.scene = 'dungeon'; S.paused = false; S.training = false; S.returnInvulnerable = false;
     S.base = { lv: profile.level, xp: 0, pts: 0, str: profile.level * 3, mag: 0, def: profile.level, agi: profile.level, spi: 0, luk: 0 };
     equip(profile, depth);
     S.p = newPlayer();
+    S.p.mAtk *= power; S.p.sAtk *= power; S.p.max *= power; S.p.hp *= power;
     enterFloor(depth);
     HELD.fill(true);
     const step = .05, limit = 45;
@@ -52,9 +53,9 @@ const report = game.run(() => {
     return S.scene !== 'dungeon' || S.p.hp <= 0 || S.enemies.length > 0;
   }
 
-  function deathRate(profile, depth, runs) {
+  function deathRate(profile, depth, runs, power = 1) {
     let deaths = 0;
-    for (let run = 0; run < runs; run++) { _s = (depth * 2654435761 + run * 1013904223) >>> 0; deaths += trial(profile, depth); }
+    for (let run = 0; run < runs; run++) { _s = (depth * 2654435761 + run * 1013904223) >>> 0; deaths += trial(profile, depth, power); }
     return deaths / runs;
   }
 
@@ -68,6 +69,10 @@ const report = game.run(() => {
     const rate = deathRate(profile, lower, 160);
     combat.push({ name: profile.name, level: profile.level, depth: lower, deathRate: rate, range: profile.range });
   }
+  const selected = profiles.find(profile => profile.name === '厳選');
+  let boostedLower = combat.find(row => row.name === '厳選').depth, boostedUpper = 200;
+  while (boostedLower < boostedUpper) { const middle = Math.floor((boostedLower + boostedUpper) / 2); if (deathRate(selected, middle, 48, 2) >= .5) boostedUpper = middle; else boostedLower = middle + 1; }
+  const powerGain = { base: combat.find(row => row.name === '厳選').depth, doubled: boostedLower, gain: boostedLower - combat.find(row => row.name === '厳選').depth };
 
   // A single dive always resolves floors 1..target depth through the shared helper.
   const economy = [10, 50, 100, 300, 1000].map(depth => {
@@ -82,7 +87,7 @@ const report = game.run(() => {
   });
   enterFloor(1000);
   const depth1000 = { entered: S.floor === 1000, enemies: S.enemies.length, finite: S.enemies.every(enemy => Number.isFinite(enemy.hp) && Number.isFinite(enemy.dmg)) };
-  return { combat, economy, depth1000 };
+  return { combat, powerGain, economy, depth1000 };
 });
 
 game.run(() => localStorage.setItem('descent_v5', JSON.stringify({
@@ -94,9 +99,11 @@ const migratedSave = game.run(() => ({ scene: S.scene, mats: S.mats }));
 
 console.log('\n到達深度実測');
 console.table(report.combat.map(row => ({ プロファイル: row.name, レベル: row.level, '50%死亡深度': row.depth, 死亡率: `${(row.deathRate * 100).toFixed(1)}%` })));
+console.log('総合力2倍の到達深度', report.powerGain);
 console.log('\n強化経済実測');
 console.table(report.economy.map(row => ({ 深度: row.depth, 階梯: row.tier, 強化上限: row.maxLevel, 必要結晶: row.cost, '結晶/潜行': row.yieldPerDive.toFixed(2), 必要潜行数: row.dives.toFixed(1) })));
 for (const row of report.combat) if (row.depth < row.range[0] || row.depth > row.range[1]) throw new Error(`${row.name}: 50%死亡深度 ${row.depth} は目標 ${row.range.join('〜')} の範囲外`);
+if (report.powerGain.gain < 10 || report.powerGain.gain > 20) throw new Error(`総合力2倍の到達深度増分 +${report.powerGain.gain} は+10〜+20の範囲外`);
 for (const row of report.economy) if (row.dives < 20 || row.dives > 40) throw new Error(`深度${row.depth}: ${row.dives.toFixed(1)}潜行は20〜40の範囲外`);
 if (!report.depth1000.entered || !report.depth1000.finite) throw new Error('深度1000への潜行に失敗');
 if (migratedSave.mats.crystal[1] !== 7 || migratedSave.mats.crystal[3] !== 3 || migratedSave.mats.core[2] !== 2) throw new Error('旧セーブの階梯移行に失敗');

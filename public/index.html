@@ -423,12 +423,14 @@ const CFG={
   ],
 
   /* --- 進行 --- */
-  LV_CAP:100, STAT_PER_LV:5,
+  STAT_PER_LV:5,
   /* 到達目安（層あたりの獲得XPを実測して逆算）
      Lv10 = 1〜10層を3周 / Lv20 = 11〜20層を5周
      Lv30 = 21〜30層を10周 / Lv40 = 31〜40層を20周 */
   XP_ANCHOR:[[1,0],[10,20200],[20,128500],[30,486000],[40,1438000]],
-  XP_TAIL:1.1128,   // Lv40 以降は1レベルごとにこの倍率
+  XP_MID_GROWTH:1.067,   // Lv40〜100の累積XP伸び率
+  XP_HIGH_GROWTH:1.217,  // Lv100以降。将来の進行緩和はこの定数だけを下げる
+  ENEMY_ACCEL_START:100,ENEMY_ACCEL_GROWTH:1.06,
   SKIP_STEP:5,        // 何層ごとにスキップ開始地点を選べるか
   SHRINE_CHANCE:.30,  // フロアに祭壇が出る確率
   SHARD_DROP:.13, SHARD_HEAL:.045,   // 拾った瞬間に少し回復する欠片
@@ -449,8 +451,14 @@ function xpCum(lv){
     const[a,ca]=A[i-1],[b,cb]=A[i];
     if(lv<=b)return Math.round(ca+(cb-ca)*Math.pow((lv-a)/(b-a),1.7));}
   const[lb,cb]=A[A.length-1];
-  return Math.round(cb*Math.pow(CFG.XP_TAIL,lv-lb));}
+  if(lv<=100)return Math.round(cb*Math.pow(CFG.XP_MID_GROWTH,lv-lb));
+  const at100=cb*Math.pow(CFG.XP_MID_GROWTH,100-lb);
+  return Math.round(at100*Math.pow(CFG.XP_HIGH_GROWTH,lv-100));}
 const xpNeed=lv=>Math.max(10,xpCum(lv+1)-xpCum(lv));
+function legacyXpCum(lv){
+  if(lv<=1)return 0;const A=CFG.XP_ANCHOR;
+  for(let i=1;i<A.length;i++){const[a,ca]=A[i-1],[b,cb]=A[i];if(lv<=b)return Math.round(ca+(cb-ca)*Math.pow((lv-a)/(b-a),1.7));}
+  return Math.round(A[A.length-1][1]*Math.pow(1.1128,lv-A[A.length-1][0]));}
 const d2=(ax,ay,bx,by)=>{const x=ax-bx,y=ay-by;return x*x+y*y;};
 let _s=(Math.random()*4294967296)>>>0;
 function rnd(){_s|=0;_s=(_s+0x6D2B79F5)|0;let t=Math.imul(_s^(_s>>>15),1|_s);
@@ -609,11 +617,14 @@ const SLOTN=k=>(SLOTS.find(s=>s.k===k)||{n:"?"}).n;
 const ELEMENTS={fire:{n:"火",col:"#ff684e"},water:{n:"水",col:"#55aaff"},wood:{n:"木",col:"#68c96b"},light:{n:"光",col:"#f4dc72"},dark:{n:"闇",col:"#b681e8"},neutral:{n:"無",col:"#aaa4b5"}};
 const ELEMENT_KEYS=["fire","water","wood","light","dark"];
 const elementName=k=>(ELEMENTS[k]||ELEMENTS.neutral).n;
-// 8層で火水木を2回、光闇を1回ずつ優勢にする。局所は偏り、帯域では全属性が15〜25%に収まる。
-const dominantElement=fl=>["fire","water","wood","light","fire","water","wood","dark"][(Math.max(1,fl)-1)%8];
+// 5層帯ごとに優勢属性を固定し、8帯で火水木を2回、光闇を1回ずつ巡回する。
+const dominantElement=fl=>["fire","water","wood","light","fire","water","wood","dark"][Math.floor((Math.max(1,fl)-1)/5)%8];
 const bossElement=fl=>ELEMENT_KEYS[(Math.floor(Math.max(5,fl)/5)-1)%5];
-function resonance(gear=S.gear){const counts={};for(const it of Object.values(gear||{}))if(it&&it.element&&it.element!=="neutral")counts[it.element]=(counts[it.element]||0)+1;let element="neutral",count=0;for(const k of ELEMENT_KEYS)if((counts[k]||0)>count){element=k;count=counts[k];}const stage=count>=7?3:count>=5?2:count>=3?1:0;return{element:stage?element:"neutral",count,stage,damage:[1,1.2,2.5,2.8][stage],resist:[1,.92,.84,.75][stage]};}
-function elementMultiplier(attacker,defender){if(!attacker||!defender||attacker==="neutral"||defender==="neutral")return 1;if(attacker==="light"||attacker==="dark")return defender===(attacker==="light"?"dark":"light")?1.3:.88;const beats={fire:"wood",wood:"water",water:"fire"};return beats[attacker]===defender?1.5:beats[defender]===attacker?.5:1;}
+function resonance(gear=S.gear){const counts={};for(const it of Object.values(gear||{}))if(it&&it.element&&it.element!=="neutral")counts[it.element]=(counts[it.element]||0)+1;let element="neutral",count=0;for(const k of ELEMENT_KEYS)if((counts[k]||0)>count){element=k;count=counts[k];}const stage=count>=7?3:count>=5?2:count>=3?1:0;return{element:stage?element:"neutral",count,stage,advantage:[1,1.8,2.2,2.5][stage],guard:[1,.85,.75,.70][stage],danger:[1,1.15,1.25,1.30][stage]};}
+function elementMultiplier(attacker,defender){if(!attacker||!defender||attacker==="neutral"||defender==="neutral")return 1;if(attacker==="light"||attacker==="dark")return defender===(attacker==="light"?"dark":"light")?1.3:1;const beats={fire:"wood",wood:"water",water:"fire"};return beats[attacker]===defender?1.5:beats[defender]===attacker?.5:1;}
+const disadvantageMultiplier=fl=>.5+.15*clamp((Math.max(100,fl)-100)/100,0,1);
+function resonanceDamageMultiplier(r,defender,fl){if(r.element==="neutral")return 1;const affinity=elementMultiplier(r.element,defender);return affinity>1?r.advantage:affinity<1?disadvantageMultiplier(fl):1;}
+function resonanceIncomingMultiplier(r,attacker){if(r.element==="neutral")return 1;const affinity=elementMultiplier(r.element,attacker);return affinity>1?r.guard:affinity<1?r.danger:1;}
 const ACLS=["warrior","mage"];
 const BASEN={weapon:null,
   helm:{warrior:["バシネット","サレット","グレートヘルム"],mage:["秘術師のフード","星詠みのサークレット","ルーンの頭巾"]},
@@ -1094,12 +1105,13 @@ function curve(fl,points){
     const[a,av]=points[i-1],[b,bv]=points[i];return lerp(av,bv,(fl-a)/(b-a));}
   const[a,av]=points[points.length-2],[b,bv]=points[points.length-1];
   return bv+(fl-b)*(bv-av)/(b-a);}
-// 裸で遊べる序盤から、5層ごとの装備更新が必要になる後半へ滑らかに接続する。
-const enemyHPScale=fl=>curve(fl,[[1,2.2],[5,3],[10,4],[20,9],[35,18],[60,38],[80,65],[110,190],[180,360],[300,650]]);
-const enemyDMGScale=fl=>curve(fl,[[1,.18],[5,.30],[10,.55],[20,1.35],[35,2.8],[60,6.8],[80,12],[110,38],[180,72],[300,130]]);
+// 深度100までの曲線は維持し、それ以降は後から開始層を動かせる共通係数で加速する。
+const enemyAcceleration=fl=>Math.pow(CFG.ENEMY_ACCEL_GROWTH,Math.max(0,fl-CFG.ENEMY_ACCEL_START));
+const enemyHPScale=fl=>curve(fl,[[1,2.2],[5,3],[10,4],[20,9],[35,18],[60,38],[80,65],[100,148]])*enemyAcceleration(fl);
+const enemyDMGScale=fl=>curve(fl,[[1,.18],[5,.30],[10,.55],[20,1.35],[35,2.8],[60,6.8],[80,12],[100,29]])*enemyAcceleration(fl);
 // 各階層ボスは通常進行曲線に対して HP 2倍、攻撃力 1.5倍。
-const bossHPScale=fl=>2*curve(fl,[[5,.40],[10,.80],[20,1.8],[35,4.2],[60,9.5],[80,16],[110,48],[180,90],[300,162]]);
-const bossDMGScale=fl=>1.5*curve(fl,[[5,.25],[10,.45],[20,.9],[35,1.9],[60,4.5],[80,8],[110,26],[180,48],[300,87]]);
+const bossHPScale=fl=>2*curve(fl,[[5,.40],[10,.80],[20,1.8],[35,4.2],[60,9.5],[80,16],[100,37]])*enemyAcceleration(fl);
+const bossDMGScale=fl=>1.5*curve(fl,[[5,.25],[10,.45],[20,.9],[35,1.9],[60,4.5],[80,8],[100,20]])*enemyAcceleration(fl);
 function spawnE(k,x,y,fl,elite){
   const t=ET[k],hs=enemyHPScale(fl),ds=enemyDMGScale(fl);
   const e={k,n:t.n,x,y,r:t.r,sp:t.sp,aR:t.aR,cd:t.cd,cdT:rr(0,t.cd),xp:t.xp,col:t.col,sz:t.sz,
@@ -1208,7 +1220,7 @@ function pDmg(base,mul){const p=S.p;
 function hurtE(e,dmg,crit,kx,ky,quiet){
   if(e.hp<=0)return;
   const resonanceNow=resonance(),match=elementMultiplier(resonanceNow.element,e.element),weak=match>1;
-  dmg*=Math.max(.5,match*resonanceNow.damage*(e.boss?1:(e.eleRes&&e.eleRes[resonanceNow.element]||1)));
+  dmg*=resonanceDamageMultiplier(resonanceNow,e.element,S.floor)*(e.boss?1:(e.eleRes&&e.eleRes[resonanceNow.element]||1));
   if(e.weaken>0)dmg/=.75; // 弱体の霧: 敵防御を25%低下した結果を被ダメージへ反映
   if(e.shield>0){const a=Math.min(e.shield,dmg);e.shield-=a;dmg-=a;
     dnum(e.x,e.y,a,"#d8d040");if(dmg<=0){e.flash=CFG.FLASH_T;return;}}
@@ -1282,19 +1294,13 @@ function hitPotsCone(x,y,face,range,arc){let hit=false;for(const q of S.props){
   if(q.t!=="barrel"||q.hp<=0)continue;const d=Math.hypot(q.x-x,q.y-y);if(d>range+.35)continue;
   let a=Math.atan2(q.y-y,q.x-x)-face;while(a>Math.PI)a-=TAU;while(a<-Math.PI)a+=TAU;
   if(Math.abs(a)<=arc)hit=breakPot(q)||hit;}return hit;}
-function gainXP(v){const b=S.base;
-  if(b.lv>=CFG.LV_CAP){
-    b.xp=(b.xp||0)+v;const need=xpNeed(CFG.LV_CAP-1);let gained=0;
-    while(b.xp>=need){b.xp-=need;b.para=(b.para||0)+1;b.pts++;gained++;}
-    if(gained){S.p.d=derive();recalcHP(S.p);SFX.lvl();save();toast(`パラゴン +${gained}：能力ポイント +${gained}`);}
-    updHUD();return;}
-  b.xp+=v;
-  while(b.lv<CFG.LV_CAP&&b.xp>=xpNeed(b.lv)){
+function gainXP(v){const b=S.base;b.xp+=v;
+  while(b.xp>=xpNeed(b.lv)){
     b.xp-=xpNeed(b.lv);b.lv++;b.pts+=CFG.STAT_PER_LV;
     S.p.d=derive();recalcHP(S.p);SFX.lvl();save();}   // 即保存: 死んでもレベルは残る
   updHUD();}
 function forceLevel(lv){
-  const b=S.base,next=clamp(Math.floor(lv),1,CFG.LV_CAP),gained=Math.max(0,next-b.lv);
+  const b=S.base,next=Math.max(1,Math.floor(lv)),gained=Math.max(0,next-b.lv);
   b.lv=next;b.xp=0;b.pts+=gained*CFG.STAT_PER_LV;
   S.p.d=derive();recalcHP(S.p);
   if(gained){SFX.lvl();toast(`Lv${next}：能力ポイント +${gained*CFG.STAT_PER_LV}`);}
@@ -1303,7 +1309,7 @@ function hurtP(dm,cause,force,attackerElement="neutral"){const p=S.p;if(S.traini
   if(rnd()<dodgeRate()){p.hurtT=.16;
     S.nums.push({x:p.x,y:p.y,v:0,txt:"回避",t:0,c:"#8ad8ff"});
     tone(900,.06,"sine",.06,1300);return;}
-  const incoming=attackerElement,r=resonance(),elementGuard=incoming===r.element?r.resist:1;
+  const incoming=attackerElement,r=resonance(),elementGuard=resonanceIncomingMultiplier(r,incoming);
   const d=dm*elementGuard*(1-Math.min(.8,p.d.dr+p.mDr+p.sDr+p.buffDr+(p.itemBuffs.hard?(armorDR(p.d.armor*1.12)-armorDR(p.d.armor))*(p.d.C.defMul||1):0)+p.guardS*.2));
   p.hp-=d;p.lastHit=0;if(p.returnCast>0){p.returnCast=0;p.returnSlot=-1;toast("帰還詠唱が中断された","ng");}p.hurtT=.42;S.flash=.18;shk(CFG.SHAKE_HURT);SFX.hurt();buzz(38);
   dnum(p.x,p.y,d,"#ff6060");
@@ -2165,8 +2171,8 @@ function updHUD(){
   $("mpF").style.width=(p.mp/p.d.mpMax*100)+"%";
   $("mpT").textContent="MP "+Math.floor(p.mp)+"/"+p.d.mpMax;
   const b=S.base;
-  $("xpF").style.width=(b.xp/(b.lv>=CFG.LV_CAP?xpNeed(CFG.LV_CAP-1):xpNeed(b.lv))*100)+"%";
-  $("lvT").textContent="Lv"+b.lv+(b.para?"+"+b.para:"");
+  $("xpF").style.width=(b.xp/xpNeed(b.lv)*100)+"%";
+  $("lvT").textContent="Lv"+b.lv;
   const dg=dangerOf(S.floor);
   $("flT").innerHTML=S.floor+' <span style="color:'+dg.c+';font-size:9px">'+dg.n+'</span>';
   $("goldT").textContent=S.gold+" G";
@@ -2465,7 +2471,7 @@ function renderSettings(b,after,inDungeon){
   const number=(label,initial,fn,min=-999999999,max=999999999)=>{const v=prompt(label,String(initial));if(v===null||!Number.isFinite(+v))return;fn(clamp(+v,min,max));S.p.d=derive();recalcHP(S.p);save();after();};
   const grid=document.createElement("div");grid.className="adminGrid";b.appendChild(grid);const action=(label,fn)=>{const d=document.createElement("div");d.className="btn gh";d.textContent=label;tapEl(d,fn);grid.appendChild(d);};
   // デバッグモードは検証に必要な3項目だけ。管理者モードでは全項目を開放する。
-  action("レベル",()=>number("レベル",S.base.lv,v=>forceLevel(v),1,CFG.LV_CAP));action("ゴールド",()=>number("所持ゴールド",S.gold,v=>S.gold=Math.floor(v),0));action("最深階層",()=>number("最深階層",S.deepest,v=>S.deepest=Math.floor(v),1));
+  action("レベル",()=>number("レベル",S.base.lv,v=>forceLevel(v),1));action("ゴールド",()=>number("所持ゴールド",S.gold,v=>S.gold=Math.floor(v),0));action("最深階層",()=>number("最深階層",S.deepest,v=>S.deepest=Math.floor(v),1));
   if(!S.admin)return;
   action("課金通貨",()=>number("課金通貨",S.premium,v=>S.premium=Math.floor(v),0));action("スタミナ",()=>number("スタミナ",S.stamina,v=>S.stamina=v,0,100));action("経験値",()=>number("経験値",S.base.xp,v=>S.base.xp=v,0));action("能力pt",()=>number("未割当ポイント",S.base.pts,v=>S.base.pts=Math.floor(v),0));action("回復薬",()=>number("回復薬",S.consumables.heal||0,v=>S.consumables.heal=Math.floor(v),0,999));
   for(const [k,n] of STATDEF)action(n,()=>number(n,S.base[k],v=>S.base[k]=v));
@@ -2480,7 +2486,7 @@ function openRecords(after=openTown){const r=S.log.runs;invMenu("記録",c=>{
   const d=document.createElement("div");d.className="card";d.innerHTML=`
     <div class="stat"><span>最深到達</span><b>${S.deepest}</b></div><div class="stat"><span>潜行回数</span><b>${r.length}</b></div>
     <div class="stat"><span>生還</span><b>${r.filter(x=>x.alive).length}</b></div><div class="stat"><span>累計撃破</span><b>${r.reduce((a,x)=>a+(x.kills||0),0)}</b></div>
-    <div class="stat"><span>次のレベルまで</span><b>${S.base.lv>=CFG.LV_CAP?"—":(xpNeed(S.base.lv)-S.base.xp)+" exp"}</b></div>`;c.appendChild(d);
+    <div class="stat"><span>次のレベルまで</span><b>${xpNeed(S.base.lv)-S.base.xp} exp</b></div>`;c.appendChild(d);
   const ta=document.createElement("textarea");ta.readOnly=true;ta.value=JSON.stringify({runs:r.length,extracted:r.filter(x=>x.alive).length,deepest:S.deepest,detail:r},null,1);c.appendChild(ta);
   const cp=document.createElement("div");cp.className="btn gh";cp.textContent="ログをコピー";tapEl(cp,()=>{ta.select();try{navigator.clipboard.writeText(ta.value);}catch(e){document.execCommand("copy");}toast("コピーしました");});c.appendChild(cp);},after);}
 
@@ -2832,15 +2838,21 @@ function load(){try{
   S.unlockedCharacters=d.unlockedCharacters||["warrior:gai"];S.tutorial=d.tutorial||{phase:"done",gearIndex:0};S.returnInvulnerable=!!d.returnInvulnerable;
   S.formation=(d.formation||[]).filter(k=>S.unlockedCharacters.includes(k)).slice(0,formationCapacity());S.diveFloor=d.diveFloor||1;S.daily=d.daily||null;S.stamina=d.daily?clamp(d.stamina==null?3:d.stamina,0,3):3;ensureDaily();S.premium=d.premium||0;S.paidInventory=Object.assign({catalysts:[],feathers:[],slots:[]},d.paidInventory||{});S.profileAvatar=d.profileAvatar||null;S.shopSub=d.shopSub||"gacha";S.gearSub=d.gearSub||"equip";
   if(!S.avatars[S.cls])S.avatars[S.cls]=CHARACTERS[S.cls][0].id;
-  const normalizeBase=raw=>{const b=Object.assign({lv:1,xp:0,pts:0,para:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0},raw||{});
-    // 旧版の para は効果のない累計値だったため、初回ロード時だけ未使用能力点へ返す。
-    if(!b.paraConverted&&b.para>0){b.pts+=b.para;b.paraConverted=true;}return b;};
+  const normalizeBase=raw=>{const b=Object.assign({lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0},raw||{});
+    if(!b.xpCurveV2){
+      const oldLv=Math.max(1,b.lv|0),oldExtra=Math.max(0,b.para|0);
+      const total=legacyXpCum(oldLv)+(b.xp||0)+oldExtra*Math.max(10,legacyXpCum(100)-legacyXpCum(99));
+      let lv=1;while(xpCum(lv+1)<=total)lv++;
+      b.pts=Math.max(0,(b.pts||0)+(lv-1)*CFG.STAT_PER_LV-((oldLv-1)*CFG.STAT_PER_LV+oldExtra));
+      b.lv=lv;b.xp=total-xpCum(lv);b.xpCurveV2=true;
+    }
+    delete b.para;delete b.paraConverted;return b;};
   const nb=normalizeBase(d.base);
   delete nb.need;
   if(nb.dex!==undefined||nb.vit!==undefined){   // 旧スキーマは全部振り直しにして返す
     nb.pts+=(nb.str|0)+(nb.dex|0)+(nb.vit|0)+(nb.ene|0)+(nb.luk|0);
     nb.str=nb.mag=nb.def=nb.agi=nb.spi=nb.luk=0;
-    delete nb.dex;delete nb.vit;delete nb.ene;delete nb.para;}
+    delete nb.dex;delete nb.vit;delete nb.ene;}
   S.base=nb;
   for(const st of Object.values(S.characterStates)){st.base=normalizeBase(st.base);const fixed=emptyGear();for(const it of Object.values(st.gear||{})){const x=fix(it);if(x&&!fixed[x.slot])fixed[x.slot]=x;}st.gear=fixed;}
   const active=S.characterStates[activeCharacterKey()];if(active){S.base=active.base;S.gear=active.gear;}else S.characterStates[activeCharacterKey()]={base:S.base,gear:S.gear};
