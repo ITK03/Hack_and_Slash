@@ -431,6 +431,8 @@ const CFG={
   XP_MID_GROWTH:1.067,   // Lv40〜100の累積XP伸び率
   XP_HIGH_GROWTH:1.217,  // Lv100以降。将来の進行緩和はこの定数だけを下げる
   ENEMY_ACCEL_START:100,ENEMY_ACCEL_GROWTH:1.06,
+  CORE_DAILY_CAP:3,CORE_HOLD_CAP:16,CORE_WEEKLY_PURCHASE_CAP:6,
+  BREAKTHROUGH_CORE_COST:[0,80,90,100,110,120],
   SKIP_STEP:5,        // 何層ごとにスキップ開始地点を選べるか
   SHRINE_CHANCE:.30,  // フロアに祭壇が出る確率
   SHARD_DROP:.13, SHARD_HEAL:.045,   // 拾った瞬間に少し回復する欠片
@@ -601,6 +603,12 @@ const CHARACTERS={
 const currentCharacter=()=>{
   const list=CHARACTERS[S.cls]||[],id=S.avatars[S.cls];
   return list.find(x=>x.id===id)||list[0];};
+const breakthroughLevel=key=>clamp((S.breakthroughs&&S.breakthroughs[key])||0,0,5);
+const breakthroughStatMul=level=>[1,1.06,1.06,1.12,1.12,1.20][clamp(level|0,0,5)];
+function breakthroughWithCore(key){const lv=breakthroughLevel(key);if(lv>=5)return false;S.breakthroughProgress=S.breakthroughProgress||{};const need=CFG.BREAKTHROUGH_CORE_COST[lv+1],paid=S.breakthroughProgress[key]||0,use=Math.min(materialCount("core"),need-paid);if(use<=0)return false;spendAny("core",use);if(paid+use>=need){S.breakthroughs[key]=lv+1;S.breakthroughProgress[key]=0;}else S.breakthroughProgress[key]=paid+use;save();return true;}
+function awardCharacter(key){const lv=breakthroughLevel(key);if(!S.unlockedCharacters.includes(key)){S.unlockedCharacters.push(key);return{kind:"unlock",level:0};}if(lv<5){S.breakthroughs[key]=lv+1;return{kind:"breakthrough",level:lv+1};}const converted=addMat("core",materialTier(S.deepest),3);return{kind:"core",cores:converted};}
+const SUPPORT_ELEMENTS={"warrior:gai":"fire","warrior:luca":"wood","warrior:baldo":"dark","mage:mira":"water","mage:noa":"light","mage:iris":"dark"};
+function formationElementSupport(element){return (S.formation||[]).slice(1).filter(key=>S.unlockedCharacters.includes(key)&&SUPPORT_ELEMENTS[key]===element).length*.02;}
 
 /* ---------- 装備 ---------- */
 const SLOTS=[
@@ -829,7 +837,7 @@ const materialTier=depth=>Math.max(1,Math.ceil(Math.log2(Math.max(1,Number(depth
 const materialScale=depth=>Math.max(1,Math.ceil(Math.sqrt(Math.max(1,Number(depth)||1)/10)));
 const MAT_QTY=[1,2,5,12,30],crystalQty=it=>MAT_QTY[clamp(it.rar|0,0,4)]*materialScale(it.ilvl);
 const matBucket=kind=>S.mats[kind]||(S.mats[kind]={});
-const addMat=(kind,tier,n=1)=>{const b=matBucket(kind),k=Math.max(1,tier|0);b[k]=(b[k]||0)+n;};
+const addMat=(kind,tier,n=1)=>{const b=matBucket(kind),k=Math.max(1,tier|0);if(kind==="core")n=Math.max(0,Math.min(n,CFG.CORE_HOLD_CAP-materialCount("core")));b[k]=(b[k]||0)+n;return n;};
 const matCapacity=(kind,minTier)=>Object.entries(matBucket(kind)).reduce((sum,[tier,n])=>
   +tier>=minTier?sum+n*Math.pow(4,+tier-minTier):sum,0);
 function spendMat(kind,minTier,units){
@@ -900,7 +908,7 @@ const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   settings:{map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0},admin:false,debug:false,debugFloor:1,adminOpts:{},chars:{},characterStates:{},avatars:{},
   combo:0,comboT:0,dmgLog:[],dps:0,startFloor:1,runGold:0,
   inv:{filters:[],sort:"score",sellSel:[],sellRar:1},mats:{crystal:{},core:{}},consumables:{},loadout:["heal",null,null,null],runItems:[0,0,0,0],itemSlot:0,
-  formation:[],partyIndex:0,diveFloor:1,stamina:3,premium:0,profileAvatar:null,shopSub:"gacha",alloc:null,
+  formation:[],partyIndex:0,diveFloor:1,stamina:3,premium:0,profileAvatar:null,shopSub:"gacha",alloc:null,breakthroughs:{},weeklyCore:{week:"",bought:0},beginnerClaimed:false,
   paidInventory:{catalysts:[],feathers:[],slots:[]},tactical:{trap:null,reveal:false},
   daily:null,dailyMatMul:1,
   unlockedCharacters:["warrior:gai"],tutorial:{phase:"training_intro",gearIndex:0},training:false,returnInvulnerable:false,
@@ -911,14 +919,20 @@ Object.assign(S.settings,{controlMode:"manual",autoPreset:"aggressive",automatio
 // 4:00の日次更新はこの関数だけで判定する。dailyClock はブラウザ検証で差し替え可能。
 let dailyClock=()=>new Date();
 function dailyDateKey(){const d=new Date(dailyClock().getTime()-4*60*60*1000);return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;}
-const newDaily=()=>({date:dailyDateKey(),clear:0,kills:0,dismantled:0,claimed:[false,false,false],allClaimed:false});
+const newDaily=()=>({date:dailyDateKey(),clear:0,kills:0,dismantled:0,coreEarned:0,claimed:[false,false,false],allClaimed:false});
 function ensureDaily(){const key=dailyDateKey();if(!S.daily||S.daily.date!==key){S.daily=newDaily();S.stamina=3;}return S.daily;}
 const dailyClearTarget=()=>Math.max(1,Math.ceil(Math.max(1,S.deepest)/2));
 const dailyDone=i=>{const d=ensureDaily();return i===0?d.clear>=dailyClearTarget():i===1?d.kills>=200:d.dismantled>=5;};
 function dailyProgress(kind,n=1){const d=ensureDaily();if(kind==="clear")d.clear=Math.max(d.clear,n);else d[kind]=(d[kind]||0)+n;}
+function earnCore(tier,n=1){const d=ensureDaily(),allowed=Math.max(0,Math.min(n,CFG.CORE_DAILY_CAP-(d.coreEarned||0))),added=addMat("core",tier,allowed);d.coreEarned=(d.coreEarned||0)+added;return added;}
 function beginDailyDive(){ensureDaily();S.dailyMatMul=S.stamina>0?2:1;if(S.stamina>0)S.stamina--;return S.dailyMatMul;}
 function claimDaily(i){const d=ensureDaily();if(i<0||i>2||d.claimed[i]||!dailyDone(i))return false;d.claimed[i]=true;const tier=materialTier(S.deepest),crystals=[10,15,10][i],gold=[500,1000,700][i];addMat("crystal",tier,crystals);S.gold+=gold;save();return true;}
-function claimDailyAll(){const d=ensureDaily();if(d.allClaimed||![0,1,2].every(dailyDone))return false;d.allClaimed=true;addMat("core",materialTier(S.deepest),1);save();return true;}
+function claimDailyAll(){const d=ensureDaily();if(d.allClaimed||![0,1,2].every(dailyDone))return false;d.allClaimed=true;earnCore(materialTier(S.deepest),1);save();return true;}
+const weekKey=()=>{const d=dailyClock(),first=new Date(d.getFullYear(),0,1),day=Math.floor((d-first)/86400000);return `${d.getFullYear()}-${Math.floor((day+first.getDay())/7)}`;};
+function buyWeeklyCore(n=1){const key=weekKey();if(S.weeklyCore.week!==key)S.weeklyCore={week:key,bought:0};n=Math.min(n,CFG.CORE_WEEKLY_PURCHASE_CAP-S.weeklyCore.bought,CFG.CORE_HOLD_CAP-materialCount("core"));const cost=n*100;if(n<=0||S.premium<cost)return 0;S.premium-=cost;S.weeklyCore.bought+=n;return addMat("core",materialTier(S.deepest),n);}
+const beginnerTarget=()=>CFG.ENEMY_ACCEL_START;
+function progressionDaysToContent(divePerDay,lateStartDays=0){const coreDays=Math.ceil(500/CFG.CORE_DAILY_CAP),xpDays=Math.ceil(750/Math.max(1,divePerDay));const days=Math.max(coreDays,xpDays);return lateStartDays?Math.min(300,days+Math.ceil(lateStartDays/4)):days;}
+function claimBeginnerMission(){if(S.beginnerClaimed)return false;const target=beginnerTarget();forceLevel(Math.max(1,Math.floor(target*.6)));for(const slot of SLOTK){let it;do it=makeItem(target*.6,0,0,2);while(it.slot!==slot||(it.ac&&it.ac!==S.cls));S.stash.push(it);}S.beginnerClaimed=true;save();return true;}
 
 const TUTORIAL_SLOTS=["weapon","helm","armor","glove","boot","ring","amulet"];
 function tutorialItem(slot){
@@ -1002,15 +1016,17 @@ function derive(){
     for(const a of it.affs)t[a.id]=(t[a.id]||0)+a.v*itemBaseMultiplier(it);
     if(it.pw&&!pw.includes(it.pw))pw.push(it.pw);}
   if(S.admin)for(const k in S.adminOpts)t[k]=(t[k]||0)+(Number(S.adminOpts[k])||0);
-  const str=C.str+b.str,mag=C.mag+b.mag,def=C.def+b.def,
-        agi=C.agi+b.agi+t.agiF,spi=C.spi+b.spi,luk=C.luk+b.luk+t.luk+t.lukF+(ch.luk||0),lv=b.lv;
+  const bt=breakthroughLevel(activeCharacterKey()),baseMul=breakthroughStatMul(bt);
+  const str=(C.str+b.str)*baseMul,mag=(C.mag+b.mag)*baseMul,def=(C.def+b.def)*baseMul,
+        agi=(C.agi+b.agi)*baseMul+t.agiF,spi=(C.spi+b.spi)*baseMul,luk=(C.luk+b.luk)*baseMul+t.luk+t.lukF+(ch.luk||0),lv=b.lv;
   // 旧「ダメージ軽減」と旧「攻撃力」は、同程度の固定能力値へ統合する。
   const armor=t.armor+t.dr*1.5+def*1.1;
   const manaPw=pw.includes("mana")?1.5:1;
-  const physAtk=t.atk+t.atkP+str*.92+lv*2.1,specAtk=t.matk+t.atkP+mag*.92+lv*2.1;
+  const support=formationElementSupport(resonance().element),traitAtk=(bt>=2?1.025:1)*(1+support),traitHP=(bt>=4?1.025:1)*(1+support),traitOne=bt>=5?1.02:1;
+  const physAtk=(t.atk+t.atkP+str*.92+lv*2.1)*traitAtk,specAtk=(t.matk+t.atkP+mag*.92+lv*2.1)*traitAtk;
   const bonusAgi=b.agi+t.agiF;
   return {C,pw,opt:t,str,mag,def,agi,spi,luk,physAtk,specAtk,
-    max:Math.round((C.hp+lv*17+t.hp)*(ch.hp||1)),
+    max:Math.round((C.hp+lv*17+t.hp)*(ch.hp||1)*traitHP*traitOne),
     atkFlat:(C.atkStat==="mag"?specAtk:physAtk), armor,
     rng:1+t.rng/100,
     crit:.05+agi*.0022+t.crit/100+(ch.crit||0), cdmg:1.8+t.cdmg/100,
@@ -1648,7 +1664,7 @@ function update(dt){
       const pull=Math.min(dist,CFG.MAGNET_SPEED*dt);d.x+=(p.x-d.x)/dist*pull;d.y+=(p.y-d.y)/dist*pull;}
     const pr=CFG.PICKUP_RADIUS;
     if(d.t>=CFG.PICKUP_DELAY&&d2(d.x,d.y,p.x,p.y)<pr*pr){
-      if(d.mat){const n=(d.n||1)*(S.dailyMatMul||1);addMat(d.mat,d.tier,n);SFX.gold();toast(`${d.mat==="core"?"核":"結晶"} 階梯${d.tier} +${n}`);}
+      if(d.mat){const n=(d.n||1)*(S.dailyMatMul||1),added=d.mat==="core"?earnCore(d.tier,n):addMat(d.mat,d.tier,n);SFX.gold();if(added)toast(`${d.mat==="core"?"核":"結晶"} 階梯${d.tier} +${added}`);}
       else if(d.shard){
         p.hp=Math.min(p.max,p.hp+p.max*CFG.SHARD_HEAL);
         burst(p.x,p.y,"#6ae0a0",6,1);tone(760,.07,"sine",.08,1040);}
@@ -2408,9 +2424,9 @@ function renderTown(){
     }
     else if(S.shopSub==="gacha"){
       const gacha=(name,cost,kind,draw)=>{const phase=(S.tutorial||{}).phase,free=phase===(kind==="equip"?"equip_gacha":"char_gacha");add(`<div class="card"><div class="nm">${name}</div><div class="st">${free?"チュートリアル初回無料":`課金通貨 ${cost} ◆ で1回引けます。`}</div></div>`);const d=btn(free?"無料で1回引く":`1回引く — ${cost} ◆`,free||S.premium>=cost?"gold":"no",()=>{if(!free&&S.premium<cost)return;const run=()=>{if(!free)S.premium-=cost;const result=draw(free);save();openTown();showGachaResult(result.title,result.html);};free?run():ask(name,`${cost} ◆ を使ってガチャを引きます。`,run);});d.dataset.tutorial=kind+"-gacha";};
-      gacha("キャラクターガチャ",300,"char",free=>{const locked=allRoster().filter(x=>!S.unlockedCharacters.includes(x.k+":"+x.ch.id)),entry=free?allRoster().find(x=>x.ch.id==="mira"):pick(locked.length?locked:allRoster()),{k,ch}=entry,key=k+":"+ch.id;if(!S.unlockedCharacters.includes(key))S.unlockedCharacters.push(key);S.profileAvatar=key;if(free)S.tutorial.phase="formation";SFX.lvl();return{title:"キャラクター獲得",html:`<div style="color:${ch.col};font-size:58px">●</div><div class="nm">${ch.n}</div><div class="st">${CLASSES[k].name} / ${ch.trait}</div>`};});
+      gacha("キャラクターガチャ",300,"char",free=>{const locked=allRoster().filter(x=>!S.unlockedCharacters.includes(x.k+":"+x.ch.id)),entry=free?allRoster().find(x=>x.ch.id==="mira"):pick(locked.length?locked:allRoster()),{k,ch}=entry,key=k+":"+ch.id,result=awardCharacter(key);S.profileAvatar=key;if(free)S.tutorial.phase="formation";SFX.lvl();return{title:result.kind==="unlock"?"キャラクター獲得":result.kind==="breakthrough"?`限界突破 ${result.level}凸`:"最大突破重複",html:`<div style="color:${ch.col};font-size:58px">●</div><div class="nm">${ch.n}</div><div class="st">${result.kind==="core"?`核 +${result.cores}`:`${CLASSES[k].name} / ${ch.trait}`}</div>`};});
       gacha("装備ガチャ",200,"equip",free=>{const it=makeItem(Math.max(1,S.deepest),.6,S.p.d.luk,free?2:Math.max(1,ri(1,4)));S.stash.push(it);if(free)S.tutorial.phase="char_gacha";SFX.chest();return{title:"装備獲得",html:`<div class="${RC[it.rar]}">${icon(iconKey(it),54)}</div><div class="nm ${RC[it.rar]}">${it.name}</div><div class="st">${CFG.RARITY[it.rar][0]} / ${SLOTN(it.slot)}</div>`};});}
-    else {add(`<div class="card"><div class="nm">ジェムショップ</div><div class="st">課金限定効果はありません。時短・保険・枠のみ（決済はダミー）。所有物は個体IDで記録されます。</div></div>`);for(const [kind,name,cost,desc] of [["catalysts","純化触媒",120,"下位結晶4個を上位1個へ即時変換"],["feathers","復活の羽",180,"1潜行1回、その場で復活し戦利品保持"],["slots","持ち込み枠+1",500,"恒久。最大6枠（2回まで）"]]){const n=(S.paidInventory[kind]||[]).length,d=document.createElement("div");d.className="card recipe";d.innerHTML=`<div><div class="nm">${name}（所有 ${n}）</div><div class="st">${desc}</div></div>`;const x=document.createElement("div");x.className="btn "+(S.premium>=cost&&(kind!=="slots"||n<2)?"gold":"no");x.textContent=cost+" ◆";tapEl(x,()=>{if(buyPaid(kind,cost)){toast(name+"を購入","ok");openTown();}});d.appendChild(x);b.appendChild(d);}}}
+    else {add(`<div class="card"><div class="nm">ジェムショップ</div><div class="st">週次上限付きの核と時短・保険・枠（決済はダミー）。</div></div>`);{const left=CFG.CORE_WEEKLY_PURCHASE_CAP-(S.weeklyCore.week===weekKey()?S.weeklyCore.bought:0),d=document.createElement("div");d.className="card recipe";d.innerHTML=`<div><div class="nm">核 1個（今週残り ${left}）</div><div class="st">保有上限 ${CFG.CORE_HOLD_CAP}</div></div>`;const x=document.createElement("div");x.className="btn "+(left>0&&S.premium>=100?"gold":"no");x.textContent="100 ◆";tapEl(x,()=>{if(buyWeeklyCore(1)){save();openTown();}});d.appendChild(x);b.appendChild(d);}for(const [kind,name,cost,desc] of [["catalysts","純化触媒",120,"下位結晶4個を上位1個へ即時変換"],["feathers","復活の羽",180,"1潜行1回、その場で復活し戦利品保持"],["slots","持ち込み枠+1",500,"恒久。最大6枠（2回まで）"]]){const n=(S.paidInventory[kind]||[]).length,d=document.createElement("div");d.className="card recipe";d.innerHTML=`<div><div class="nm">${name}（所有 ${n}）</div><div class="st">${desc}</div></div>`;const x=document.createElement("div");x.className="btn "+(S.premium>=cost&&(kind!=="slots"||n<2)?"gold":"no");x.textContent=cost+" ◆";tapEl(x,()=>{if(buyPaid(kind,cost)){toast(name+"を購入","ok");openTown();}});d.appendChild(x);b.appendChild(d);}}}
   if(S.tab==="conf")renderSettings(b,openTown,false);
 }
 
@@ -2435,6 +2451,8 @@ function renderPrepTab(b){
   ];
   rows.forEach((row,i)=>{const done=dailyDone(i),claimed=daily.claimed[i],card=document.createElement("div");card.className="card";card.innerHTML=`<div class="nm">${done?"✓ ":""}${row[0]}</div><div class="st">${row[1]} / ${row[2]} — 報酬 ${row[3]}</div>`;const take=document.createElement("div");take.className="btn "+(done&&!claimed?"gold":"no");take.textContent=claimed?"受取済み":done?"受け取る":"未達成";tapEl(take,()=>{if(claimDaily(i)){SFX.chest();toast("日替わり任務の報酬を受け取った","ok");openTown();}});card.appendChild(take);b.appendChild(card);});
   const allDone=[0,1,2].every(dailyDone),all=document.createElement("div");all.className="btn "+(allDone&&!daily.allClaimed?"gold":"no");all.textContent=daily.allClaimed?"全達成ボーナス受取済み":allDone?`全達成ボーナスを受け取る — 階梯${tier}核1個`:"全達成ボーナス — 核1個";tapEl(all,()=>{if(claimDailyAll()){SFX.chest();toast("全達成ボーナス：核 +1","ok");openTown();}});b.appendChild(all);
+  if(!S.beginnerClaimed){const beginner=document.createElement("div");beginner.className="btn gold";beginner.textContent=`初心者ミッション報酬（基準 ${beginnerTarget()}F）`;tapEl(beginner,()=>{if(claimBeginnerMission())openTown();});b.appendChild(beginner);}
+  {const key=activeCharacterKey(),lv=breakthroughLevel(key),need=lv<5?CFG.BREAKTHROUGH_CORE_COST[lv+1]:0,paid=(S.breakthroughProgress||{})[key]||0,d=document.createElement("div");d.className="card";d.innerHTML=`<div class="nm">${currentCharacter().n} ${lv}凸 / 5凸</div><div class="st">${lv<5?`次段階：核 ${paid}/${need}`:"最大突破"}</div>`;if(lv<5){const x=document.createElement("div");x.className="btn "+(materialCount("core")?"gold":"no");x.textContent="核を投入";tapEl(x,()=>{breakthroughWithCore(key);openTown();});d.appendChild(x);}b.appendChild(d);}
   const roster=unlockedRoster(),cap=formationCapacity();
   const h=document.createElement("h3");h.textContent=`潜入編成（現在${cap}人 / 最大4人）`;b.appendChild(h);
   const g=document.createElement("div");g.className="formation";
@@ -2806,7 +2824,7 @@ const KEY="descent_v5";
 function save(){storeActiveCharacter();try{localStorage.setItem(KEY,JSON.stringify({cls:S.cls,deepest:S.deepest,
   gold:S.gold,stash:S.stash,gear:S.gear,base:S.base,log:S.log,mats:S.mats,consumables:S.consumables,loadout:S.loadout,consumableVersion:1,
   matTierVersion:2,
-  settings:S.settings,admin:S.admin,debug:S.debug,debugFloor:S.debugFloor,adminOpts:S.adminOpts,chars:S.chars,characterStates:S.characterStates,avatars:S.avatars,formation:S.formation,diveFloor:S.diveFloor,stamina:S.stamina,daily:S.daily,premium:S.premium,paidInventory:S.paidInventory,profileAvatar:S.profileAvatar,shopSub:S.shopSub,gearSub:S.gearSub,unlockedCharacters:S.unlockedCharacters,tutorial:S.tutorial,returnInvulnerable:S.returnInvulnerable}));}catch(e){}}
+  settings:S.settings,admin:S.admin,debug:S.debug,debugFloor:S.debugFloor,adminOpts:S.adminOpts,chars:S.chars,characterStates:S.characterStates,avatars:S.avatars,formation:S.formation,diveFloor:S.diveFloor,stamina:S.stamina,daily:S.daily,premium:S.premium,paidInventory:S.paidInventory,profileAvatar:S.profileAvatar,shopSub:S.shopSub,gearSub:S.gearSub,unlockedCharacters:S.unlockedCharacters,tutorial:S.tutorial,returnInvulnerable:S.returnInvulnerable,breakthroughs:S.breakthroughs,breakthroughProgress:S.breakthroughProgress,weeklyCore:S.weeklyCore,beginnerClaimed:S.beginnerClaimed}));}catch(e){}}
 function load(){try{
   const d=JSON.parse(localStorage.getItem(KEY)||"null");
   if(!d||!d.cls||!CLASSES[d.cls])return false;
@@ -2834,7 +2852,7 @@ function load(){try{
   S.gear=ng;
   S.consumables=Object.assign({},d.consumables||{});if(!d.consumableVersion)S.consumables.heal=(S.consumables.heal||0)+3;S.loadout=(d.loadout||["heal",null,null,null]).slice(0,6);while(S.loadout.length<loadoutCapacity())S.loadout.push(null);S.runItems=[0,0,0,0];S.log=d.log||{runs:[]};
   S.settings=Object.assign({map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0,controlMode:"manual",autoPreset:"aggressive",automationEditor:0},d.settings||{});
-  S.admin=!!d.admin;S.debug=!!d.debug;S.debugFloor=d.debugFloor||1;S.adminOpts=d.adminOpts||{};S.chars=d.chars||{};S.characterStates=d.characterStates||{};S.avatars=d.avatars||{};
+  S.admin=!!d.admin;S.debug=!!d.debug;S.debugFloor=d.debugFloor||1;S.adminOpts=d.adminOpts||{};S.chars=d.chars||{};S.characterStates=d.characterStates||{};S.avatars=d.avatars||{};S.breakthroughs=d.breakthroughs||{};S.breakthroughProgress=d.breakthroughProgress||{};S.weeklyCore=d.weeklyCore||{week:"",bought:0};S.beginnerClaimed=!!d.beginnerClaimed;
   S.unlockedCharacters=d.unlockedCharacters||["warrior:gai"];S.tutorial=d.tutorial||{phase:"done",gearIndex:0};S.returnInvulnerable=!!d.returnInvulnerable;
   S.formation=(d.formation||[]).filter(k=>S.unlockedCharacters.includes(k)).slice(0,formationCapacity());S.diveFloor=d.diveFloor||1;S.daily=d.daily||null;S.stamina=d.daily?clamp(d.stamina==null?3:d.stamina,0,3):3;ensureDaily();S.premium=d.premium||0;S.paidInventory=Object.assign({catalysts:[],feathers:[],slots:[]},d.paidInventory||{});S.profileAvatar=d.profileAvatar||null;S.shopSub=d.shopSub||"gacha";S.gearSub=d.gearSub||"equip";
   if(!S.avatars[S.cls])S.avatars[S.cls]=CHARACTERS[S.cls][0].id;

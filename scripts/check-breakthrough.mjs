@@ -1,0 +1,20 @@
+import { loadGame } from './game-env.mjs';
+const game=await loadGame();
+const r=game.run(()=>{
+ S.mats={crystal:{},core:{}};S.daily=null;dailyClock=()=>new Date(2026,0,1,5);ensureDaily();
+ for(let i=0;i<20;i++)earnCore(1,1);const capped=materialCount('core'),dailyEarned=S.daily.coreEarned;
+ S.daily.coreEarned=0;addMat('core',1,100);const held=materialCount('core');
+ S.mats.core={};S.unlockedCharacters=['warrior:gai'];S.breakthroughs={'warrior:gai':5};const duplicate=awardCharacter('warrior:gai');
+ const before=breakthroughLevel('warrior:gai');for(let i=0;i<10;i++)awardCharacter('warrior:gai');const after=breakthroughLevel('warrior:gai');
+ const freeDays=CFG.BREAKTHROUGH_CORE_COST.slice(1).reduce((a,n)=>a+n,0)/CFG.CORE_DAILY_CAP;
+ const beginnerBefore=beginnerTarget();CFG.ENEMY_ACCEL_START=120;const beginnerAfter=beginnerTarget();
+ S.premium=9999;S.weeklyCore={week:'',bought:0};S.mats.core={};let bought=0;for(let i=0;i<20;i++)bought+=buyWeeklyCore(1);
+ const days={login:progressionDaysToContent(2.5),hardcore:progressionDaysToContent(15),catchup:progressionDaysToContent(15,180)};return{days,capped,dailyEarned,held,duplicate,before,after,freeDays,beginnerBefore,beginnerAfter,bought,weekly:S.weeklyCore.bought};
+});
+console.log('核律速・限界突破実測',r);
+if(r.days.login<180||r.days.login>365||r.days.hardcore<90||r.days.hardcore>180||r.days.login/r.days.hardcore>2||r.days.catchup>300)throw new Error('到達日数シミュレーションが範囲外');
+if(r.dailyEarned!==3||r.held!==16)throw new Error('核の日次・保有上限が不正');
+if(r.before!==5||r.after!==5||r.duplicate.kind!=='core'||r.duplicate.cores!==3)throw new Error('5凸上限または重複変換が不正');
+if(r.freeDays<150||r.freeDays>250)throw new Error(`無課金5凸 ${r.freeDays}日は範囲外`);
+if(r.beginnerBefore!==100||r.beginnerAfter!==120)throw new Error('初心者配布がコンテンツ上限に連動しない');
+if(r.weekly!==6||r.bought!==6)throw new Error('課金核の週次上限が不正');
