@@ -178,7 +178,7 @@ for (const [mode, label] of [['auto', '完全オート'], ['onehand', '片手']]
   if (row.attackTicks <= 0) throw new Error(`${label}は60秒で一度も通常攻撃の射程に入れていない`);
 }
 if (report.operation.auto.stillSeconds > 20) throw new Error(`完全オートの静止 ${report.operation.auto.stillSeconds}秒が20秒を超えている`);
-if (report.tactical.difference < 1 || report.tactical.difference > 3) throw new Error(`戦術込み50%死亡深度差 ${report.tactical.difference} は+1〜+3でない`);
+if (report.tactical.difference < 5 || report.tactical.difference > 10) throw new Error(`戦術込み50%死亡深度差 ${report.tactical.difference} は+5〜+10でない`);
 // 守るべき設計不変条件は「手動が最も強い」こと。片手と完全オートは戦闘部分が
 // 同じ自動化なので、両者のあいだに厳密な大小を要求すると調整が恣意的になる。
 const [manualMode, onehandMode, autoMode] = report.modes;

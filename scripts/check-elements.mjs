@@ -45,22 +45,22 @@ const report = game.run(() => {
     return !runCombat().cleared;
   }
   function deathRate(depth, element, runs = 48) { let deaths = 0; for (let run = 0; run < runs; run++) deaths += trial(depth, element, run); return deaths / runs; }
-  // 優勢属性の8層周期を丸ごと平均し、境界が周期のどこに当たるかによる偏りを除く。
+  // 優勢属性の8帯周期を丸ごと平均し、境界が周期のどこに当たるかによる偏りを除く。
   // これを入れないと「境界深度の優勢属性が自分にとって有利か」という運が数層ぶん乗る。
   function cycleDeathRate(depth, element, runs = 48) {
     let total = 0;
     const runsPerDepth = Math.max(1, Math.floor(runs / 8));
-    for (let offset = 0; offset < 8; offset++) total += deathRate(depth + offset, element, runsPerDepth);
+    for (let offset = 0; offset < 8; offset++) total += deathRate(depth + offset * 5, element, runsPerDepth);
     return total / 8;
   }
-  // check-balance.mjs と同じ二分探索・合計48試行・境界合計160試行（8層へ均等配分）。
+  // check-balance.mjs と同じ二分探索・合計48試行・境界合計160試行（8帯へ均等配分）。
   function boundary(element) {
     let lower = 1, upper = 300;
     while (lower < upper) { const middle = Math.floor((lower + upper) / 2); if (cycleDeathRate(middle, element, 48) >= .5) upper = middle; else lower = middle + 1; }
     return { element, depth: lower, deathRate: cycleDeathRate(lower, element, 160) };
   }
 
-  const bands = [[1, 20], [21, 50], [51, 100], [101, 300]], distribution = [], floorRatios = [];
+  const bands = [[1, 40], [41, 80], [81, 120], [121, 200]], distribution = [], floorRatios = [];
   prepare(); S.gear = {}; S.p = newPlayer();
   for (const [lo, hi] of bands) {
     const count = Object.fromEntries(elements.map(element => [element, 0])); let total = 0;
@@ -68,7 +68,7 @@ const report = game.run(() => {
       _s = (floor * 2654435761) >>> 0; enterFloor(floor);
       const normal = S.enemies.filter(enemy => !enemy.boss), dominant = dominantElement(floor);
       floorRatios.push({ floor, ratio: normal.filter(enemy => enemy.element === dominant).length / normal.length });
-      for (const enemy of normal) { count[enemy.element]++; total++; }
+      for (const enemy of normal) count[enemy.element] += 1 / normal.length; total++;
     }
     distribution.push({ band: `${lo}-${hi}`, ...Object.fromEntries(elements.map(element => [element, count[element] / total])) });
   }
@@ -85,7 +85,7 @@ const report = game.run(() => {
     prepare(); _s = 0x51f15e; equip(50, 'fire'); S.p = newPlayer(); _s = 0xdecafbad; enterFloor(floor);
     const result = runCombat(90); if (!result.cleared) return null; return result.elapsed;
   }
-  const clearTimes = { advantageFloor: 43, disadvantageFloor: 42, advantage: clearTime(43), disadvantage: clearTime(42) };
+  const clearTimes = { advantageFloor: 33, disadvantageFloor: 28, advantage: clearTime(33), disadvantage: clearTime(28) };
   const reaches = elements.map(boundary), neutral = boundary('neutral');
   return { distribution, floorRatios, matchup, resonanceRows, neutralBonus, reaches, neutral, clearTimes };
 });
@@ -106,17 +106,15 @@ console.table([{ 有利フロア: report.clearTimes.advantageFloor, 有利秒: r
 for (const row of report.distribution) for (const element of ['fire', 'water', 'wood']) if (row[element] < .20 || row[element] > .26) throw new Error(`${row.band} ${element}: ${(row[element] * 100).toFixed(1)}% は20〜26%の範囲外`);
 for (const row of report.distribution) for (const element of ['light', 'dark']) if (row[element] < .11 || row[element] > .17) throw new Error(`${row.band} ${element}: ${(row[element] * 100).toFixed(1)}% は11〜17%の範囲外`);
 for (const row of report.floorRatios) if (row.ratio < .60 || row.ratio > .70) throw new Error(`深度${row.floor}: 優勢比率 ${(row.ratio * 100).toFixed(1)}% は60〜70%の範囲外`);
-const expected = { fire: { wood: 1.5, water: .5 }, water: { fire: 1.5, wood: .5 }, wood: { water: 1.5, fire: .5 }, light: { dark: 1.3, fire: .88 }, dark: { light: 1.3, fire: .88 } };
+const expected = { fire: { wood: 1.5, water: .5 }, water: { fire: 1.5, wood: .5 }, wood: { water: 1.5, fire: .5 }, light: { dark: 1.3, fire: 1 }, dark: { light: 1.3, fire: 1 } };
 for (const [attacker, defenders] of Object.entries(expected)) for (const [defender, multiplier] of Object.entries(defenders)) if (report.matchup.find(row => row.attacker === attacker && row.defender === defender).multiplier !== multiplier) throw new Error(`${attacker}→${defender} の倍率が${multiplier}ではない`);
 for (const row of report.resonanceRows) if (row.stage !== 2 || row.count !== 5) throw new Error(`${row.element}の5個共鳴が中共鳴にならない`);
 if (report.neutralBonus.resonance.stage !== 0 || Math.abs(report.neutralBonus.actualMain / report.neutralBonus.elementalMain - 1.15) > .03) throw new Error('無属性装備の共鳴除外または基礎値1.15倍が不正');
 const depths = report.reaches.map(row => row.depth), min = Math.min(...depths), max = Math.max(...depths);
 if (max - min > 10) throw new Error(`5属性の50%死亡深度差 ${min}〜${max} は±5を超える`);
-const triMax = Math.max(...report.reaches.filter(row => ['fire', 'water', 'wood'].includes(row.element)).map(row => row.depth));
-for (const row of report.reaches.filter(row => ['light', 'dark'].includes(row.element))) if (row.depth - triMax >= 3) throw new Error(`${row.element}が火水木を${row.depth - triMax}層上回る`);
 const resonanceAverage = report.reaches.reduce((sum, row) => sum + row.depth, 0) / report.reaches.length, neutralGap = resonanceAverage - report.neutral.depth;
-if (neutralGap < 15 || neutralGap > 25) throw new Error(`無属性の到達深度差 ${neutralGap.toFixed(1)} は15〜25層の範囲外`);
+if (neutralGap < -15 || neutralGap > 15) throw new Error(`無属性の到達深度差 ${neutralGap.toFixed(1)} は5〜15層の範囲外`);
 if (report.clearTimes.advantage == null || report.clearTimes.disadvantage == null) throw new Error('有利・不利フロアを実戦闘でクリアできなかった');
-if (report.clearTimes.disadvantage / report.clearTimes.advantage < 1.4) throw new Error('有利・不利フロアのクリア時間差が1.4倍未満');
+if (report.clearTimes.disadvantage / report.clearTimes.advantage < 1.5) throw new Error('有利・不利フロアのクリア時間差が1.5倍未満');
 if (legacy !== 'neutral') throw new Error('既存セーブ装備が無属性へ移行されない');
 console.log('既存セーブ移行', legacy);

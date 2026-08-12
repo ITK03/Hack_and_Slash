@@ -29,4 +29,4 @@ game.advance(120);
 const fanDuring=game.run(()=>({open:document.querySelector('#itemFan').classList.contains('on'),paused:S.paused,time:S.runT}));
 game.dispatch('pot','pointerup',{pointerId:1,pointerType:'mouse',clientX:70,clientY:5,buttons:0});
 result.fanDoesNotPause=fanStart.open&&fanDuring.open&&!fanStart.paused&&!fanDuring.paused&&fanDuring.time>fanStart.time;
-console.log('消耗品実測',result);if(result.heals<3||result.heals>5)throw new Error(`深度10一周の回復薬換算 ${result.heals.toFixed(2)} は約4個でない`);if(result.difference<1||result.difference>2)throw new Error(`50%死亡深度差 ${result.difference} は+1〜+2でない`);if(!result.fanDoesNotPause)throw new Error('長押し中に停止した');
+console.log('消耗品実測',result);if(result.heals<3||result.heals>5)throw new Error(`深度10一周の回復薬換算 ${result.heals.toFixed(2)} は約4個でない`);if(result.difference<5||result.difference>10)throw new Error(`50%死亡深度差 ${result.difference} は+5〜+10でない`);if(!result.fanDoesNotPause)throw new Error('長押し中に停止した');
