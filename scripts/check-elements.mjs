@@ -27,7 +27,7 @@ const report = game.run(() => {
     }
   }
 
-  function runCombat(limit = 45) {
+  function runCombat(limit = 90) {
     HELD.fill(true); const step = .05; let elapsed = 0;
     for (; elapsed < limit && S.scene === 'dungeon' && S.p.hp > 0 && S.enemies.length; elapsed += step) {
       let target = S.enemies[0], best = Infinity;
@@ -40,9 +40,9 @@ const report = game.run(() => {
     return { elapsed, cleared: S.scene === 'dungeon' && S.p.hp > 0 && S.enemies.length === 0 };
   }
 
-  function trial(depth, element, run) {
+  function trial(depth, element, run, limit = 90) {
     prepare(); _s = (depth * 2654435761 + run * 1013904223) >>> 0; equip(depth, element); S.p = newPlayer(); enterFloor(depth);
-    return !runCombat().cleared;
+    return !runCombat(limit).cleared;
   }
   function deathRate(depth, element, runs = 48) { let deaths = 0; for (let run = 0; run < runs; run++) deaths += trial(depth, element, run); return deaths / runs; }
   // 優勢属性の8帯周期を丸ごと平均し、境界が周期のどこに当たるかによる偏りを除く。
@@ -76,18 +76,49 @@ const report = game.run(() => {
   const matchup = [];
   for (const attacker of [...elements, 'neutral']) for (const defender of [...elements, 'neutral']) matchup.push({ attacker, defender, multiplier: elementMultiplier(attacker, defender) });
   const resonanceRows = elements.map(element => { prepare(); equip(50, element); return { element, ...resonance() }; });
+  const incoming = resonanceRows.map(row => ({ element: row.element, advantageous: row.guard, disadvantageous: row.danger }));
   prepare(); equip(50, 'neutral');
   const neutralResonance = resonance(), neutralMain = mainV(S.gear.weapon); S.gear.weapon.element = 'fire';
   const neutralBonus = { resonance: neutralResonance, actualMain: neutralMain, elementalMain: mainV(S.gear.weapon) };
 
-  // 合成敵や hurtE の直呼びは使わず、同一装備・Lv・乱数種で実フロアを生成し update() だけで全滅させる。
-  function clearTime(floor) {
-    prepare(); _s = 0x51f15e; equip(50, 'fire'); S.p = newPlayer(); _s = 0xdecafbad; enterFloor(floor);
+  // 合成敵や hurtE の直呼びは使わず、実際に生成したフロアを update() だけで戦う。
+  function clearTime(floor, element) {
+    prepare(); _s = 0x51f15e; equip(50, element); S.p = newPlayer(); _s = 0xdecafbad; enterFloor(floor);
     const result = runCombat(90); if (!result.cleared) return null; return result.elapsed;
   }
-  const clearTimes = { advantageFloor: 33, disadvantageFloor: 28, advantage: clearTime(33), disadvantage: clearTime(28) };
+  function routeTime(floors, element) {
+    const times = floors.map(floor => clearTime(floor, element));
+    return times.some(time => time == null) ? null : times.reduce((sum, time) => sum + time, 0) / times.length;
+  }
+  const advantageFloors = [31, 32], disadvantageFloors = [29];
+  const clearTimes = {
+    advantageFloors, disadvantageFloors,
+    advantage: routeTime(advantageFloors, 'fire'), disadvantage: routeTime(disadvantageFloors, 'fire'),
+    neutralAdvantage: routeTime(advantageFloors, 'neutral'), neutralDisadvantage: routeTime(disadvantageFloors, 'neutral'),
+  };
+
+  // 同じ乱数で生成した実在の通常敵を、通常攻撃が一度命中するまで update() して測る。
+  function actualAttackDamage(floor, buildElement, targetElement) {
+    prepare(); _s = 0x13579bdf; equip(50, buildElement); S.p = newPlayer(); _s = 0x2468ace0; enterFloor(floor);
+    const target = S.enemies.find(enemy => !enemy.boss && enemy.element === targetElement);
+    if (!target) return null;
+    S.enemies = [target]; target.hp = target.max = Number.MAX_SAFE_INTEGER; target.dmg = 0;
+    S.p.x = target.x - 1.15; S.p.y = target.y; S.p.face = 0; S.dmgLog = []; _s = 0xabcdef01; HELD.fill(true);
+    for (let elapsed = 0; elapsed < 3 && !S.dmgLog.length; elapsed += .01) update(.01);
+    HELD.fill(false); return S.dmgLog[0]?.v ?? null;
+  }
+  const damage = {
+    normalNeutral: actualAttackDamage(31, 'neutral', 'fire'),
+    normalResonance: actualAttackDamage(31, 'fire', 'fire'),
+    weakNeutral: actualAttackDamage(31, 'neutral', 'wood'),
+    weakResonance: actualAttackDamage(31, 'fire', 'wood'),
+  };
+  const adverseDepth = 151; let progressed = 0;
+  for (let run = 0; run < 24; run++) { prepare(); _s = (adverseDepth * 2654435761 + run * 1013904223) >>> 0; equip(adverseDepth, 'fire'); S.p = newPlayer(); enterFloor(adverseDepth); const initial = S.enemies.length; runCombat(90); if (S.enemies.length < initial) progressed++; }
+  const adverseProgress = { floor: adverseDepth, progressed, runs: 24 };
   const reaches = elements.map(boundary), neutral = boundary('neutral');
-  return { distribution, floorRatios, matchup, resonanceRows, neutralBonus, reaches, neutral, clearTimes };
+  return { distribution, floorRatios, matchup, resonanceRows, incoming, neutralBonus, reaches, neutral, clearTimes, damage, adverseProgress };
+
 });
 
 game.run(() => localStorage.setItem('descent_v5', JSON.stringify({ cls: 'warrior', tutorial: { phase: 'done' }, gear: { weapon: { slot: 'weapon', wt: 'sword', base: 'ロングソード', main: { id: 'atk', v: 10 }, affs: [], rar: 0, ilvl: 1, lv: 1 } } })));
@@ -101,7 +132,10 @@ console.table(report.floorRatios.map(row => ({ 深度: row.floor, 優勢比率: 
 console.log('\n共鳴ビルドの到達深度');
 console.table([...report.reaches, report.neutral].map(row => ({ 属性: row.element, '50%死亡深度': row.depth, 死亡率: `${(row.deathRate * 100).toFixed(1)}%` })));
 console.log('\n実フロアのクリア時間');
-console.table([{ 有利フロア: report.clearTimes.advantageFloor, 有利秒: report.clearTimes.advantage?.toFixed(2), 不利フロア: report.clearTimes.disadvantageFloor, 不利秒: report.clearTimes.disadvantage?.toFixed(2), 時間比: report.clearTimes.advantage && (report.clearTimes.disadvantage / report.clearTimes.advantage).toFixed(2) }]);
+console.table([{ 有利帯: report.clearTimes.advantageFloors.join(','), 有利秒: report.clearTimes.advantage?.toFixed(2), 不利帯: report.clearTimes.disadvantageFloors.join(','), 不利秒: report.clearTimes.disadvantage?.toFixed(2), 時間比: report.clearTimes.advantage && (report.clearTimes.disadvantage / report.clearTimes.advantage).toFixed(2), 無属性比: report.clearTimes.neutralAdvantage && (report.clearTimes.neutralDisadvantage / report.clearTimes.neutralAdvantage).toFixed(2) }]);
+console.log('実生成敵への通常攻撃ダメージ', report.damage);
+console.table(report.incoming);
+console.log('深度150不利帯の進行', report.adverseProgress);
 
 for (const row of report.distribution) for (const element of ['fire', 'water', 'wood']) if (row[element] < .20 || row[element] > .26) throw new Error(`${row.band} ${element}: ${(row[element] * 100).toFixed(1)}% は20〜26%の範囲外`);
 for (const row of report.distribution) for (const element of ['light', 'dark']) if (row[element] < .11 || row[element] > .17) throw new Error(`${row.band} ${element}: ${(row[element] * 100).toFixed(1)}% は11〜17%の範囲外`);
@@ -109,12 +143,23 @@ for (const row of report.floorRatios) if (row.ratio < .60 || row.ratio > .70) th
 const expected = { fire: { wood: 1.5, water: .5 }, water: { fire: 1.5, wood: .5 }, wood: { water: 1.5, fire: .5 }, light: { dark: 1.3, fire: 1 }, dark: { light: 1.3, fire: 1 } };
 for (const [attacker, defenders] of Object.entries(expected)) for (const [defender, multiplier] of Object.entries(defenders)) if (report.matchup.find(row => row.attacker === attacker && row.defender === defender).multiplier !== multiplier) throw new Error(`${attacker}→${defender} の倍率が${multiplier}ではない`);
 for (const row of report.resonanceRows) if (row.stage !== 2 || row.count !== 5) throw new Error(`${row.element}の5個共鳴が中共鳴にならない`);
-if (report.neutralBonus.resonance.stage !== 0 || Math.abs(report.neutralBonus.actualMain / report.neutralBonus.elementalMain - 1.15) > .03) throw new Error('無属性装備の共鳴除外または基礎値1.15倍が不正');
+for (const row of report.incoming) if (row.advantageous !== .75 || row.disadvantageous !== 1.25) throw new Error(`${row.element}の5個共鳴被ダメージ補正は有利0.75・不利1.25でなければならない（実測 ${row.advantageous}/${row.disadvantageous}）`);
+if (report.neutralBonus.resonance.stage !== 0 || Math.abs(report.neutralBonus.actualMain / report.neutralBonus.elementalMain - 1.02) > .01) throw new Error('無属性装備の共鳴除外または基礎値1.02倍が不正');
 const depths = report.reaches.map(row => row.depth), min = Math.min(...depths), max = Math.max(...depths);
-if (max - min > 10) throw new Error(`5属性の50%死亡深度差 ${min}〜${max} は±5を超える`);
+if (max - min > 10) throw new Error(`5属性の50%死亡深度差 ${min}〜${max} は±5（全幅10）を超える`);
 const resonanceAverage = report.reaches.reduce((sum, row) => sum + row.depth, 0) / report.reaches.length, neutralGap = resonanceAverage - report.neutral.depth;
-if (neutralGap < -15 || neutralGap > 15) throw new Error(`無属性の到達深度差 ${neutralGap.toFixed(1)} は5〜15層の範囲外`);
-if (report.clearTimes.advantage == null || report.clearTimes.disadvantage == null) throw new Error('有利・不利フロアを実戦闘でクリアできなかった');
-if (report.clearTimes.disadvantage / report.clearTimes.advantage < 1.5) throw new Error('有利・不利フロアのクリア時間差が1.5倍未満');
+if (neutralGap < 5 || neutralGap > 15) throw new Error(`属性平均−無属性の到達深度差 ${neutralGap.toFixed(1)} は+5〜+15層の範囲外`);
+const primaryMax = Math.max(...report.reaches.filter(row => ['fire', 'water', 'wood'].includes(row.element)).map(row => row.depth));
+for (const row of report.reaches.filter(row => ['light', 'dark'].includes(row.element))) if (row.depth - primaryMax >= 3) throw new Error(`${row.element}の到達深度${row.depth}は火水木最高${primaryMax}を3層以上上回る`);
+if (report.clearTimes.advantage == null || report.clearTimes.disadvantage == null) throw new Error('有利帯・不利帯を実戦闘でクリアできなかった');
+const elementalTimeRatio = report.clearTimes.disadvantage / report.clearTimes.advantage;
+if (elementalTimeRatio < 2) throw new Error(`有利帯・不利帯のクリア時間比 ${elementalTimeRatio.toFixed(2)} は2.0未満`);
+if (report.clearTimes.neutralAdvantage == null || report.clearTimes.neutralDisadvantage == null) throw new Error('無属性で有利帯・不利帯を実戦闘でクリアできなかった');
+const neutralTimeRatio = Math.max(report.clearTimes.neutralAdvantage, report.clearTimes.neutralDisadvantage) / Math.min(report.clearTimes.neutralAdvantage, report.clearTimes.neutralDisadvantage);
+if (neutralTimeRatio > 1.2) throw new Error(`無属性の帯間クリア時間比 ${neutralTimeRatio.toFixed(2)} は1.2を超える`);
+if (Object.values(report.damage).some(value => value == null)) throw new Error('実生成敵への通常攻撃ダメージを測定できなかった');
+if (report.damage.normalNeutral <= report.damage.normalResonance) throw new Error(`普通の敵への与ダメージ 無属性${report.damage.normalNeutral.toFixed(1)} は属性5個共鳴${report.damage.normalResonance.toFixed(1)}以下`);
+if (report.damage.weakResonance < report.damage.weakNeutral * 1.8) throw new Error(`弱点の敵への属性5個共鳴ダメージ${report.damage.weakResonance.toFixed(1)}は無属性${report.damage.weakNeutral.toFixed(1)}の1.8倍未満`);
+if (report.adverseProgress.progressed === 0) throw new Error(`深度${report.adverseProgress.floor}の不利帯で属性ビルドが24/24回、一体も倒せず進行不能`);
 if (legacy !== 'neutral') throw new Error('既存セーブ装備が無属性へ移行されない');
 console.log('既存セーブ移行', legacy);

@@ -628,7 +628,7 @@ const elementName=k=>(ELEMENTS[k]||ELEMENTS.neutral).n;
 // 5層帯ごとに優勢属性を固定し、8帯で火水木を2回、光闇を1回ずつ巡回する。
 const dominantElement=fl=>["fire","water","wood","light","fire","water","wood","dark"][Math.floor((Math.max(1,fl)-1)/5)%8];
 const bossElement=fl=>ELEMENT_KEYS[(Math.floor(Math.max(5,fl)/5)-1)%5];
-function resonance(gear=S.gear){const counts={};for(const it of Object.values(gear||{}))if(it&&it.element&&it.element!=="neutral")counts[it.element]=(counts[it.element]||0)+1;let element="neutral",count=0;for(const k of ELEMENT_KEYS)if((counts[k]||0)>count){element=k;count=counts[k];}const stage=count>=7?3:count>=5?2:count>=3?1:0;return{element:stage?element:"neutral",count,stage,advantage:[1,1.8,2.2,2.5][stage],guard:[1,.85,.75,.70][stage],danger:[1,1.15,1.25,1.30][stage]};}
+function resonance(gear=S.gear){const counts={};for(const it of Object.values(gear||{}))if(it&&it.element&&it.element!=="neutral")counts[it.element]=(counts[it.element]||0)+1;let element="neutral",count=0;for(const k of ELEMENT_KEYS)if((counts[k]||0)>count){element=k;count=counts[k];}const stage=count>=7?3:count>=5?2:count>=3?1:0,rare=element==="light"||element==="dark";return{element:stage?element:"neutral",count,stage,advantage:(rare?[1,1.8,5.0,2.5]:[1,1.8,4.5,2.5])[stage],guard:[1,.85,.75,.70][stage],danger:[1,1.15,1.25,1.30][stage]};}
 function elementMultiplier(attacker,defender){if(!attacker||!defender||attacker==="neutral"||defender==="neutral")return 1;if(attacker==="light"||attacker==="dark")return defender===(attacker==="light"?"dark":"light")?1.3:1;const beats={fire:"wood",wood:"water",water:"fire"};return beats[attacker]===defender?1.5:beats[defender]===attacker?.5:1;}
 const disadvantageMultiplier=fl=>.5+.15*clamp((Math.max(100,fl)-100)/100,0,1);
 function resonanceDamageMultiplier(r,defender,fl){if(r.element==="neutral")return 1;const affinity=elementMultiplier(r.element,defender);return affinity>1?r.advantage:affinity<1?disadvantageMultiplier(fl):1;}
@@ -881,8 +881,8 @@ function makeItem(fl,mf,luk,forceRar){
     :"《"+pick(PRE)+pick(SUF)+"》"+it.base;
   it.score=iScore(it);return it;}
 // 職業に合わない防具は主ステが6割しか出ない
-const itemBaseMultiplier=it=>it&&it.element==="neutral"?1.15:1;
-const mainV=it=>Math.round(it.main.v*(1+(it.lv-1)*ENHANCE_PER_LV)*((it.ac&&it.ac!==S.cls)?.6:1)*itemBaseMultiplier(it)); // 無属性は共鳴しない代わり基礎値+15%
+const itemBaseMultiplier=it=>it&&it.element==="neutral"?1.02:1;
+const mainV=it=>Math.round(it.main.v*(1+(it.lv-1)*ENHANCE_PER_LV)*((it.ac&&it.ac!==S.cls)?.6:1)*itemBaseMultiplier(it)); // 無属性は共鳴しない代わり基礎値+2%
 const fuseNeed=it=>Math.round(56+4*Math.sqrt(Math.max(1,Number(it&&it.ilvl)||1)));
 const fuseGold=it=>Math.round((25+it.ilvl*7)*[1,1.4,2.2,3.6,7][it.rar]);
 const fuseXP=f=>Math.round((14+f.ilvl*2.4)*(1+f.rar*.55)*(1+(f.lv-1)*.32));
