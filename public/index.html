@@ -863,7 +863,10 @@ const enhancementDiveScale=depth=>curve(depth,[[10,1.17],[50,1.42],[100,1.67],[3
 const crystalNeed=it=>Math.max(1,Math.round(120*Math.max(1,it.ilvl)*materialScale(it.ilvl)*enhancementDiveScale(it.ilvl)/(itemMaxLv(it)-1)));
 const coreNeeded=it=>it.lv+1>1+Math.floor((itemMaxLv(it)-1)*2/3);
 function upgradeMatCost(it,addedXP){let lv=it.lv,xp=it.xp+addedXP,crystal=0,core=0;
-  while(lv<itemMaxLv(it)&&xp>=fuseNeed({lv})){const step={ilvl:it.ilvl,lv};xp-=fuseNeed(step);crystal+=crystalNeed(step);if(coreNeeded(step))core++;lv++;}
+  /* 判定は fuseNeed({lv})、実際の減算は fuseNeed({ilvl,lv}) を使っていた。
+     fuseNeed は ilvl だけで決まるため、前者は ilvl=1 の 60 に落ちて条件が緩くなり、
+     払えない段階まで回って結晶と核を余計に数えていた。両方 it で揃える。 */
+  while(lv<itemMaxLv(it)&&xp>=fuseNeed(it)){const step={ilvl:it.ilvl,lv};xp-=fuseNeed(it);crystal+=crystalNeed(step);if(coreNeeded(step))core++;lv++;}
   return {crystal,core,levels:lv-it.lv};}
 const iScore=it=>((it.main?it.main.v*(SW[it.main.id]||1)*(1+((it.lv||1)-1)*ENHANCE_PER_LV):0)
   +it.affs.reduce((s,a)=>s+a.v*(SW[a.id]||1),0))+(it.pw?80:0);
@@ -943,7 +946,12 @@ const weekKey=()=>{const d=dailyClock(),first=new Date(d.getFullYear(),0,1),day=
 function buyWeeklyCore(n=1){const key=weekKey();if(S.weeklyCore.week!==key)S.weeklyCore={week:key,bought:0};n=Math.min(n,CFG.CORE_WEEKLY_PURCHASE_CAP-S.weeklyCore.bought,CFG.CORE_HOLD_CAP-materialCount("core"));const cost=n*100;if(n<=0||S.premium<cost)return 0;S.premium-=cost;S.weeklyCore.bought+=n;return addMat("core",materialTier(S.deepest),n);}
 const beginnerTarget=()=>CFG.ENEMY_ACCEL_START;
 function progressionDaysToContent(divePerDay,lateStartDays=0){const coreDays=Math.ceil(500/CFG.CORE_DAILY_CAP),xpDays=Math.ceil(750/Math.max(1,divePerDay));const days=Math.max(coreDays,xpDays);return lateStartDays?Math.min(300,days+Math.ceil(lateStartDays/4)):days;}
-function claimBeginnerMission(){if(S.beginnerClaimed)return false;const target=beginnerTarget();forceLevel(Math.max(1,Math.floor(target*.6)));for(const slot of SLOTK){let it;do it=makeItem(target*.6,0,0,2);while(it.slot!==slot||(it.ac&&it.ac!==S.cls));S.stash.push(it);}S.beginnerClaimed=true;save();return true;}
+function claimBeginnerMission(){if(S.beginnerClaimed)return false;const target=beginnerTarget();
+  /* 後発組の底上げが目的。受け取りボタンは未受領のあいだ出続けるので、
+     基準を追い越してから押した既存プレイヤーが降格していた（forceLevel は
+     管理者モード用に下げる方向も持つ）。上げる時だけ呼ぶ。 */
+  const boost=Math.max(1,Math.floor(target*.6));if(boost>S.base.lv)forceLevel(boost);
+  for(const slot of SLOTK){let it;do it=makeItem(target*.6,0,0,2);while(it.slot!==slot||(it.ac&&it.ac!==S.cls));S.stash.push(it);}S.beginnerClaimed=true;save();return true;}
 
 const TUTORIAL_SLOTS=["weapon","helm","armor","glove","boot","ring","amulet"];
 function tutorialItem(slot){
@@ -2654,9 +2662,12 @@ function showItem(it,inDungeon){
   $("itPop").classList.add("on");}
 /* 合成: 同部位の装備をまとめて食わせてレベルを上げる */
 let fuseTarget=null,fuseSel=[];
+/* 「強化後予測」。fuseNeed は ilvl だけで決まるのに {lv} を渡していたため、
+   1レベルあたり60exp（ilvl=1相当）で計算していた。実際は深度60で87、深度1000で182。
+   予測が実際より多くの段階を表示し、余りexpも合わなかった。 */
 function fusePreview(target,xp){let lv=target.lv,cur=target.xp+xp,up=0;
-  const maxLv=itemMaxLv(target);
-  while(lv<maxLv&&cur>=fuseNeed({lv})){cur-=fuseNeed({lv});lv++;up++;}
+  const maxLv=itemMaxLv(target),per=fuseNeed(target);
+  while(lv<maxLv&&cur>=per){cur-=per;lv++;up++;}
   return {lv,xp:cur,up};}
 function openFuse(target){
   if(fuseTarget!==target){fuseTarget=target;fuseSel=[];}
@@ -2865,10 +2876,13 @@ function save(){storeActiveCharacter();try{localStorage.setItem(KEY,JSON.stringi
   gold:S.gold,stash:S.stash,gear:S.gear,base:S.base,log:S.log,mats:S.mats,consumables:S.consumables,loadout:S.loadout,consumableVersion:1,
   matTierVersion:2,
   settings:S.settings,admin:S.admin,debug:S.debug,debugFloor:S.debugFloor,adminOpts:S.adminOpts,chars:S.chars,characterStates:S.characterStates,avatars:S.avatars,formation:S.formation,diveFloor:S.diveFloor,stamina:S.stamina,daily:S.daily,premium:S.premium,paidInventory:S.paidInventory,profileAvatar:S.profileAvatar,shopSub:S.shopSub,gearSub:S.gearSub,unlockedCharacters:S.unlockedCharacters,tutorial:S.tutorial,returnInvulnerable:S.returnInvulnerable,breakthroughs:S.breakthroughs,breakthroughProgress:S.breakthroughProgress,weeklyCore:S.weeklyCore,beginnerClaimed:S.beginnerClaimed}));}catch(e){}}
+/* セーブの数値は必ず有限な数へ均す。文字列や負値がそのまま入ると
+   S.gold+=500 が文字列連結になったり、深度が負のまま階梯計算へ流れる。 */
+const numAt=(v,fallback,min)=>{const n=Number(v);return Number.isFinite(n)?(min==null?n:Math.max(min,n)):fallback;};
 function load(){try{
   const d=JSON.parse(localStorage.getItem(KEY)||"null");
   if(!d||!d.cls||!CLASSES[d.cls])return false;
-  S.cls=d.cls;S.deepest=d.deepest||1;S.gold=d.gold||0;S.stash=d.stash||[];
+  S.cls=d.cls;S.deepest=numAt(d.deepest,1,1);S.gold=numAt(d.gold,0,0);S.stash=Array.isArray(d.stash)?d.stash:[];
   S.mats={crystal:Object.assign({},d.mats&&d.mats.crystal||{}),core:Object.assign({},d.mats&&d.mats.core||{})};
   if((d.matTierVersion||1)<2)for(const kind of ["crystal","core"]){const old=S.mats[kind],moved={};for(const [tier,n] of Object.entries(old))moved[Math.max(1,(+tier||1)-1)]=(moved[Math.max(1,(+tier||1)-1)]||0)+n;S.mats[kind]=moved;}
   const fix=it=>{
@@ -2892,20 +2906,25 @@ function load(){try{
   S.gear=ng;
   S.consumables=Object.assign({},d.consumables||{});if(!d.consumableVersion)S.consumables.heal=(S.consumables.heal||0)+3;S.loadout=(d.loadout||["heal",null,null,null]).slice(0,6);while(S.loadout.length<loadoutCapacity())S.loadout.push(null);S.runItems=[0,0,0,0];S.log=d.log||{runs:[]};
   S.settings=Object.assign({map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0,controlMode:"manual",autoPreset:"aggressive",automationEditor:0},d.settings||{});
-  S.admin=!!d.admin;S.debug=!!d.debug;S.debugFloor=d.debugFloor||1;S.adminOpts=d.adminOpts||{};S.chars=d.chars||{};S.characterStates=d.characterStates||{};S.avatars=d.avatars||{};S.breakthroughs=d.breakthroughs||{};S.breakthroughProgress=d.breakthroughProgress||{};S.weeklyCore=d.weeklyCore||{week:"",bought:0};S.beginnerClaimed=!!d.beginnerClaimed;
-  S.unlockedCharacters=d.unlockedCharacters||["warrior:gai"];S.tutorial=d.tutorial||{phase:"done",gearIndex:0};S.returnInvulnerable=!!d.returnInvulnerable;
-  S.formation=(d.formation||[]).filter(k=>S.unlockedCharacters.includes(k)).slice(0,formationCapacity());S.diveFloor=d.diveFloor||1;S.daily=d.daily||null;S.stamina=d.daily?clamp(d.stamina==null?3:d.stamina,0,3):3;ensureDaily();S.premium=d.premium||0;S.paidInventory=Object.assign({catalysts:[],feathers:[],slots:[]},d.paidInventory||{});S.profileAvatar=d.profileAvatar||null;S.shopSub=d.shopSub||"gacha";S.gearSub=d.gearSub||"equip";
+  S.admin=!!d.admin;S.debug=!!d.debug;S.debugFloor=numAt(d.debugFloor,1,1);S.adminOpts=d.adminOpts||{};S.chars=d.chars||{};S.characterStates=d.characterStates||{};S.avatars=d.avatars||{};S.breakthroughs=d.breakthroughs||{};S.breakthroughProgress=d.breakthroughProgress||{};S.weeklyCore=d.weeklyCore||{week:"",bought:0};S.beginnerClaimed=!!d.beginnerClaimed;
+  S.unlockedCharacters=Array.isArray(d.unlockedCharacters)&&d.unlockedCharacters.length?d.unlockedCharacters:["warrior:gai"];S.tutorial=d.tutorial||{phase:"done",gearIndex:0};S.returnInvulnerable=!!d.returnInvulnerable;
+  S.formation=(Array.isArray(d.formation)?d.formation:[]).filter(k=>S.unlockedCharacters.includes(k)).slice(0,formationCapacity());S.diveFloor=numAt(d.diveFloor,1,1);S.daily=d.daily||null;S.stamina=d.daily?clamp(d.stamina==null?3:d.stamina,0,3):3;ensureDaily();S.premium=numAt(d.premium,0,0);S.paidInventory=Object.assign({catalysts:[],feathers:[],slots:[]},d.paidInventory||{});S.profileAvatar=d.profileAvatar||null;S.shopSub=d.shopSub||"gacha";S.gearSub=d.gearSub||"equip";
   if(!S.avatars[S.cls])S.avatars[S.cls]=CHARACTERS[S.cls][0].id;
   const normalizeBase=raw=>{const b=Object.assign({lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0},raw||{});
     if(!b.xpCurveV2){
-      const oldLv=Math.max(1,b.lv|0),oldExtra=Math.max(0,b.para|0);
-      let total=legacyXpCum(oldLv)+(b.xp||0)+oldExtra*Math.max(10,legacyXpCum(100)-legacyXpCum(99));
-      let lv=1;while(xpCum(lv+1)<=total)lv++;
+      const oldLv=Math.max(1,Math.min(1e6,Number(b.lv)||1)|0),oldExtra=Math.max(0,b.para|0);
+      let total=legacyXpCum(oldLv)+(Number(b.xp)||0)+oldExtra*Math.max(10,legacyXpCum(100)-legacyXpCum(99));
+      /* legacyXpCum は Lv10万あたりで Infinity になり、Infinity<=Infinity が永久に真になって
+         起動時に固まっていた（初期化ボタンにも辿り着けない）。管理者モードのレベル入力は
+         任意の数を受けるので、必ず有限側で打ち切る。 */
+      if(!Number.isFinite(total))total=Number.MAX_VALUE;
+      let lv=1;while(lv<1e6){const next=xpCum(lv+1);if(!Number.isFinite(next)||next>total)break;lv++;}
       /* 新カーブは Lv129 あたりから旧カーブより重くなるため、素直に換算すると
          そこから上のセーブはレベルが下がる。移行で弱くなることは無い、を守る。 */
-      if(lv<oldLv){lv=oldLv;total=Math.max(total,xpCum(lv));}
+      if(lv<oldLv)lv=oldLv;
       b.pts=Math.max(0,(b.pts||0)+(lv-1)*CFG.STAT_PER_LV-((oldLv-1)*CFG.STAT_PER_LV+oldExtra));
-      b.lv=lv;b.xp=total-xpCum(lv);b.xpCurveV2=true;
+      const carry=total-xpCum(lv);
+      b.lv=lv;b.xp=Number.isFinite(carry)?Math.max(0,carry):0;b.xpCurveV2=true;
     }
     delete b.para;delete b.paraConverted;return b;};
   const nb=normalizeBase(d.base);
