@@ -913,6 +913,10 @@ function statsHTML(it,cmp){
 const sellV=it=>Math.max(1,Math.round((8+it.ilvl*4)*[1,2,5,14,60][it.rar]/CFG.SELL_DIV));
 
 /* ---------- 状態 ---------- */
+/* 新規キャラクターの能力値。xpCurveV2 を必ず立てる。
+   立てないと load() の旧カーブ移行が新規キャラにも走り、Lv50を超えていると
+   そのぶんレベルが水増しされる（Lv80なら101）。移行は v2 以前のセーブ専用。 */
+const newBase=()=>({lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0,xpCurveV2:true});
 const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   enemies:[],drops:[],bullets:[],parts:[],nums:[],props:[],fx:[],corpses:[],
   portal:null,stairs:null,boss:null,
@@ -926,7 +930,7 @@ const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   paidInventory:{catalysts:[],feathers:[],slots:[]},tactical:{trap:null,reveal:false},
   daily:null,dailyMatMul:1,
   unlockedCharacters:["warrior:gai"],tutorial:{phase:"training_intro",gearIndex:0},training:false,returnInvulnerable:false,
-  base:{lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0}};
+  base:newBase()};
 
 Object.assign(S.settings,{controlMode:"manual",autoPreset:"aggressive",automationEditor:0});
 
@@ -2787,7 +2791,7 @@ const equippedOwner=it=>(equippedEntries().find(e=>e.it===it)||{}).owner;
 const isEquipped=it=>!!equippedOwner(it);
 function selectCharacter(k,id,after){const target=k+":"+id;if(target===activeCharacterKey()){if(after)after();return;}
   storeActiveCharacter();S.cls=k;S.avatars[k]=id;const sv=S.characterStates[target];
-  S.base=sv&&sv.base?sv.base:{lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0};S.gear=sv&&sv.gear?sv.gear:emptyGear();S.alloc=null;S.p=newPlayer();SFX.lvl();save();if(after)after();else openTown();}
+  S.base=sv&&sv.base?sv.base:newBase();S.gear=sv&&sv.gear?sv.gear:emptyGear();S.alloc=null;S.p=newPlayer();SFX.lvl();save();if(after)after();else openTown();}
 function switchClass(k,after){selectCharacter(k,S.avatars[k]||CHARACTERS[k][0].id,after);}
 
 function openPause(){
