@@ -2573,8 +2573,8 @@ function invFiltered(){
   let list=[...S.stash,...equippedEntries().map(e=>e.it)];
   const fs=F.filters;
   if(fs.length){list=list.filter(i=>fs.some(f=>{
-    if(f[0]==="r")return i.rar===+f[1];
-    if(f==="ring")return i.slot==="ring1"||i.slot==="ring2";
+    if(f[0]==="r"&&f.length===2)return i.rar===+f[1];
+    // 指輪枠が ring1/ring2 だった頃の名残。今は ring 一枠なので常に0件になっていた。
     return i.slot===f;}));}
   list.sort((a,c)=>F.sort==="rar"?(c.rar-a.rar||c.score-a.score)
     :F.sort==="ilvl"?(c.ilvl-a.ilvl||c.score-a.score):(c.score-a.score));
