@@ -89,20 +89,22 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
   box-shadow:0 3px 10px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   font-size:10px;font-weight:800;color:#efe6d6;text-align:center;line-height:1.15;padding:3px}
-/* 技名は円の内側で折り返す。はみ出すと overflow:hidden で両端が切れて読めなくなる。 */
-.sk>span{display:block;max-width:100%;word-break:break-all;overflow-wrap:anywhere}
 .sk .cd{position:absolute;inset:0;background:rgba(5,4,9,.76);transform-origin:bottom;pointer-events:none}
 .sk .cost{font-size:8px;color:#7fb4f0;font-weight:700;margin-top:2px}
 .sk.no{opacity:.34;filter:grayscale(.6)}
 .sk:active{transform:scale(.92)}
 #s0{width:80px;height:80px;right:3px;bottom:3px;font-size:12px;border-color:rgba(224,165,60,.4);
   background:radial-gradient(circle at 34% 28%,#4a3a26,#1a1410 72%)}
-/* 技は攻撃ボタンの上に横一列。以前は攻撃ボタンを囲む弧に置いていたが、
-   攻撃と突進斬りが19x7px重なり、技名も円からはみ出して読めなかった。
-   一列なら重ならず、4文字の技名がそのまま入る。 */
-#s1{width:60px;height:60px;right:134px;bottom:96px}
-#s2{width:60px;height:60px;right:70px;bottom:96px}
-#s3{width:60px;height:60px;right:6px;bottom:96px}
+/* 技は攻撃ボタンの上に横一列。以前は攻撃ボタンを囲む弧に置いていて、
+   攻撃と突進斬りが19x7px重なっていた。
+   技名は円の中に入れると、その高さでの円の弦（約52px）と文字幅（4文字で52px）が
+   ちょうど同じになり、overflow:hidden の丸い切り抜きで文字の左右が削られていた。
+   円の外・下側に置いて、名前の長さに関係なく切れないようにする。 */
+.skWrap{position:absolute;width:60px;bottom:88px;pointer-events:none}
+#w1{right:134px}#w2{right:70px}#w3{right:6px}
+.skWrap .sk{position:relative;width:60px;height:60px;right:auto;bottom:auto}
+.skName{display:block;margin-top:3px;text-align:center;font-size:9px;font-weight:800;
+  line-height:1.2;color:#efe6d6;text-shadow:0 1px 3px #000,0 0 6px #000;white-space:nowrap}
 #pot{position:absolute;left:0;bottom:10px;width:56px;height:56px;border-radius:50%;
   pointer-events:auto;border:1px solid rgba(214,69,80,.55);
   background:radial-gradient(circle at 34% 28%,#5e1622,#220810 72%);
@@ -220,6 +222,15 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 .gearPanel{margin-top:10px}
 .tutorialBanner{position:fixed;z-index:95;left:14px;right:14px;top:calc(env(safe-area-inset-top) + 72px);padding:13px 15px;background:#132038;border:1px solid #5aa0ff;border-radius:4px;color:#e4f1ff;font-size:12px;font-weight:800;line-height:1.65;text-align:center;box-shadow:0 8px 32px #000}
 .tutorialBanner.bottom{top:auto;bottom:calc(env(safe-area-inset-bottom) + 82px)}
+/* チュートリアル中つねに出る操作。バナーを閉じても案内の再表示とスキップに手が届くようにする。 */
+#tutorialBar{position:fixed;z-index:96;left:0;right:0;top:calc(env(safe-area-inset-top) + 4px);
+  display:flex;justify-content:center;gap:6px;pointer-events:none}
+#tutorialBar .tb{pointer-events:auto;padding:5px 12px;border:1px solid #5aa0ff;border-radius:3px;
+  background:rgba(12,18,32,.92);color:#cfe4ff;font-size:10px;font-weight:800;box-shadow:0 2px 10px #000}
+/* バーの分だけ上部のHUDと拠点ヘッダを下げる。重ねるとHP/MPバーや所持金が隠れる。 */
+body.tutBar #hud{padding-top:calc(env(safe-area-inset-top) + 40px)}
+body.tutBar .shead{padding-top:calc(env(safe-area-inset-top) + 38px)}
+body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
 .tutorialBanner b{color:#82c4ff}.tutorialActions{display:flex;justify-content:center;gap:8px;margin-top:8px}.tutorialBanner .confirm,.tutorialBanner .skip{padding:6px 14px;border:1px solid #66809e;color:#b9cbe0;font-size:10px}.tutorialBanner .confirm{border-color:#82c4ff;background:#203c61;color:#fff}.tutorialMask{display:none!important}.tutorialTarget{outline:3px solid #72b8ff!important;outline-offset:3px;filter:drop-shadow(0 0 8px #54a8ff);pointer-events:auto!important}
 .formation{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.member{min-height:92px;padding:8px 4px;text-align:center;border:1px solid var(--line);background:var(--panel);border-radius:3px}
 .member.on{border-color:var(--gold)}.member .order{font-size:8px;color:var(--gold)}.member .face{font-size:24px;margin:4px}.member .ty{font-size:8px}
@@ -366,9 +377,9 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
 <div id="stickZone"><div id="stick"><i></i></div></div>
 <div id="pad">
   <div class="sk" id="s0"><span></span><div class="cd"></div></div>
-  <div class="sk" id="s1"><span></span><em class="cost"></em><div class="cd"></div></div>
-  <div class="sk" id="s2"><span></span><em class="cost"></em><div class="cd"></div></div>
-  <div class="sk" id="s3"><span></span><em class="cost"></em><div class="cd"></div></div>
+  <div class="skWrap" id="w1"><div class="sk" id="s1"><em class="cost"></em><div class="cd"></div></div><span class="skName"></span></div>
+  <div class="skWrap" id="w2"><div class="sk" id="s2"><em class="cost"></em><div class="cd"></div></div><span class="skName"></span></div>
+  <div class="skWrap" id="w3"><div class="sk" id="s3"><em class="cost"></em><div class="cd"></div></div><span class="skName"></span></div>
   <div id="pot"><b id="potN">0</b><span id="potLabel">アイテム</span><div id="itemFan"></div></div>
 </div>
 <div id="act"></div>
@@ -433,6 +444,10 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
 <div id="toast"></div>
 <div id="tutorialMask" class="tutorialMask" style="display:none"></div>
 <div id="tutorialBanner" class="tutorialBanner" style="display:none"></div>
+<!-- スキップは案内バナーの中にしか無く、「確認」でバナーを閉じると押せなくなっていた。
+     練習部屋で閉じると、スキップも案内も呼び出せないまま部屋に取り残される。
+     チュートリアル中は常に出しておく。 -->
+<div id="tutorialBar" style="display:none"><div class="tb" id="tutorialShow">案内を見る</div><div class="tb" id="tutorialQuit">スキップ</div></div>
 
 <script>
 "use strict";
@@ -1026,11 +1041,18 @@ function tutorialTarget(selector,message,onConfirm){
   const banner=$("tutorialBanner"),shade=$("tutorialMask"),el=selector&&document.querySelector(selector);
   banner.innerHTML=message+(el?'<div><b>確認後、青く光っている場所をタップしてください。</b></div>':"")+'<div class="tutorialActions"><div class="confirm" id="tutorialConfirm">確認</div><div class="skip" id="tutorialSkip">スキップ</div></div>';
   banner.classList.toggle("bottom",!!el&&el.getBoundingClientRect().top<innerHeight*.48);banner.style.display="block";shade.style.display="none";
-  tapEl($("tutorialConfirm"),()=>{banner.style.display="none";if(onConfirm)onConfirm();});
+  tapEl($("tutorialConfirm"),()=>{banner.style.display="none";updTutorialBar();if(onConfirm)onConfirm();});
   tapEl($("tutorialSkip"),skipTutorial);
   if(el)el.classList.add("tutorialTarget");
+  updTutorialBar();
 }
-function hideTutorial(){document.querySelectorAll(".tutorialTarget").forEach(x=>x.classList.remove("tutorialTarget"));$("tutorialBanner").classList.remove("bottom");$("tutorialBanner").style.display=$("tutorialMask").style.display="none";}
+function hideTutorial(){document.querySelectorAll(".tutorialTarget").forEach(x=>x.classList.remove("tutorialTarget"));$("tutorialBanner").classList.remove("bottom");$("tutorialBanner").style.display=$("tutorialMask").style.display="none";updTutorialBar();}
+/* チュートリアルが終わるまで、案内の再表示とスキップを常に画面に出しておく。
+   バナーが出ている間は重複するので隠す。 */
+function updTutorialBar(){const p=(S.tutorial||{}).phase;
+  const active=!!p&&p!=="done",shown=$("tutorialBanner").style.display!=="none",on=active&&!shown;
+  $("tutorialBar").style.display=on?"flex":"none";
+  document.body.classList.toggle("tutBar",on);}
 const DUNGEON_TUTORIAL_PHASES=["training_intro","training_cleave","training_dash","training_slam","training_potion","training_return","boss","boss_message","return"];
 function refreshTutorial(){
   const t=S.tutorial||{};hideTutorial();
@@ -1054,7 +1076,7 @@ function refreshTutorial(){
 }
 
 function skipTutorial(){hideTutorial();ask("チュートリアルをスキップ","スキップすると、チュートリアルで入手する予定の装備や無料ガチャ報酬は受け取れません。本当にスキップしますか？",()=>{
-  S.stash=S.stash.filter(x=>!x.tutorial);S.bag=S.bag.filter(x=>!x.tutorial);S.tutorial={phase:"done",gearIndex:0};S.returnInvulnerable=false;
+  S.stash=S.stash.filter(x=>!x.tutorial);S.bag=S.bag.filter(x=>!x.tutorial);S.tutorial={phase:"done",gearIndex:0};S.returnInvulnerable=false;updTutorialBar();
   if(S.training){S.training=false;endRun(true);}else{save();openTown();}});}
 function trainingEnemies(count){
   S.enemies.length=0;
@@ -1067,7 +1089,7 @@ function beginTraining(){
   $("scTown").classList.remove("on");S.scene="dungeon";S.paused=false;S.training=true;S.floor=1;S.p=newPlayer();S.p.mAtk=20;S.p.trainingAtk=200;S.consumables.heal=Math.max(3,S.consumables.heal||0);S.loadout=["heal",null,null,null];S.runItems=[3,0,0,0];
   map=new Uint8Array(MW*MH);seen=new Uint8Array(MW*MH);rooms=[{x:28,y:28,w:32,h:32,cx:44,cy:44}];rooms.stairIdx=0;for(let y=28;y<60;y++)for(let x=28;x<60;x++)map[y*MW+x]=1;
   S.p.x=44;S.p.y=44;S.enemies=[];S.drops=[];S.props=[];S.bullets=[];S.parts=[];S.nums=[];S.fx=[];S.corpses=[];S.boss=null;S.stairs={x:55,y:55,t:0,training:true};S.portal={x:33,y:33,t:0};MMBG=null;mmSeen=-1;
-  $("pauseB").classList.add("show");for(let i=0;i<3;i++){const sk=CLASSES.warrior.skills[i];$("s"+(i+1)).querySelector("span").textContent=sk.n;$("s"+(i+1)).querySelector(".cost").textContent=sk.c;}$("s0").querySelector("span").textContent="攻撃";updHUD();draw();
+  $("pauseB").classList.add("show");for(let i=0;i<3;i++){const sk=CLASSES.warrior.skills[i];$("w"+(i+1)).querySelector(".skName").textContent=sk.n;$("s"+(i+1)).querySelector(".cost").textContent=sk.c;}$("s0").querySelector("span").textContent="攻撃";updHUD();draw();
   ask("練習部屋へようこそ","ここではガイの3つの技、ポーション、ミニマップ、階段と帰還ポータルを練習します。\n練習中はダメージを受けず、物理攻撃力は200です。この補正は部屋を出ると解除されます。",()=>{S.tutorial.phase="training_cleave";trainingEnemies(1);S.paused=false;refreshTutorial();});}
 function trainingSkillUsed(i){const p=(S.tutorial||{}).phase;if(S.enemies.length)return;
   if(p==="training_cleave"&&i===0){S.tutorial.phase="training_dash";trainingEnemies(1);}
@@ -2289,7 +2311,11 @@ function drawMM(){
 function updHUD(){
   const p=S.p;if(!p)return;
   // 表示設定はスティックの見た目だけに適用し、入力面は常に有効にする。
-  $("stickZone").style.display=S.settings.controlMode==="auto"?"none":"block";for(let i=1;i<=3;i++)$("s"+i).style.display=S.settings.controlMode==="manual"?"block":"none";
+  /* 技ボタンは手動のときだけ出す。以前は #s1..#s3 へ直接 display:block を書いており、
+     .sk の display:flex を打ち消してコストの中央寄せが壊れていた。
+     技名を円の外へ出した今は、名前ごと入っている #w1..#w3 を出し入れする。 */
+  $("stickZone").style.display=S.settings.controlMode==="auto"?"none":"block";
+  for(let i=1;i<=3;i++)$("w"+i).style.display=S.settings.controlMode==="manual"?"":"none";
   $("stick").style.visibility=S.settings.stick?"visible":"hidden";
   $("hpF").style.width=(p.hp/p.max*100)+"%";
   $("hpT").textContent=Math.ceil(p.hp)+"/"+Math.ceil(p.max);
@@ -3014,7 +3040,7 @@ function beginRun(fl){
   S.p=newPlayer();S.bag.length=0;
   $("s0").querySelector("span").textContent="攻撃";
   for(let i=1;i<=3;i++){const sk=CLASSES[S.cls].skills[i-1];
-    $("s"+i).querySelector("span").textContent=sk.n;
+    $("w"+i).querySelector(".skName").textContent=sk.n;
     $("s"+i).querySelector(".cost").textContent=sk.c;}
   $("pauseB").classList.add("show");
   enterFloor(fl);updBuffs();updHUD();}
@@ -3092,7 +3118,7 @@ resize();
 /* チュートリアル中の入力制限。
    誘導先が画面に存在しないときは必ず制限を解除する（fail open）。
    閉じ込めると復帰手段が無くなり、セーブを消す以外に進めなくなるため。 */
-function tutorialAllows(el){if(el.closest("#tutorialSkip,#tutorialConfirm,#btnBack")||$("itPop").classList.contains("on")||$("askPop").classList.contains("on"))return true;const p=(S.tutorial||{}).phase;
+function tutorialAllows(el){if(el.closest("#tutorialSkip,#tutorialConfirm,#tutorialBar,#btnBack")||$("itPop").classList.contains("on")||$("askPop").classList.contains("on"))return true;const p=(S.tutorial||{}).phase;
   if(p&&p.startsWith("tour_")){
     if(!document.querySelector(".tutorialTarget"))return true;   // 案内先が無ければ制限しない
     if($("tutorialBanner").style.display!=="none")return false;
@@ -3110,6 +3136,8 @@ for(const ev of ["click","mousedown","touchstart"])document.addEventListener(ev,
   e.preventDefault();e.stopImmediatePropagation();
   const now=performance.now();if(now-tutorialBlockT<600)return;tutorialBlockT=now;
   refreshTutorial();toast("案内の場所をタップしてください");},true);
+tapEl($("tutorialShow"),()=>{refreshTutorial();updTutorialBar();});
+tapEl($("tutorialQuit"),skipTutorial);
 for(let i=0;i<4;i++)holdBtn($("s"+i),i);
 (()=>{let down=null;const el=$("cv");el.addEventListener("pointerdown",e=>{if(S.settings.controlMode!=="onehand"||S.scene!=="dungeon")return;down={x:e.clientX,y:e.clientY};IN.ox=e.clientX;IN.oy=e.clientY;});el.addEventListener("pointermove",e=>{if(!down||S.settings.controlMode!=="onehand")return;let dx=e.clientX-down.x,dy=e.clientY-down.y,l=Math.hypot(dx,dy)||1;IN.dx=dx/l;IN.dy=dy/l;});el.addEventListener("pointerup",e=>{if(!down)return;if(Math.hypot(e.clientX-down.x,e.clientY-down.y)<12){HELD[0]=true;setTimeout(()=>HELD[0]=false,80);}IN.dx=IN.dy=0;down=null;});})();
 (()=>{const el=$("pot"),fan=$("itemFan");let timer=null,open=false,sel=0;const layout=[[20,105],[65,55],[120,25],[155,72]];const draw=()=>{fan.innerHTML="";S.loadout.forEach((k,i)=>{const d=document.createElement("div");d.className="fanItem"+(i===sel?" sel":"");d.style.left=layout[i][0]+"px";d.style.top=layout[i][1]+"px";d.textContent=k?CONSUMABLES[k].icon+" "+(S.runItems[i]||0):"—";fan.appendChild(d);});};const point=e=>e.touches?e.touches[0]:e;const down=e=>{if(S.scene!=="dungeon"||S.paused)return;e.preventDefault();open=false;timer=setTimeout(()=>{open=true;fan.classList.add("on");draw();},360);};const move=e=>{if(!open)return;e.preventDefault();const q=point(e),r=el.getBoundingClientRect(),x=q.clientX-r.left,y=q.clientY-r.top;let best=1e9;layout.forEach((v,i)=>{const z=(x-v[0]-27)**2+(y-v[1]-27)**2;if(z<best){best=z;sel=i;}});draw();};const up=e=>{clearTimeout(timer);if(open){e.preventDefault();fan.classList.remove("on");open=false;useItem(sel);}else useItem(S.itemSlot);};el.addEventListener("pointerdown",down);el.addEventListener("pointermove",move);el.addEventListener("pointerup",up);el.addEventListener("pointercancel",()=>{clearTimeout(timer);fan.classList.remove("on");open=false;});})();
@@ -3144,6 +3172,7 @@ if(freshStart){S.cls="warrior";S.avatars.warrior="gai";S.formation=["warrior:gai
 else{if(!S.formation.length)S.formation=["warrior:gai"];S.p=newPlayer();
   if(TRAINING_PHASES.includes((S.tutorial||{}).phase)){S.tutorial={phase:"training_intro",gearIndex:0};beginTraining();}
   else openTown();}
+updTutorialBar();
 
 let last=performance.now(),acc=0;
 function frame(now){
