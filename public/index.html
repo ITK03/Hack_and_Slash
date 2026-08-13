@@ -628,11 +628,22 @@ const elementName=k=>(ELEMENTS[k]||ELEMENTS.neutral).n;
 // 5層帯ごとに優勢属性を固定し、8帯で火水木を2回、光闇を1回ずつ巡回する。
 const dominantElement=fl=>["fire","water","wood","light","fire","water","wood","dark"][Math.floor((Math.max(1,fl)-1)/5)%8];
 const bossElement=fl=>ELEMENT_KEYS[(Math.floor(Math.max(5,fl)/5)-1)%5];
-function resonance(gear=S.gear){const counts={};for(const it of Object.values(gear||{}))if(it&&it.element&&it.element!=="neutral")counts[it.element]=(counts[it.element]||0)+1;let element="neutral",count=0;for(const k of ELEMENT_KEYS)if((counts[k]||0)>count){element=k;count=counts[k];}const stage=count>=7?3:count>=5?2:count>=3?1:0,rare=element==="light"||element==="dark";return{element:stage?element:"neutral",count,stage,advantage:(rare?[1,1.8,5.0,6.5]:[1,1.8,4.5,6.0])[stage],guard:[1,.85,.05,.04][stage],danger:[1,1.15,1.25,1.30][stage]};}
+function resonance(gear=S.gear){const counts={};for(const it of Object.values(gear||{}))if(it&&it.element&&it.element!=="neutral")counts[it.element]=(counts[it.element]||0)+1;let element="neutral",count=0;for(const k of ELEMENT_KEYS)if((counts[k]||0)>count){element=k;count=counts[k];}const stage=count>=7?3:count>=5?2:count>=3?1:0,rare=element==="light"||element==="dark";return{element:stage?element:"neutral",count,stage,advantage:(rare?[1,1.8,5.0,6.5]:[1,1.8,4.5,6.0])[stage],
+  /* guard は「自分が有利な属性の敵から受ける倍率」。
+     .05/.04 は被ダメ95%減で、3個(.85)からの落差も17倍と段差が異常だった。
+     danger(1.15/1.25/1.30) と対称になる幅に戻す。 */
+  guard:[1,.85,.75,.70][stage],danger:[1,1.15,1.25,1.30][stage]};}
 function elementMultiplier(attacker,defender){if(!attacker||!defender||attacker==="neutral"||defender==="neutral")return 1;if(attacker==="light"||attacker==="dark")return defender===(attacker==="light"?"dark":"light")?1.3:1;const beats={fire:"wood",wood:"water",water:"fire"};return beats[attacker]===defender?1.5:beats[defender]===attacker?.5:1;}
 const disadvantageMultiplier=fl=>.5+.15*clamp((Math.max(100,fl)-100)/100,0,1);
 function resonanceDamageMultiplier(r,defender,fl){if(r.element==="neutral")return 1;const affinity=elementMultiplier(r.element,defender);return affinity>1?r.advantage:affinity<1?disadvantageMultiplier(fl):1;}
-function resonanceIncomingMultiplier(r,attacker){if(r.element==="neutral")return 1;const affinity=elementMultiplier(r.element,attacker);return affinity>1?r.guard:affinity<1?r.danger:1;}
+/* 被ダメージは「相手に勝てるなら軽く受ける」で決めるが、光と闇だけは互いに1.3倍で
+   対称なため、その判定だと光も闇も相手を軽減してしまい、どちらにも弱点が無くなる。
+   結果、光闇ビルドは8帯すべてで不利無しとなり火水木より到達深度が伸びていた。
+   光闇は互いに与ダメージも被ダメージも上がる、高リスク高リターンの組み合わせとして扱う。 */
+const LIGHT_DARK=new Set(["light","dark"]);
+function resonanceIncomingMultiplier(r,attacker){if(r.element==="neutral")return 1;
+  if(LIGHT_DARK.has(r.element)&&LIGHT_DARK.has(attacker)&&r.element!==attacker)return r.danger;
+  const affinity=elementMultiplier(r.element,attacker);return affinity>1?r.guard:affinity<1?r.danger:1;}
 const ACLS=["warrior","mage"];
 const BASEN={weapon:null,
   helm:{warrior:["バシネット","サレット","グレートヘルム"],mage:["秘術師のフード","星詠みのサークレット","ルーンの頭巾"]},
@@ -950,8 +961,12 @@ function tutorialTarget(selector,message,onConfirm){
   if(el)el.classList.add("tutorialTarget");
 }
 function hideTutorial(){document.querySelectorAll(".tutorialTarget").forEach(x=>x.classList.remove("tutorialTarget"));$("tutorialBanner").classList.remove("bottom");$("tutorialBanner").style.display=$("tutorialMask").style.display="none";}
+const DUNGEON_TUTORIAL_PHASES=["training_intro","training_cleave","training_dash","training_slam","training_potion","training_return","boss","boss_message","return"];
 function refreshTutorial(){
   const t=S.tutorial||{};hideTutorial();
+  // 潜行中の案内は拠点では出さない。#s1 や #mmW は拠点でも DOM には在るため、
+  // 素通しにすると見えないボタンを指すバナーが拠点に貼り付いたままになる。
+  if(S.scene!=="dungeon"&&DUNGEON_TUTORIAL_PHASES.includes(t.phase))return;
   if(t.phase==="training_cleave")tutorialTarget("#s1","<b>薙ぎ払い</b>：強めの攻撃をしたい時に使います。出現した敵へ使ってみましょう。スキルはMPを消費します。");
   else if(t.phase==="training_dash")tutorialTarget("#s2","<b>突進斬り</b>：攻撃を避ける時や、素早い移動手段として使えます。敵へ使ってみましょう。");
   else if(t.phase==="training_slam")tutorialTarget("#s3","<b>大地砕き</b>：複数の敵をまとめて攻撃したい時に使います。3体へ使ってみましょう。");
@@ -1028,14 +1043,18 @@ function derive(){
   return {C,pw,opt:t,str,mag,def,agi,spi,luk,physAtk,specAtk,
     max:Math.round((C.hp+lv*17+t.hp)*(ch.hp||1)*traitHP*traitOne),
     atkFlat:(C.atkStat==="mag"?specAtk:physAtk), armor,
-    rng:1+t.rng/100,
-    crit:.05+agi*.0022+t.crit/100+(ch.crit||0), cdmg:1.8+t.cdmg/100,
-    as:1+bonusAgi*.0022+t.as/100,
-    ms:(1+Math.min(.28,bonusAgi*.0016))*(1+t.ms/100)*(C.msMul||1)*(ch.ms||1),
+    /* %系には必ず天井を置く。AFF の抽選上限は深度に比例して伸びるため、
+       上限が無いと深度1000で攻撃速度40倍・移動速度34倍に達し、
+       当たり判定も移動も破綻する。装備の伸びとは別の安全弁として持つ。
+       抽選上限そのものの見直し（深度で飽和させる）は実数系の再調整とセットで行う。 */
+    rng:Math.min(2.2,1+t.rng/100),
+    crit:Math.min(1,.05+agi*.0022+t.crit/100+(ch.crit||0)), cdmg:Math.min(6,1.8+t.cdmg/100),
+    as:Math.min(2.6,1+bonusAgi*.0022+t.as/100),
+    ms:Math.min(2,(1+Math.min(.28,bonusAgi*.0016))*(1+t.ms/100)*(C.msMul||1)*(ch.ms||1)),
     ls:Math.min(.03,t.ls/100), cdr:Math.min(.5,t.cdr/100+b.spi*.0015),
     dr:Math.min(.7,armorDR(armor)*(C.defMul||1)),
     stRes:Math.min(.72,def/(def+150)),
-    agiD:agi, mf:t.mf/100,
+    agiD:agi, mf:Math.min(3,t.mf/100),
     mpMax:Math.round((C.mp+t.mpF)*manaPw*(ch.mp||1)),
     mpReg:(CFG.MP_REGEN+spi*.075)*(1+t.mreg/100)*manaPw*(C.mpRegMul||1)};
 }
@@ -2247,7 +2266,9 @@ function endRun(alive,cause){
     S.partyIndex++;const [k,id]=S.formation[S.partyIndex].split(":");
     selectCharacter(k,id,()=>{S.p=newPlayer();S.paused=false;enterFloor(S.floor);updBuffs();updHUD();toast(`${currentCharacter().n}に交代`);});return;}
   const got=S.bag.slice();
-  if(alive&&(S.tutorial||{}).phase==="return"){S.tutorial.phase="equip_tab";hideTutorial();}
+  // boss_message は深度5ボス撃破時に設定され、そこから先へ進む経路が無かった。
+  // 帰還した時点で装備・商店・編成の案内へ繋ぐ（無料ガチャ2回もこの枝にある）。
+  if(alive&&["return","boss_message"].includes((S.tutorial||{}).phase)){S.tutorial.phase="equip_tab";hideTutorial();}
   if(alive){S.stash.push(...got);SFX.extract();}else SFX.death();
   S.log.runs.push({t:Math.round(S.runT),floor:S.floor,start:S.startFloor,alive,
     items:got.length,kills:S.p.kills,lv:S.base.lv,gold:S.gold,ups:S.p.ups.slice()});
@@ -2474,7 +2495,26 @@ function openFormationPick(slot){hideTutorial();const c=$("itC"),t=(S.tutorial||
   const keys=t?["mage"]:[...new Set(unlockedRoster().map(x=>x.k))];for(const k of keys){const d=document.createElement("div");d.className="card tap";d.innerHTML=`<div class="nm" style="color:${CLASSES[k].col}">${CLASSES[k].name}</div><div class="st">${CLASSES[k].desc}</div>`;tapEl(d,()=>openFormationChoices(slot,k));c.appendChild(d);}
   if(slot>0&&S.formation[slot]){const rm=document.createElement("div");rm.className="btn gh";rm.textContent="この枠を外す";tapEl(rm,()=>{S.formation.splice(slot,1);save();$("itPop").classList.remove("on");openTown();});c.appendChild(rm);}
   const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);$("itPop").classList.add("on");}
-function openFormationChoices(slot,k){const c=$("itC");c.innerHTML=`<div class="nm">${CLASSES[k].name}のキャラクター</div>`;for(const ch of CHARACTERS[k].filter(ch=>S.unlockedCharacters.includes(k+":"+ch.id))){const key=k+":"+ch.id,on=S.formation.includes(key),d=document.createElement("div");d.className="card tap"+(on?" no":"");d.innerHTML=`<div class="row"><div><div class="nm" style="color:${ch.col}">● ${ch.n}</div><div class="ty">${ch.trait}</div></div>${on?'<span class="tag">編成中</span>':""}</div><div class="st">${ch.d}</div>`;tapEl(d,()=>{if(on)return;S.formation[slot]=key;S.formation=S.formation.filter(Boolean).slice(0,formationCapacity());if((S.tutorial||{}).phase==="formation_slot"&&key==="mage:mira"){S.tutorial.phase="done";toast("チュートリアル完了！","ok");}save();$("itPop").classList.remove("on");openTown();});c.appendChild(d);}const back=document.createElement("div");back.className="btn gh";back.textContent="職業選択へ戻る";tapEl(back,()=>openFormationPick(slot));c.appendChild(back);$("itPop").classList.add("on");}
+function openFormationChoices(slot,k){const c=$("itC");c.innerHTML=`<div class="nm">${CLASSES[k].name}のキャラクター</div>`;for(const ch of CHARACTERS[k].filter(ch=>S.unlockedCharacters.includes(k+":"+ch.id))){const key=k+":"+ch.id,on=S.formation.includes(key),d=document.createElement("div");d.className="card tap"+(on?" no":"");d.innerHTML=`<div class="row"><div><div class="nm" style="color:${ch.col}">● ${ch.n}</div><div class="ty">${ch.trait}</div></div>${on?'<span class="tag">編成中</span>':""}</div><div class="st">${ch.d}</div>`;tapEl(d,()=>{if(on)return;
+  // 入れ替えを断ってもチュートリアルは終わらせる。ここで止めると、
+  // ガイは編成済みで選べず、ミラを選ぶかスキップする以外に完了できなくなる。
+  const finishTutorial=()=>{if((S.tutorial||{}).phase==="formation_slot"&&key==="mage:mira"){S.tutorial.phase="done";toast("チュートリアル完了！","ok");}};
+  const commit=()=>{S.formation[slot]=key;S.formation=S.formation.filter(Boolean).slice(0,formationCapacity());finishTutorial();save();$("itPop").classList.remove("on");openTown();};
+  /* 1番手＝実際に潜るキャラクター。装備とレベルはキャラクターごとに別なので、
+     育てた1番手を降ろすと、次の潜行は装備なしのLv1で始まることになる。
+     チュートリアル最終手順がまさにこれ（ガイ→ミラ）で、案内どおり進めた新規が
+     訓練用装備一式を持ったまま裸のLv1で潜る形になっていた。降ろす前に必ず知らせる。 */
+  const previous=slot===0&&S.formation[0],prevState=previous&&S.characterStates[previous];
+  const prevGear=previous===activeCharacterKey()?S.gear:(prevState||{}).gear;
+  const prevCount=Object.values(prevGear||{}).filter(Boolean).length;
+  if(previous&&previous!==key&&prevCount){
+    const [pk,pid]=previous.split(":"),pch=(CHARACTERS[pk]||[]).find(x=>x.id===pid)||{n:previous};
+    const next=S.characterStates[key],nextCount=Object.values((next||{}).gear||{}).filter(Boolean).length;
+    finishTutorial();save();
+    ask("1番手を入れ替える",
+      `1番手は実際に潜るキャラクターです。\n装備とレベルはキャラクターごとに別々なので、${pch.n}の装備${prevCount}個は${ch.n}では使えません。\n${ch.n}の装備は${nextCount}個、レベルは${(next&&next.base?next.base.lv:1)}です。`,commit);
+    return;}
+  commit();});c.appendChild(d);}const back=document.createElement("div");back.className="btn gh";back.textContent="職業選択へ戻る";tapEl(back,()=>openFormationPick(slot));c.appendChild(back);$("itPop").classList.add("on");}
 
 function renderSettings(b,after,inDungeon){
   const h=document.createElement("h3");h.textContent="表示・省電力";b.appendChild(h);const cg=document.createElement("div");cg.className="compactGrid";b.appendChild(cg);
@@ -2859,8 +2899,11 @@ function load(){try{
   const normalizeBase=raw=>{const b=Object.assign({lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0},raw||{});
     if(!b.xpCurveV2){
       const oldLv=Math.max(1,b.lv|0),oldExtra=Math.max(0,b.para|0);
-      const total=legacyXpCum(oldLv)+(b.xp||0)+oldExtra*Math.max(10,legacyXpCum(100)-legacyXpCum(99));
+      let total=legacyXpCum(oldLv)+(b.xp||0)+oldExtra*Math.max(10,legacyXpCum(100)-legacyXpCum(99));
       let lv=1;while(xpCum(lv+1)<=total)lv++;
+      /* 新カーブは Lv129 あたりから旧カーブより重くなるため、素直に換算すると
+         そこから上のセーブはレベルが下がる。移行で弱くなることは無い、を守る。 */
+      if(lv<oldLv){lv=oldLv;total=Math.max(total,xpCum(lv));}
       b.pts=Math.max(0,(b.pts||0)+(lv-1)*CFG.STAT_PER_LV-((oldLv-1)*CFG.STAT_PER_LV+oldExtra));
       b.lv=lv;b.xp=total-xpCum(lv);b.xpCurveV2=true;
     }
@@ -2878,13 +2921,27 @@ function load(){try{
 
 /* ---------- 起動 ---------- */
 resize();
+/* チュートリアル中の入力制限。
+   誘導先が画面に存在しないときは必ず制限を解除する（fail open）。
+   閉じ込めると復帰手段が無くなり、セーブを消す以外に進めなくなるため。 */
 function tutorialAllows(el){if(el.closest("#tutorialSkip,#tutorialConfirm,#btnBack")||$("itPop").classList.contains("on")||$("askPop").classList.contains("on"))return true;const p=(S.tutorial||{}).phase;
-  if($("tutorialBanner").style.display!=="none")return false;
-  if(p&&p.startsWith("tour_"))return !!el.closest(".tutorialTarget,#tutorialSkip");
+  if(p&&p.startsWith("tour_")){
+    if(!document.querySelector(".tutorialTarget"))return true;   // 案内先が無ければ制限しない
+    if($("tutorialBanner").style.display!=="none")return false;
+    return !!el.closest(".tutorialTarget,#tutorialSkip");}
   if(!["equip_tab","equip","shop","equip_gacha","char_gacha","formation","formation_slot"].includes(p))return true;
   const selectors={equip_tab:'#scTown .tab[data-t="gear"]',equip:`.slot[data-slot="${TUTORIAL_SLOTS[S.tutorial.gearIndex]}"]`,shop:'#scTown .tab[data-t="shop"]',equip_gacha:'[data-tutorial="equip-gacha"]',char_gacha:'[data-tutorial="char-gacha"]',formation:'#scTown .tab[data-t="prep"]',formation_slot:'.member[data-index="0"]'};
+  if(!document.querySelector(selectors[p]))return true;           // 誘導先が無ければ制限しない
+  if($("tutorialBanner").style.display!=="none")return false;
   return !!el.closest(selectors[p]);}
-for(const ev of ["click","mousedown","touchstart"])document.addEventListener(ev,e=>{if(!tutorialAllows(e.target)){e.preventDefault();e.stopImmediatePropagation();}},true);
+/* 弾いた入力を黙って捨てると、案内を閉じた後の画面は「押しても何も起きない」状態に見える。
+   （拠点案内の最中に「潜る」を押しても無反応、という報告はこれ。）
+   弾いたら案内を出し直して、どこを押せばよいのかを必ず画面に戻す。 */
+let tutorialBlockT=0;
+for(const ev of ["click","mousedown","touchstart"])document.addEventListener(ev,e=>{if(tutorialAllows(e.target))return;
+  e.preventDefault();e.stopImmediatePropagation();
+  const now=performance.now();if(now-tutorialBlockT<600)return;tutorialBlockT=now;
+  refreshTutorial();toast("案内の場所をタップしてください");},true);
 for(let i=0;i<4;i++)holdBtn($("s"+i),i);
 (()=>{let down=null;const el=$("cv");el.addEventListener("pointerdown",e=>{if(S.settings.controlMode!=="onehand"||S.scene!=="dungeon")return;down={x:e.clientX,y:e.clientY};IN.ox=e.clientX;IN.oy=e.clientY;});el.addEventListener("pointermove",e=>{if(!down||S.settings.controlMode!=="onehand")return;let dx=e.clientX-down.x,dy=e.clientY-down.y,l=Math.hypot(dx,dy)||1;IN.dx=dx/l;IN.dy=dy/l;});el.addEventListener("pointerup",e=>{if(!down)return;if(Math.hypot(e.clientX-down.x,e.clientY-down.y)<12){HELD[0]=true;setTimeout(()=>HELD[0]=false,80);}IN.dx=IN.dy=0;down=null;});})();
 (()=>{const el=$("pot"),fan=$("itemFan");let timer=null,open=false,sel=0;const layout=[[20,105],[65,55],[120,25],[155,72]];const draw=()=>{fan.innerHTML="";S.loadout.forEach((k,i)=>{const d=document.createElement("div");d.className="fanItem"+(i===sel?" sel":"");d.style.left=layout[i][0]+"px";d.style.top=layout[i][1]+"px";d.textContent=k?CONSUMABLES[k].icon+" "+(S.runItems[i]||0):"—";fan.appendChild(d);});};const point=e=>e.touches?e.touches[0]:e;const down=e=>{if(S.scene!=="dungeon"||S.paused)return;e.preventDefault();open=false;timer=setTimeout(()=>{open=true;fan.classList.add("on");draw();},360);};const move=e=>{if(!open)return;e.preventDefault();const q=point(e),r=el.getBoundingClientRect(),x=q.clientX-r.left,y=q.clientY-r.top;let best=1e9;layout.forEach((v,i)=>{const z=(x-v[0]-27)**2+(y-v[1]-27)**2;if(z<best){best=z;sel=i;}});draw();};const up=e=>{clearTimeout(timer);if(open){e.preventDefault();fan.classList.remove("on");open=false;useItem(sel);}else useItem(S.itemSlot);};el.addEventListener("pointerdown",down);el.addEventListener("pointermove",move);el.addEventListener("pointerup",up);el.addEventListener("pointercancel",()=>{clearTimeout(timer);fan.classList.remove("on");open=false;});})();
@@ -2909,7 +2966,16 @@ for(const t of document.querySelectorAll("#scTown .tab"))tapEl(t,()=>{
   save();openTown();});
 for(const t of document.querySelectorAll("#scPause .tab"))tapEl(t,()=>{S.ptab=t.dataset.p;openPause();});
 
-const freshStart=!load();if(freshStart){S.cls="warrior";S.avatars.warrior="gai";S.formation=["warrior:gai"];S.profileAvatar="warrior:gai";S.gear={};for(const k of SLOTK)S.gear[k]=null;S.p=newPlayer();save();beginTraining();}else{if(!S.formation.length)S.formation=["warrior:gai"];S.p=newPlayer();openTown();}
+/* 練習部屋は初回起動でしか組み立てられず、S.scene も保存されない。
+   そのため練習中に再読込すると部屋ごと失われ、チュートリアルが training_* のまま
+   永久に止まる（深度5ボスの訓練用装備一式も無料ガチャ2回も受け取れなくなる）。
+   練習中の再開は、もう一度練習部屋の頭から始める。 */
+const TRAINING_PHASES=["training_intro","training_cleave","training_dash","training_slam","training_potion","training_return"];
+const freshStart=!load();
+if(freshStart){S.cls="warrior";S.avatars.warrior="gai";S.formation=["warrior:gai"];S.profileAvatar="warrior:gai";S.gear={};for(const k of SLOTK)S.gear[k]=null;S.p=newPlayer();save();beginTraining();}
+else{if(!S.formation.length)S.formation=["warrior:gai"];S.p=newPlayer();
+  if(TRAINING_PHASES.includes((S.tutorial||{}).phase)){S.tutorial={phase:"training_intro",gearIndex:0};beginTraining();}
+  else openTown();}
 
 let last=performance.now(),acc=0;
 function frame(now){

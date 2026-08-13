@@ -122,8 +122,25 @@ const report = game.run(() => {
   const adverseDepth = 151; let progressed = 0;
   for (let run = 0; run < 24; run++) { prepare(); _s = (adverseDepth * 2654435761 + run * 1013904223) >>> 0; equip(adverseDepth, 'fire'); S.p = newPlayer(); enterFloor(adverseDepth); const initial = S.enemies.length; runCombat(90); if (S.enemies.length < initial) progressed++; }
   const adverseProgress = { floor: adverseDepth, progressed, runs: 24 };
-  const reaches = elements.map(boundary), neutral = boundary('neutral');
-  return { distribution, floorRatios, matchup, resonanceRows, resonanceStages, incoming, neutralBonus, reaches, neutral, clearTimes, damage, adverseProgress };
+  /* 到達深度は2通り測る。
+     reaches   … 属性を固定したまま8帯すべてを潜る（有利帯と不利帯が相殺する）。
+                 これは無属性とほぼ並ぶのが正しい。属性を放置しても得をしない、が設計。
+     matched   … その帯の優勢属性に勝てる属性へ持ち替えて潜る。
+                 「属性を合わせた分だけ深く行ける」という狙いはこちらで測る。 */
+  const counterOf = { fire: 'water', water: 'wood', wood: 'fire', light: 'dark', dark: 'light' };
+  function matchedCycleDeathRate(depth, runs = 48) {
+    let total = 0;
+    const runsPerDepth = Math.max(1, Math.floor(runs / 8));
+    for (let offset = 0; offset < 8; offset++) { const floor = depth + offset * 5; total += deathRate(floor, counterOf[dominantElement(floor)], runsPerDepth); }
+    return total / 8;
+  }
+  function matchedBoundary() {
+    let lower = 1, upper = 300;
+    while (lower < upper) { const middle = Math.floor((lower + upper) / 2); if (matchedCycleDeathRate(middle, 48) >= .5) upper = middle; else lower = middle + 1; }
+    return { element: '帯に合わせる', depth: lower, deathRate: matchedCycleDeathRate(lower, 160) };
+  }
+  const reaches = elements.map(boundary), neutral = boundary('neutral'), matched = matchedBoundary();
+  return { distribution, floorRatios, matchup, resonanceRows, resonanceStages, incoming, neutralBonus, reaches, neutral, matched, clearTimes, damage, adverseProgress };
 
 });
 
@@ -136,7 +153,7 @@ console.table(report.distribution.map(row => ({ 深度帯: row.band, 火: `${(ro
 console.log('\n1フロア内の優勢属性比率');
 console.table(report.floorRatios.map(row => ({ 深度: row.floor, 優勢比率: `${(row.ratio * 100).toFixed(1)}%` })));
 console.log('\n共鳴ビルドの到達深度');
-console.table([...report.reaches, report.neutral].map(row => ({ 属性: row.element, '50%死亡深度': row.depth, 死亡率: `${(row.deathRate * 100).toFixed(1)}%` })));
+console.table([...report.reaches, report.neutral, report.matched].map(row => ({ 属性: row.element, '50%死亡深度': row.depth, 死亡率: `${(row.deathRate * 100).toFixed(1)}%`, 無属性差: row.depth - report.neutral.depth })));
 console.log('\n実フロアのクリア時間');
 console.table([{ 有利帯: report.clearTimes.advantageFloors.join(','), 有利秒: report.clearTimes.advantage?.toFixed(2), 不利帯: report.clearTimes.disadvantageFloors.join(','), 不利秒: report.clearTimes.disadvantage?.toFixed(2), 時間比: report.clearTimes.advantage && (report.clearTimes.disadvantage / report.clearTimes.advantage).toFixed(2), 無属性比: report.clearTimes.neutralAdvantage && (report.clearTimes.neutralDisadvantage / report.clearTimes.neutralAdvantage).toFixed(2) }]);
 console.log('実生成敵への通常攻撃ダメージ', report.damage);
@@ -155,15 +172,62 @@ for (const element of elementKeys) {
   const stages = report.resonanceStages.filter(row => row.element === element);
   if (stages.some((row, index) => row.stage !== index + 1)) throw new Error(`${element}の3/5/7個共鳴段階が不正`);
   if (!(stages[0].dealt < stages[1].dealt && stages[1].dealt < stages[2].dealt)) throw new Error(`${element}の有利与ダメージ倍率が3個 < 5個 < 7個ではない（${stages.map(row => row.dealt).join(' / ')}）`);
+  /* 被ダメージ側も段階が進むほど一貫させる。片側だけ調整して段差が逆転するのを防ぐ。
+     火水木は「勝てる相手からは軽く受ける」ので段階が進むほど下がる。
+     光闇は互いに与ダメージも被ダメージも上がる高リスク高リターンなので、逆に上がる。
+     どちらも一段ごとの跳ね幅は1.5倍までに抑える（0.85→0.05のような段差を許さない）。 */
+  const taken = stages.map(row => row.takenAdvantageous);
+  const resists = taken[1] < 1;
+  if (resists) {
+    if (!(taken[0] > taken[1] && taken[1] > taken[2])) throw new Error(`${element}の有利被ダメージ倍率が3個 > 5個 > 7個ではない（${taken.join(' / ')}）`);
+  } else {
+    if (!(taken[0] < taken[1] && taken[1] < taken[2])) throw new Error(`${element}の対面被ダメージ倍率が3個 < 5個 < 7個ではない（${taken.join(' / ')}）`);
+  }
+  for (let index = 1; index < taken.length; index++) {
+    const ratio = Math.max(taken[index - 1] / taken[index], taken[index] / taken[index - 1]);
+    if (ratio > 1.5) throw new Error(`${element}の被ダメージ倍率が${index * 2 + 1}個→${index * 2 + 3}個で${ratio.toFixed(1)}倍も跳ねる（${taken.join(' / ')}）`);
+  }
 }
-for (const row of report.incoming) if (row.advantageous !== .05 || row.disadvantageous !== 1.25) throw new Error(`${row.element}の5個共鳴被ダメージ補正は有利0.05・不利1.25でなければならない（実測 ${row.advantageous}/${row.disadvantageous}）`);
+// 火水木は必ず「軽く受ける相手」を持ち、光闇は互いに不利を負う（どの属性にも弱点がある）。
+for (const element of ['fire', 'water', 'wood']) {
+  const middle = report.resonanceStages.find(row => row.element === element && row.count === 5);
+  if (!(middle.takenAdvantageous < 1)) throw new Error(`${element}は有利相手からの被ダメージが軽減されていない（${middle.takenAdvantageous}）`);
+}
+for (const element of ['light', 'dark']) {
+  const middle = report.resonanceStages.find(row => row.element === element && row.count === 5);
+  if (!(middle.takenAdvantageous > 1)) throw new Error(`${element}は対の属性から不利を受けていない（${middle.takenAdvantageous}）。弱点の無い属性を作らない`);
+}
+// 被ダメージ補正は有利側(guard)と不利側(danger)が対称の幅に収まっていること。
+// 数値を1点で固定すると調整のたびにテストを書き換える羽目になるので、幅と段差で縛る。
+for (const row of report.incoming) {
+  if (!(row.advantageous >= .6 && row.advantageous <= .8)) throw new Error(`${row.element}の5個共鳴 有利被ダメージ倍率 ${row.advantageous} は0.60〜0.80の範囲外`);
+  if (!(row.disadvantageous >= 1.2 && row.disadvantageous <= 1.4)) throw new Error(`${row.element}の5個共鳴 不利被ダメージ倍率 ${row.disadvantageous} は1.20〜1.40の範囲外`);
+  const advantageGain = 1 - row.advantageous, dangerLoss = row.disadvantageous - 1;
+  if (advantageGain > dangerLoss * 1.5) throw new Error(`${row.element}: 有利時の軽減 ${(advantageGain * 100).toFixed(0)}% が不利時の増加 ${(dangerLoss * 100).toFixed(0)}% に対して大きすぎる`);
+}
 if (report.neutralBonus.resonance.stage !== 0 || Math.abs(report.neutralBonus.actualMain / report.neutralBonus.elementalMain - 1.15) > .01) throw new Error('無属性装備の共鳴除外または基礎値1.15倍が不正');
 const depths = report.reaches.map(row => row.depth), min = Math.min(...depths), max = Math.max(...depths);
 if (max - min > 10) throw new Error(`5属性の50%死亡深度差 ${min}〜${max} は±5（全幅10）を超える`);
-const resonanceAverage = report.reaches.reduce((sum, row) => sum + row.depth, 0) / report.reaches.length, neutralGap = resonanceAverage - report.neutral.depth;
-if (neutralGap < 5 || neutralGap > 15) throw new Error(`属性平均−無属性の到達深度差 ${neutralGap.toFixed(1)} は+5〜+15層の範囲外`);
+const resonanceAverage = report.reaches.reduce((sum, row) => sum + row.depth, 0) / report.reaches.length, fixedGap = resonanceAverage - report.neutral.depth;
+console.log(`到達深度まとめ 無属性${report.neutral.depth} / 属性固定平均${resonanceAverage.toFixed(1)}(${fixedGap >= 0 ? '+' : ''}${fixedGap.toFixed(1)}) / 帯に合わせる${report.matched.depth}(+${report.matched.depth - report.neutral.depth})`);
+// 狙いの本体：帯の優勢属性に合わせて持ち替えたときだけ、はっきり深くまで行ける。
+const matchedGap = report.matched.depth - report.neutral.depth;
+if (matchedGap < 5 || matchedGap > 15) throw new Error(`帯に合わせた属性−無属性の到達深度差 ${matchedGap} は+5〜+15層の範囲外`);
+if (report.matched.depth - resonanceAverage < 5) throw new Error(`帯に合わせた到達深度 ${report.matched.depth} が属性固定平均 ${resonanceAverage.toFixed(1)} を5層以上上回らない`);
+/* 属性を固定したまま全帯を潜る運用は、無属性より上には出ないこと（放置で得をさせない）。
+   下振れ側は無属性の主能力1.15倍ぶんだけ沈むのが正常なので、-8層まで許す。
+   ここを対称にすると、1.15倍の存在自体と矛盾してテストが通らなくなる。 */
+if (fixedGap > 3) throw new Error(`属性固定平均が無属性より ${fixedGap.toFixed(1)} 層深い。属性を放置しても得をしない設計に反する`);
+if (fixedGap < -8) throw new Error(`属性固定平均が無属性より ${(-fixedGap).toFixed(1)} 層浅い。無属性ボーナスが効きすぎて属性が罠になっている`);
+/* 光闇は8帯のうち1帯でしか対面が起きない（火水木は有利2帯・不利2帯）。
+   不利帯を持たないぶん固定運用の到達深度は火水木より自然に高く出るので、
+   火水木との直接比較ではなく「無属性を上回らないこと」で縛る。
+   ここを上回ると、光闇を着けておくだけで無属性より得、という状態になる。 */
 const primaryMax = Math.max(...report.reaches.filter(row => ['fire', 'water', 'wood'].includes(row.element)).map(row => row.depth));
-for (const row of report.reaches.filter(row => ['light', 'dark'].includes(row.element))) if (row.depth - primaryMax >= 3) throw new Error(`${row.element}の到達深度${row.depth}は火水木最高${primaryMax}を3層以上上回る`);
+for (const row of report.reaches.filter(row => ['light', 'dark'].includes(row.element))) {
+  if (row.depth > report.neutral.depth + 2) throw new Error(`${row.element}の到達深度${row.depth}は無属性${report.neutral.depth}を上回る。出現頻度の低い属性を着けておくだけで得になっている`);
+  if (row.depth < primaryMax - 8) throw new Error(`${row.element}の到達深度${row.depth}は火水木最高${primaryMax}より8層以上浅い。希少属性が実用外になっている`);
+}
 if (report.clearTimes.advantage == null || report.clearTimes.disadvantage == null) throw new Error('有利帯・不利帯を実戦闘でクリアできなかった');
 const elementalTimeRatio = report.clearTimes.disadvantage / report.clearTimes.advantage;
 if (elementalTimeRatio < 2) throw new Error(`有利帯・不利帯のクリア時間比 ${elementalTimeRatio.toFixed(2)} は2.0未満`);
