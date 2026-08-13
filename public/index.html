@@ -1124,7 +1124,7 @@ function newPlayer(){const d=derive();
   return {x:0,y:0,r:CFG.P_RADIUS,face:0,d,hp:d.max,max:d.max,mp:d.mpMax,
     cd:0,cds:[0,0,0],hurtT:0,invulT:0,dashT:0,dashX:0,dashY:0,dashHit:null,
     mAtk:1,mAs:1,mMs:1,mCrit:0,mCdmg:0,mRange:1,mCd:1,mDrop:1,mLs:0,mDr:0,mHp:0,
-    sAtk:1,sDr:0,sMs:1,sAs:1,sDrop:1,shrineT:0,shrine:null,
+    sAtk:1,sDr:0,sMs:1,sAs:1,sDrop:1,shrineT:0,shrine:null,slowT:0,slowMs:1,
     buffT:0,buffAtk:1,buffDr:0,guardS:0,guardT:0,atkN:0,comboStep:0,comboT:0,ups:[],kills:0,itemBuffs:{},itemCd:0,itemLock:0,hot:0,hotT:0,lastHit:99,returnCast:0,returnSlot:-1,autoDelay:0};}
 const recalcHP=p=>{p.max=Math.round(p.d.max*(1+p.mHp));p.hp=Math.min(p.hp,p.max);};
 const UPS=[
@@ -1557,6 +1557,7 @@ function update(dt){
   if(p.comboT>0){p.comboT-=dt;if(p.comboT<=0)p.comboStep=0;}
   if(p.shrineT>0){p.shrineT-=dt;
     if(p.shrineT<=0){p.sAtk=1;p.sDr=0;p.sMs=1;p.sAs=1;p.sDrop=1;p.shrine=null;updBuffs();}}
+  if(p.slowT>0){p.slowT-=dt;if(p.slowT<=0){p.slowMs=1;updBuffs();}}
   p.st=p.st||{};tickST(p,dt,true);if(p.hp<=0)return;
   p.mp=clamp(p.mp+p.d.mpReg*(p.itemBuffs.focus?1.8:1)*dt,0,p.d.mpMax);
 
@@ -1566,7 +1567,7 @@ function update(dt){
     if(p.dashT<=0){p.dashT=0;p.invulT=.18;p.dashHit=null;}}
   else if((IN.dx||IN.dy)&&!stActive(p,"frz")&&p.itemLock<=0){
     const w=s2w(IN.dx,IN.dy),
-      sp=CFG.P_SPEED*p.d.ms*p.mMs*p.sMs*(p.itemBuffs.gale?1.07:1)*w.mag*(stActive(p,"par")?.55:1);
+      sp=CFG.P_SPEED*p.d.ms*p.mMs*p.sMs*(p.slowMs||1)*(p.itemBuffs.gale?1.07:1)*w.mag*(stActive(p,"par")?.55:1);
     mv(p,w.x*sp*dt,w.y*sp*dt);
     const fl=Math.hypot(w.x,w.y)||1;p.face=Math.atan2(w.y/fl,w.x/fl);}
 
@@ -1662,7 +1663,11 @@ function update(dt){
           hurtE(e,b.dmg,b.crit,b.vx*.02,b.vy*.02);dead=true;break;}
       }else if(d2(b.x,b.y,p.x,p.y)<.16){
         hurtP(b.dmg,b.homing?"追尾弾":"敵の投射攻撃",false,b.element);
-        if(b.slow){p.sMs=.65;p.shrineT=Math.max(p.shrineT,2);updBuffs();}
+        /* 減速は祭壇とは別の時計で持つ。以前は p.sMs と p.shrineT を流用しており、
+           祭壇の効果中に減速を受けると2秒のはずの減速が祭壇の残り時間（最大50秒）続き、
+           疾風の祭壇は +28% が -35% に反転したまま張り付いていた。
+           逆に祭壇の残りが2秒未満だと祭壇の方が延命されていた。 */
+        if(b.slow){p.slowMs=.65;p.slowT=Math.max(p.slowT,2);updBuffs();}
         if(b.st)applyST(p,b.st,2.2,true);
         dead=true;}}
     if(dead)S.bullets.splice(i,1);}
@@ -2247,6 +2252,8 @@ function updBuffs(){const p=S.p,c=$("buffs");c.innerHTML="";
   if(p&&p.shrine){const d=document.createElement("div");d.className="buff";
     d.style.borderLeftColor=p.shrineGood?"#65db78":"#e0525b";
     d.textContent=p.shrine.n+" "+Math.ceil(p.shrineT)+"s";c.appendChild(d);}
+  if(p&&p.slowT>0){const d=document.createElement("div");d.className="buff";
+    d.style.borderLeftColor="#e0525b";d.textContent="減速 "+Math.ceil(p.slowT)+"s";c.appendChild(d);}
   for(const k in p.itemBuffs){const d=document.createElement("div");d.className="buff";d.textContent=CONSUMABLES[k].n+" "+Math.ceil(p.itemBuffs[k])+"s";c.appendChild(d);}}
 let tT=null;
 function toast(m,kind){const el=$("toast");el.textContent=m;el.className=kind||"";el.classList.add("on");
