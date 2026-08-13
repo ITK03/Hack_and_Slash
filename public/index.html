@@ -67,6 +67,9 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
   color:var(--ink2);text-align:center;margin-top:-2px;text-shadow:none}
 #bossBar{position:absolute;left:11px;right:108px;top:calc(env(safe-area-inset-top) + 82px);
   z-index:12;display:none;pointer-events:none;max-width:360px}
+/* ボスバーは9px・赤地に赤で残量が読めなかった。太くして枠と目盛りを足す。 */
+#bossBar .bar{height:13px;box-shadow:inset 0 0 0 1px rgba(240,120,110,.5),inset 0 2px 5px rgba(0,0,0,.8);
+  background:repeating-linear-gradient(90deg,#160a0e 0 24px,#1e0e12 24px 25px)}
 #bossBar .bn{font-size:11px;font-weight:800;color:#f09a86;text-align:center;margin-bottom:4px;
   letter-spacing:.08em;text-shadow:0 1px 4px #000}
 #bossF{background:linear-gradient(180deg,#f0404a,#5e0a12);color:#d8342c}
@@ -79,22 +82,27 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
   border-radius:50%;background:rgba(222,215,236,.26);
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.10)}
 #pad{position:absolute;right:6px;bottom:calc(env(safe-area-inset-bottom) + 12px);z-index:20;
-  width:200px;height:190px;pointer-events:none}
+  width:200px;height:170px;pointer-events:none}
 .sk{position:absolute;border-radius:50%;pointer-events:auto;overflow:hidden;
   border:1px solid rgba(190,178,214,.22);
   background:radial-gradient(circle at 34% 28%,#3b3450,#151222 72%);
   box-shadow:0 3px 10px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   font-size:10px;font-weight:800;color:#efe6d6;text-align:center;line-height:1.15;padding:3px}
+/* 技名は円の内側で折り返す。はみ出すと overflow:hidden で両端が切れて読めなくなる。 */
+.sk>span{display:block;max-width:100%;word-break:break-all;overflow-wrap:anywhere}
 .sk .cd{position:absolute;inset:0;background:rgba(5,4,9,.76);transform-origin:bottom;pointer-events:none}
 .sk .cost{font-size:8px;color:#7fb4f0;font-weight:700;margin-top:2px}
 .sk.no{opacity:.34;filter:grayscale(.6)}
 .sk:active{transform:scale(.92)}
 #s0{width:80px;height:80px;right:3px;bottom:3px;font-size:12px;border-color:rgba(224,165,60,.4);
   background:radial-gradient(circle at 34% 28%,#4a3a26,#1a1410 72%)}
-#s1{width:58px;height:58px;right:86px;bottom:8px}
-#s2{width:58px;height:58px;right:64px;bottom:76px}
-#s3{width:58px;height:58px;right:6px;bottom:94px}
+/* 技は攻撃ボタンの上に横一列。以前は攻撃ボタンを囲む弧に置いていたが、
+   攻撃と突進斬りが19x7px重なり、技名も円からはみ出して読めなかった。
+   一列なら重ならず、4文字の技名がそのまま入る。 */
+#s1{width:60px;height:60px;right:134px;bottom:96px}
+#s2{width:60px;height:60px;right:70px;bottom:96px}
+#s3{width:60px;height:60px;right:6px;bottom:96px}
 #pot{position:absolute;left:0;bottom:10px;width:56px;height:56px;border-radius:50%;
   pointer-events:auto;border:1px solid rgba(214,69,80,.55);
   background:radial-gradient(circle at 34% 28%,#5e1622,#220810 72%);
@@ -145,6 +153,9 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 .c0{color:var(--c0)}.c1{color:var(--c1)}.c2{color:var(--c2)}.c3{color:var(--c3)}
 .c4{background:linear-gradient(90deg,#ff6a6a,#ffd24a,#6ae86a,#5ac8ff,#c07aff,#ff6adf);
   -webkit-background-clip:text;background-clip:text;color:transparent;font-weight:900}
+/* 伝説は文字を虹色にするため color:transparent。アイコンは stroke="currentColor" なので
+   そのままだと透明になり、一番うれしいドロップだけ絵が消えていた。stroke を明示する。 */
+.c4 svg{stroke:var(--c4)}
 .tag{display:inline-block;font-size:8px;padding:2px 5px;border-radius:2px;border:1px solid currentColor;
   opacity:.75;margin-left:5px;vertical-align:1px;font-weight:800}
 .btn{padding:13px;border-radius:3px;text-align:center;font-size:13px;font-weight:800;
@@ -164,6 +175,20 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 .slot{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
   border-radius:3px;padding:9px 5px;text-align:center;min-height:78px;display:flex;
   flex-direction:column;justify-content:center;gap:3px}
+/* ON/OFF 切り替え。金は「択一で選ばれている」ものだけに使う。 */
+.btn.toggle{display:flex;align-items:center;justify-content:space-between;gap:6px;padding-left:11px;padding-right:9px}
+.btn.toggle em{font-style:normal;font-size:9px;font-weight:900;letter-spacing:.06em;
+  padding:2px 6px;border:1px solid var(--line2);color:var(--ink3);border-radius:2px}
+.btn.toggle.on em{border-color:rgba(224,165,60,.65);color:var(--gold);background:rgba(224,165,60,.12)}
+.setNote{font-size:9px;color:var(--ink3);line-height:1.6;margin:-2px 0 7px}
+.invLegend{display:flex;flex-wrap:wrap;gap:4px 12px;padding:7px 10px;margin-bottom:8px;
+  border:1px solid var(--line);background:var(--panel2);font-size:9px;color:var(--ink2)}
+.invLegend b{font-weight:900}
+.invLegend i{font-style:normal;margin-right:5px;font-weight:800}
+.slot{position:relative}
+/* 倉庫にもっと強い装備がある部位の印。倉庫グリッドの▲と同じ意味・同じ色にそろえる。 */
+.upMark{position:absolute;top:2px;left:4px;font-size:12px;line-height:1;font-weight:900;
+  color:#7ad04e;text-shadow:0 0 6px rgba(122,208,78,.6)}
 .slot .ic{color:var(--ink3);margin-bottom:2px}
 .slot .ic.e{opacity:.28}
 .slot .sl{font-size:9px;color:var(--ink3);font-weight:700}
@@ -200,6 +225,35 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 .member.on{border-color:var(--gold)}.member .order{font-size:8px;color:var(--gold)}.member .face{font-size:24px;margin:4px}.member .ty{font-size:8px}
 .prepDepth{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.prepDepth input{width:96px;padding:9px;background:#0a0810;border:1px solid var(--line2);color:var(--ink)}
 .floorStep{display:grid;grid-template-columns:34px 112px 34px;gap:5px}.floorStep .btn{margin:0;padding:8px 2px}.floorStep input{box-sizing:border-box;width:112px;min-width:0;text-align:center;font-size:18px;font-weight:900;font-variant-numeric:tabular-nums;padding:9px 3px}.prepDepth .nm{font-size:13px;font-weight:800}
+/* 出撃バー。潜るボタンは拠点タブの最下段にあり、日替わり任務・限界突破・編成・
+   持ち込み・開始階層を全部スクロールしないと届かなかった。タブバーの上に常駐させ、
+   編成や持ち込みをいじった直後でもそのまま出撃できるようにする。 */
+#diveBar{display:none;flex:0 0 auto;align-items:center;gap:9px;
+  padding:9px 12px calc(env(safe-area-inset-bottom) * .35 + 9px);
+  background:var(--bg2);border-top:1px solid var(--line)}
+#diveBar.on{display:flex}
+#diveBar .step{display:flex;align-items:center;gap:4px;flex:0 0 auto}
+#diveBar .step .btn{margin:0;padding:9px 0;width:34px;text-align:center;font-size:15px;font-weight:900}
+#diveBar .fl{min-width:62px;text-align:center;line-height:1.1}
+#diveBar .fl b{display:block;font-size:20px;font-weight:900;font-variant-numeric:tabular-nums}
+#diveBar .fl small{display:block;font-size:8px;color:var(--ink2)}
+#diveBar .go{flex:1 1 auto;margin:0;padding:13px 6px;font-size:15px;font-weight:900}
+/* 日替わり任務は1件ずつ大きなカード＋「未達成」の偽ボタンで画面1枚を占有していた。
+   進捗バー付きの細い行にして、受け取れる時だけボタンを出す。 */
+.qhead{display:flex;align-items:baseline;justify-content:space-between;margin:2px 0 7px}
+.qhead b{font-size:11px;color:var(--ink2);letter-spacing:.08em}
+.qhead em{font-style:normal;font-size:11px;color:var(--ink2)}
+.q{display:grid;grid-template-columns:1fr auto;gap:9px;align-items:center;
+  padding:8px 11px;border:1px solid var(--line);background:var(--panel);margin-bottom:6px}
+.q.done{border-color:rgba(224,165,60,.45)}
+.q .qn{font-size:12px;font-weight:800;line-height:1.3}
+.q .qr{font-size:9px;color:var(--ink2);margin-top:3px}
+.q .qb{height:3px;background:#0a0810;border:1px solid var(--line2);margin-top:5px;position:relative;overflow:hidden}
+.q .qb i{position:absolute;left:0;top:0;bottom:0;background:var(--gold);display:block}
+.q .btn{margin:0;padding:8px 13px;font-size:11px;white-space:nowrap}
+.qbonus{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:8px 11px;border:1px solid var(--line);background:var(--panel2);margin-bottom:6px;font-size:11px}
+.qbonus b{color:var(--gold);font-weight:900}
 .pointBox{padding:5px 9px!important;margin-bottom:3px}.pointBox .st{margin:0;line-height:1.35}
 .characterIconGrid{display:grid;grid-template-columns:repeat(5,1fr);column-gap:8px;row-gap:24px;margin:12px 0 22px}.characterIconChoice{aspect-ratio:1;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;border-radius:50%;font-size:28px;position:relative}.characterIconChoice.on{border:2px solid var(--gold);box-shadow:0 0 10px rgba(224,192,64,.35)}.characterIconChoice small{position:absolute;bottom:-17px;font-size:8px;line-height:1.2;color:var(--ink2);white-space:nowrap}.shopTabs{display:flex;gap:5px;margin-bottom:9px}.shopTabs .btn{flex:1;margin:0;padding:8px 3px;font-size:10px}
 .sellDock{margin:10px -15px -20px;padding:9px 15px calc(env(safe-area-inset-bottom) + 9px);background:var(--bg2);border-top:1px solid var(--line);display:grid;grid-template-columns:auto 1fr auto;gap:7px;align-items:center}.sellDock .btn{margin:0;padding:9px}.sellDock .amount{text-align:center;color:var(--gold);font-size:11px;font-weight:900}
@@ -329,6 +383,7 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
     <div class="profile"><div class="profileIcon" id="profileIcon">●</div><div><div class="depthBig"><small>最大深度</small><span id="townDepth">1</span>F</div></div><div class="wallet"><div class="currency"><i class="gem">◆</i><span id="premiumT">0</span></div><div class="currency gold"><i class="coin">●</i><span id="townG">0</span></div></div></div>
   </div>
   <div class="sbody" id="townBody"></div>
+  <div id="diveBar"></div>
   <div class="tabs">
       <div class="tab on" data-t="prep">拠点</div>
       <div class="tab" data-t="gear">装備</div>
@@ -888,10 +943,13 @@ function makeItem(fl,mf,luk,forceRar){
     const q=rr(.75,1.35);           // 当たり外れ。同じ接尾辞でも値が大きく振れる
     it.affs.push({id:a.id,v:Math.max(1,Math.round(a.f(il)*q)),q:+q.toFixed(2)});}
   if(rar===4)it.pw=pick(POWERS).id;
+  /* SUF は「熊の」「不滅の」のように後ろに名詞が来る形なので、部位名の後ろに付けると
+     「ファルシオン不滅の」と語尾が浮く。伝説だけ《接頭+SUF》部位名の順で正しく読めていた。
+     全レア度で 接頭 → SUF → 部位名 に揃える。既存セーブの名前はそのまま残す。 */
   it.name=rar===0?it.base
     :rar===1?(pick(PRE)+it.base)
-    :rar===2?((rnd()<.5?pick(PRE):"")+it.base+pick(SUF))
-    :rar===3?(pick(PRE)+it.base+pick(SUF))
+    :rar===2?((rnd()<.5?pick(PRE):"")+pick(SUF)+it.base)
+    :rar===3?(pick(PRE)+pick(SUF)+it.base)
     :"《"+pick(PRE)+pick(SUF)+"》"+it.base;
   it.score=iScore(it);return it;}
 // 職業に合わない防具は主ステが6割しか出ない
@@ -2032,6 +2090,21 @@ function shadow(sx,sy,w){ctx.fillStyle="rgba(0,0,0,.42)";
 function dPlayer(){
   const p=S.p,s=iso(p.x,p.y);
   shadow(s.sx,s.sy,11);
+  /* 自分の足元に常時マーカーを置く。敵と同じ輪郭の塗り分けだけだと、
+     敵が10体いる画面で自分がどれか分からない。輪＋向きの三角で必ず判別できるようにする。 */
+  ctx.save();
+  ctx.globalCompositeOperation="lighter";
+  ctx.strokeStyle="rgba(120,220,255,.5)";ctx.lineWidth=2;
+  ctx.beginPath();ctx.ellipse(s.sx,s.sy,16,8,0,0,TAU);ctx.stroke();
+  ctx.strokeStyle="rgba(120,220,255,.18)";ctx.lineWidth=4;
+  ctx.beginPath();ctx.ellipse(s.sx,s.sy,16,8,0,0,TAU);ctx.stroke();
+  {const wx=Math.cos(p.face),wy=Math.sin(p.face);
+   const dx=(wx-wy)*CFG.TILE_W/2,dy=(wx+wy)*CFG.TILE_H/2,l=Math.hypot(dx,dy)||1;
+   const ux=dx/l,uy=dy/l,tx=s.sx+ux*19,ty=s.sy+uy*19,px=-uy*4.5,py=ux*4.5;
+   ctx.fillStyle="rgba(150,230,255,.62)";ctx.beginPath();
+   ctx.moveTo(tx+ux*5,ty+uy*5);ctx.lineTo(tx+px,ty+py);ctx.lineTo(tx-px,ty-py);
+   ctx.closePath();ctx.fill();}
+  ctx.restore();
   const hurt=p.hurtT>0&&((p.hurtT*20)|0)%2===0;
   const rim=S.cls==="warrior"?"rgba(255,180,140,.95)":"rgba(160,205,255,.95)";
   ctx.fillStyle=hurt?"#fff":(S.cls==="warrior"?"#2a1a16":"#161c2c");
@@ -2227,7 +2300,8 @@ function updHUD(){
   $("lvT").textContent="Lv"+b.lv;
   const dg=dangerOf(S.floor);
   $("flT").innerHTML=S.floor+' <span style="color:'+dg.c+';font-size:9px">'+dg.n+'</span>';
-  $("goldT").textContent=S.gold+" G";
+  // 潜行中は所持金の総額より「今回いくら拾ったか」の方が意味がある。
+  $("goldT").textContent="+"+S.runGold+" G";
   $("dpsT").style.display=S.settings.dps?"block":"none";
   $("dpsT").textContent="DPS "+S.dps;
   const t=Math.floor(S.runT);
@@ -2235,9 +2309,10 @@ function updHUD(){
   $("tmT").textContent=Math.floor(t/60)+":"+String(t%60).padStart(2,"0");
   /* 持ち物はレアリティと個数だけ（中身は帰還後に分かる） */
   const cnt=[0,0,0,0,0];for(const it of S.bag)cnt[it.rar]++;
-  $("loot").style.display=S.settings.loot?"flex":"none";
-  $("loot").innerHTML=cnt.map((v,i)=>v?`<span class="${RC[i]}">${CFG.RARITY[i][0]} ${v}</span>`:"")
-    .filter(Boolean).join("")||'<span style="color:#3d3750">未取得</span>';
+  const lootHTML=cnt.map((v,i)=>v?`<span class="${RC[i]}">${CFG.RARITY[i][0]} ${v}</span>`:"").filter(Boolean).join("");
+  // 何も拾っていない間は「未取得」を出さない。常時1行を占有するだけで情報が無い。
+  $("loot").style.display=S.settings.loot&&lootHTML?"flex":"none";
+  $("loot").innerHTML=lootHTML;
   $("s0").querySelector(".cd").style.transform=
     "scaleY("+clamp(p.cd/(CFG.ATK_CD/(p.d.as*p.mAs*p.sAs)),0,1)+")";
   for(let i=1;i<=3;i++){const sk=p.d.C.skills[i-1],el=$("s"+i);
@@ -2306,12 +2381,15 @@ function endRun(alive,cause){
   if(alive&&got.length){
     const h=document.createElement("h3");h.textContent="持ち帰った装備";body.appendChild(h);
     for(const it of got){const d=document.createElement("div");d.className="card";
+      // 拾った物が今の装備より強いかどうかを、倉庫を開かずにここで分かるようにする。
+      const cur=S.gear[it.slot],up=!cur||it.score>cur.score;
       d.innerHTML=`<div class="row" style="align-items:flex-start">
-        <div class="${RC[it.rar]}" style="flex:0 0 auto">${icon(it.slot,24)}</div>
+        <div class="${RC[it.rar]}" style="flex:0 0 auto">${icon(iconKey(it),24)}</div>
         <div style="flex:1"><div class="nm ${RC[it.rar]}">${it.name}
-        <span class="tag ${RC[it.rar]}">${CFG.RARITY[it.rar][0]}</span></div>
+        <span class="tag ${RC[it.rar]}">${CFG.RARITY[it.rar][0]}</span>
+        ${up?'<span class="tag" style="color:#7ad04e;border-color:#7ad04e">▲ 装備中より強い</span>':""}</div>
         <div class="ty">${SLOTN(it.slot)} / 深度${it.ilvl}</div>
-        <div class="st">${statsHTML(it,S.gear[it.slot])}</div></div></div>`;
+        <div class="st">${statsHTML(it,cur)}</div></div></div>`;
       body.appendChild(d);}}
   S.bag.length=0;$("scEnd").classList.add("on");
   clearTimeout(deathReturnTimer);clearInterval(deathCountdownTimer);
@@ -2339,9 +2417,13 @@ function gearGrid(host,inDungeon){
   for(const s of SLOTS){const it=S.gear[s.k];
     const d=document.createElement("div");d.className="slot"+(it?"":" empty");
     d.dataset.slot=s.k;
+    /* 倉庫にこの部位のもっと強い装備があるなら印を出す。
+       出さないと、倉庫に17個あっても「どこを更新できるか」が画面のどこにも無い。 */
+    const up=S.stash.some(x=>x.slot===s.k&&!isEquipped(x)&&(!it||x.score>it.score));
     d.innerHTML=`<div class="ic ${it?RC[it.rar]:"e"}" style="${it?`color:${ELEMENTS[it.element||"neutral"].col}`:""}">${icon(it?iconKey(it):s.k,22)}</div>
       <div class="sl">${s.n}</div>
-      <div class="si ${it?RC[it.rar]:""}">${it?it.name:"—"}</div>`;
+      <div class="si ${it?RC[it.rar]:""}">${it?it.name:"—"}</div>
+      ${up?'<div class="upMark">▲</div>':""}`;
     tapEl(d,()=>{const t=S.tutorial||{};if(!inDungeon&&t.phase==="equip"&&TUTORIAL_SLOTS[t.gearIndex]===s.k){
       const training=S.stash.find(x=>x.tutorial&&x.slot===s.k);if(training){equip(training);t.gearIndex++;if(t.gearIndex>=TUTORIAL_SLOTS.length){t.phase="shop";S.tab="gear";}save();openTown();return;}}
       openGearDetail(s.k,inDungeon);});gg.appendChild(d);}
@@ -2446,6 +2528,7 @@ function renderTown(){
   const btn=(txt,cls,fn)=>{const d=document.createElement("div");d.className="btn "+(cls||"");
     d.textContent=txt;tapEl(d,fn);b.appendChild(d);return d;};
   b.classList.toggle("fit",S.tab==="gear"||S.tab==="prep");
+  $("diveBar").classList.remove("on");   // 拠点タブ以外では出撃バーを出さない
   if(S.tab==="prep")renderPrepTab(b);
   if(S.tab==="gear")renderCombinedGear(b,false,openTown);
   if(S.tab==="inv")renderInv(b);
@@ -2463,9 +2546,16 @@ function renderTown(){
         SFX.chest();toast(it.name+"を入手");save();showItem(it,false);});});
     }
     else if(S.shopSub==="gacha"){
-      const gacha=(name,cost,kind,draw)=>{const phase=(S.tutorial||{}).phase,free=phase===(kind==="equip"?"equip_gacha":"char_gacha");add(`<div class="card"><div class="nm">${name}</div><div class="st">${free?"チュートリアル初回無料":`課金通貨 ${cost} ◆ で1回引けます。`}</div></div>`);const d=btn(free?"無料で1回引く":`1回引く — ${cost} ◆`,free||S.premium>=cost?"gold":"no",()=>{if(!free&&S.premium<cost)return;const run=()=>{if(!free)S.premium-=cost;const result=draw(free);save();openTown();showGachaResult(result.title,result.html);};free?run():ask(name,`${cost} ◆ を使ってガチャを引きます。`,run);});d.dataset.tutorial=kind+"-gacha";};
-      gacha("キャラクターガチャ",300,"char",free=>{const locked=allRoster().filter(x=>!S.unlockedCharacters.includes(x.k+":"+x.ch.id)),entry=free?allRoster().find(x=>x.ch.id==="mira"):pick(locked.length?locked:allRoster()),{k,ch}=entry,key=k+":"+ch.id,result=awardCharacter(key);S.profileAvatar=key;if(free)S.tutorial.phase="formation";SFX.lvl();return{title:result.kind==="unlock"?"キャラクター獲得":result.kind==="breakthrough"?`限界突破 ${result.level}凸`:"最大突破重複",html:`<div style="color:${ch.col};font-size:58px">●</div><div class="nm">${ch.n}</div><div class="st">${result.kind==="core"?`核 +${result.cores}`:`${CLASSES[k].name} / ${ch.trait}`}</div>`};});
-      gacha("装備ガチャ",200,"equip",free=>{const it=makeItem(Math.max(1,S.deepest),.6,S.p.d.luk,free?2:Math.max(1,ri(1,4)));S.stash.push(it);if(free)S.tutorial.phase="char_gacha";SFX.chest();return{title:"装備獲得",html:`<div class="${RC[it.rar]}">${icon(iconKey(it),54)}</div><div class="nm ${RC[it.rar]}">${it.name}</div><div class="st">${CFG.RARITY[it.rar][0]} / ${SLOTN(it.slot)}</div>`};});}
+      // 説明カードとボタンが別ブロックで離れており、どのボタンがどの説明のものか分かりにくかった。
+      // ジェムタブと同じ recipe（説明＋ボタンを1行）にそろえる。
+      const gacha=(name,cost,kind,desc,draw)=>{const phase=(S.tutorial||{}).phase,free=phase===(kind==="equip"?"equip_gacha":"char_gacha");
+        const card=document.createElement("div");card.className="card recipe";
+        card.innerHTML=`<div><div class="nm">${name}</div><div class="st">${desc}<br>${free?"チュートリアル初回無料":`1回 ${cost} ◆（所持 ${S.premium||0} ◆）`}</div></div>`;
+        const d=document.createElement("div");d.className="btn "+(free||S.premium>=cost?"gold":"no");d.textContent=free?"無料で引く":`${cost} ◆`;
+        tapEl(d,()=>{if(!free&&S.premium<cost)return;const run=()=>{if(!free)S.premium-=cost;const result=draw(free);save();openTown();showGachaResult(result.title,result.html);};free?run():ask(name,`${cost} ◆ を使ってガチャを引きます。`,run);});
+        d.dataset.tutorial=kind+"-gacha";card.appendChild(d);b.appendChild(card);};
+      gacha("キャラクターガチャ",300,"char","未所持のキャラクターを優先して解放。所持済みなら限界突破が進む。",free=>{const locked=allRoster().filter(x=>!S.unlockedCharacters.includes(x.k+":"+x.ch.id)),entry=free?allRoster().find(x=>x.ch.id==="mira"):pick(locked.length?locked:allRoster()),{k,ch}=entry,key=k+":"+ch.id,result=awardCharacter(key);S.profileAvatar=key;if(free)S.tutorial.phase="formation";SFX.lvl();return{title:result.kind==="unlock"?"キャラクター獲得":result.kind==="breakthrough"?`限界突破 ${result.level}凸`:"最大突破重複",html:`<div style="color:${ch.col};font-size:58px">●</div><div class="nm">${ch.n}</div><div class="st">${result.kind==="core"?`核 +${result.cores}`:`${CLASSES[k].name} / ${ch.trait}`}</div>`};});
+      gacha("装備ガチャ",200,"equip","最大到達深度相当の装備を1つ。最低でも上質が出る。",free=>{const it=makeItem(Math.max(1,S.deepest),.6,S.p.d.luk,free?2:Math.max(1,ri(1,4)));S.stash.push(it);if(free)S.tutorial.phase="char_gacha";SFX.chest();return{title:"装備獲得",html:`<div class="${RC[it.rar]}">${icon(iconKey(it),54)}</div><div class="nm ${RC[it.rar]}">${it.name}</div><div class="st">${CFG.RARITY[it.rar][0]} / ${SLOTN(it.slot)}</div>`};});}
     else {add(`<div class="card"><div class="nm">ジェムショップ</div><div class="st">週次上限付きの核と時短・保険・枠（決済はダミー）。</div></div>`);{const left=CFG.CORE_WEEKLY_PURCHASE_CAP-(S.weeklyCore.week===weekKey()?S.weeklyCore.bought:0),d=document.createElement("div");d.className="card recipe";d.innerHTML=`<div><div class="nm">核 1個（今週残り ${left}）</div><div class="st">保有上限 ${CFG.CORE_HOLD_CAP}</div></div>`;const x=document.createElement("div");x.className="btn "+(left>0&&S.premium>=100?"gold":"no");x.textContent="100 ◆";tapEl(x,()=>{if(buyWeeklyCore(1)){save();openTown();}});d.appendChild(x);b.appendChild(d);}for(const [kind,name,cost,desc] of [["catalysts","純化触媒",120,"下位結晶4個を上位1個へ即時変換"],["feathers","復活の羽",180,"1潜行1回、その場で復活し戦利品保持"],["slots","持ち込み枠+1",500,"恒久。最大6枠（2回まで）"]]){const n=(S.paidInventory[kind]||[]).length,d=document.createElement("div");d.className="card recipe";d.innerHTML=`<div><div class="nm">${name}（所有 ${n}）</div><div class="st">${desc}</div></div>`;const x=document.createElement("div");x.className="btn "+(S.premium>=cost&&(kind!=="slots"||n<2)?"gold":"no");x.textContent=cost+" ◆";tapEl(x,()=>{if(buyPaid(kind,cost)){toast(name+"を購入","ok");openTown();}});d.appendChild(x);b.appendChild(d);}}}
   if(S.tab==="conf")renderSettings(b,openTown,false);
 }
@@ -2480,17 +2570,51 @@ function openProfileIconPick(){const c=$("itC");c.innerHTML='<div class="nm">プ
   const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);$("itPop").classList.add("on");}
 function showGachaResult(title,html){hideTutorial();const c=$("itC");c.innerHTML=`<div style="text-align:center"><div style="font-size:18px;font-weight:900;margin-bottom:18px">${title}</div>${html}</div>`;const x=document.createElement("div");x.className="btn pri";x.textContent="閉じる";tapEl(x,()=>{$("itPop").classList.remove("on");openTown();});c.appendChild(x);$("itPop").classList.add("on");}
 
+/* タブバーの上に常駐する出撃バー。開始階層の増減と潜る操作をここに集約する。 */
+function renderDiveBar(onChange){
+  const bar=$("diveBar"),maxStart=Math.max(1,Math.floor((S.deepest-1)/CFG.SKIP_STEP)*CFG.SKIP_STEP+1);
+  S.diveFloor=clamp(S.diveFloor||1,1,maxStart);
+  bar.innerHTML="";bar.classList.add("on");
+  const step=document.createElement("div");step.className="step";
+  const label=document.createElement("div");label.className="fl";
+  const paint=()=>{const el=dominantElement(S.diveFloor);
+    label.innerHTML=`<b>${S.diveFloor}F</b><small style="color:${ELEMENTS[el].col}">${elementName(el)}属性</small>`;};
+  const setFloor=v=>{v=clamp(Math.floor(+v||1),1,maxStart);
+    S.diveFloor=Math.floor((v-1)/CFG.SKIP_STEP)*CFG.SKIP_STEP+1;save();paint();if(onChange)onChange();};
+  const minus=document.createElement("div");minus.className="btn gh";minus.textContent="−";tapEl(minus,()=>setFloor(S.diveFloor-CFG.SKIP_STEP));
+  const plus=document.createElement("div");plus.className="btn gh";plus.textContent="＋";tapEl(plus,()=>setFloor(S.diveFloor+CFG.SKIP_STEP));
+  paint();step.append(minus,label,plus);bar.appendChild(step);
+  const go=document.createElement("div");go.className="btn pri go";go.textContent="潜　る";
+  tapEl(go,()=>confirmDive(S.diveFloor));bar.appendChild(go);
+}
 function renderPrepTab(b){
   const daily=ensureDaily(),target=dailyClearTarget(),tier=materialTier(S.deepest);
-  const dh=document.createElement("h3");dh.textContent="日替わり任務";b.appendChild(dh);
-  const bonus=document.createElement("div");bonus.className="card";bonus.innerHTML=`<div class="nm">日次ボーナス 残り${S.stamina}潜行</div><div class="st">最初の3潜行は結晶と核の獲得量2倍。使い切った後も潜行に制限はありません。</div>`;b.appendChild(bonus);
   const rows=[
     [`深度${target}以上をクリア`,Math.min(daily.clear,target),target,`階梯${tier}結晶10 / 500 G`],
     ["敵を200体倒す",Math.min(daily.kills,200),200,`階梯${tier}結晶15 / 1000 G`],
     ["装備を5個分解する",Math.min(daily.dismantled,5),5,`階梯${tier}結晶10 / 700 G`],
   ];
-  rows.forEach((row,i)=>{const done=dailyDone(i),claimed=daily.claimed[i],card=document.createElement("div");card.className="card";card.innerHTML=`<div class="nm">${done?"✓ ":""}${row[0]}</div><div class="st">${row[1]} / ${row[2]} — 報酬 ${row[3]}</div>`;const take=document.createElement("div");take.className="btn "+(done&&!claimed?"gold":"no");take.textContent=claimed?"受取済み":done?"受け取る":"未達成";tapEl(take,()=>{if(claimDaily(i)){SFX.chest();toast("日替わり任務の報酬を受け取った","ok");openTown();}});card.appendChild(take);b.appendChild(card);});
-  const allDone=[0,1,2].every(dailyDone),all=document.createElement("div");all.className="btn "+(allDone&&!daily.allClaimed?"gold":"no");all.textContent=daily.allClaimed?"全達成ボーナス受取済み":allDone?`全達成ボーナスを受け取る — 階梯${tier}核1個`:"全達成ボーナス — 核1個";tapEl(all,()=>{if(claimDailyAll()){SFX.chest();toast("全達成ボーナス：核 +1","ok");openTown();}});b.appendChild(all);
+  const cleared=rows.filter((_,i)=>dailyDone(i)).length;
+  const dh=document.createElement("div");dh.className="qhead";
+  dh.innerHTML=`<b>日替わり任務</b><em>${cleared} / 3 達成</em>`;b.appendChild(dh);
+  const bonus=document.createElement("div");bonus.className="qbonus";
+  bonus.innerHTML=`<span>日次ボーナス <b>残り${S.stamina}潜行</b></span><span style="color:var(--ink2)">結晶と核が2倍</span>`;b.appendChild(bonus);
+  rows.forEach((row,i)=>{const done=dailyDone(i),claimed=daily.claimed[i];
+    const card=document.createElement("div");card.className="q"+(done?" done":"");
+    card.innerHTML=`<div><div class="qn">${claimed?"✓ ":""}${row[0]}</div>
+      <div class="qb"><i style="width:${Math.round(row[1]/row[2]*100)}%"></i></div>
+      <div class="qr">${row[1]} / ${row[2]} — ${row[3]}</div></div>`;
+    if(done&&!claimed){const take=document.createElement("div");take.className="btn gold";take.textContent="受け取る";
+      tapEl(take,()=>{if(claimDaily(i)){SFX.chest();toast("日替わり任務の報酬を受け取った","ok");openTown();}});card.appendChild(take);}
+    else{const s=document.createElement("div");s.className="qr";s.style.whiteSpace="nowrap";
+      s.textContent=claimed?"受取済み":"あと"+(row[2]-row[1]);card.appendChild(s);}
+    b.appendChild(card);});
+  const allDone=[0,1,2].every(dailyDone);
+  if(allDone&&!daily.allClaimed){const all=document.createElement("div");all.className="btn gold";
+    all.textContent=`全達成ボーナスを受け取る — 階梯${tier}核1個`;
+    tapEl(all,()=>{if(claimDailyAll()){SFX.chest();toast("全達成ボーナス：核 +1","ok");openTown();}});b.appendChild(all);}
+  else{const all=document.createElement("div");all.className="qbonus";
+    all.innerHTML=`<span>全達成ボーナス</span><span style="color:var(--ink2)">${daily.allClaimed?"受取済み":`3任務すべて達成で 階梯${tier}核1個`}</span>`;b.appendChild(all);}
   if(!S.beginnerClaimed){const beginner=document.createElement("div");beginner.className="btn gold";beginner.textContent=`初心者ミッション報酬（基準 ${beginnerTarget()}F）`;tapEl(beginner,()=>{if(claimBeginnerMission())openTown();});b.appendChild(beginner);}
   {const key=activeCharacterKey(),lv=breakthroughLevel(key),need=lv<5?CFG.BREAKTHROUGH_CORE_COST[lv+1]:0,paid=(S.breakthroughProgress||{})[key]||0,d=document.createElement("div");d.className="card";d.innerHTML=`<div class="nm">${currentCharacter().n} ${lv}凸 / 5凸</div><div class="st">${lv<5?`次段階：核 ${paid}/${need}`:"最大突破"}</div>`;if(lv<5){const x=document.createElement("div");x.className="btn "+(materialCount("core")?"gold":"no");x.textContent="核を投入";tapEl(x,()=>{breakthroughWithCore(key);openTown();});d.appendChild(x);}b.appendChild(d);}
   const roster=unlockedRoster(),cap=formationCapacity();
@@ -2502,13 +2626,12 @@ function renderPrepTab(b){
   const note=document.createElement("div");note.className="st";note.textContent="編成は潜入前のみ変更できます。戦闘不能になると次のキャラクターへ交代します。装備品は倉庫で共有され、装備中の品は他のキャラクターが使用できません。";b.appendChild(note);
   renderLoadout(b);
   const maxStart=Math.max(1,Math.floor((S.deepest-1)/CFG.SKIP_STEP)*CFG.SKIP_STEP+1);S.diveFloor=clamp(S.diveFloor||1,1,maxStart);
-  const row=document.createElement("div");row.className="card prepDepth";row.innerHTML=`<div><div class="nm">開始階層</div><div class="ty">5n+1階層 / 解放済み 最大${maxStart}F</div></div>`;
-  const controls=document.createElement("div");controls.className="floorStep";const setFloor=v=>{v=clamp(Math.floor(+v||1),1,maxStart);S.diveFloor=Math.floor((v-1)/CFG.SKIP_STEP)*CFG.SKIP_STEP+1;inp.value=S.diveFloor;save();};
-  const minus=document.createElement("div");minus.className="btn gh";minus.textContent="−";tapEl(minus,()=>setFloor(S.diveFloor-CFG.SKIP_STEP));
-  const inp=document.createElement("input");inp.type="number";inp.inputMode="numeric";inp.min=1;inp.max=maxStart;inp.value=S.diveFloor;inp.addEventListener("change",()=>setFloor(inp.value));
-  const plus=document.createElement("div");plus.className="btn gh";plus.textContent="＋";tapEl(plus,()=>setFloor(S.diveFloor+CFG.SKIP_STEP));controls.append(minus,inp,plus);row.appendChild(controls);b.appendChild(row);
-  const preview=document.createElement("div"),refreshPreview=()=>{const start=dominantElement(S.diveFloor),nextBoss=Math.ceil(S.diveFloor/5)*5,boss=bossElement(nextBoss);preview.className="card";preview.innerHTML=`<div class="nm">優勢属性 <b style="color:${ELEMENTS[start].col}">${elementName(start)}</b></div><div class="st">次のボス ${nextBoss}F：<b style="color:${ELEMENTS[boss].col}">${elementName(boss)}属性</b>（属性耐性なし）</div>`;};refreshPreview();b.appendChild(preview);inp.addEventListener("change",refreshPreview);tapEl(minus,refreshPreview);tapEl(plus,refreshPreview);
-  const dive=document.createElement("div");dive.className="btn pri";dive.textContent="この編成で潜る";tapEl(dive,()=>confirmDive(S.diveFloor));b.appendChild(dive);
+  const preview=document.createElement("div");preview.className="card";
+  const refreshPreview=()=>{const start=dominantElement(S.diveFloor),nextBoss=Math.ceil(S.diveFloor/5)*5,boss=bossElement(nextBoss);
+    preview.innerHTML=`<div class="nm">開始 ${S.diveFloor}F — 優勢属性 <b style="color:${ELEMENTS[start].col}">${elementName(start)}</b></div>
+      <div class="st">次のボス ${nextBoss}F：<b style="color:${ELEMENTS[boss].col}">${elementName(boss)}属性</b>（属性耐性なし）<br>開始階層は5n+1階層 / 解放済み 最大${maxStart}F</div>`;};
+  refreshPreview();b.appendChild(preview);
+  renderDiveBar(refreshPreview);
 }
 function openFormationPick(slot){hideTutorial();const c=$("itC"),t=(S.tutorial||{}).phase==="formation_slot";c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:10px">${t?"魔術師を選び、ミラに入れ替えよう":"職業を選択"}</div>`;
   const keys=t?["mage"]:[...new Set(unlockedRoster().map(x=>x.k))];for(const k of keys){const d=document.createElement("div");d.className="card tap";d.innerHTML=`<div class="nm" style="color:${CLASSES[k].col}">${CLASSES[k].name}</div><div class="st">${CLASSES[k].desc}</div>`;tapEl(d,()=>openFormationChoices(slot,k));c.appendChild(d);}
@@ -2537,11 +2660,21 @@ function openFormationChoices(slot,k){const c=$("itC");c.innerHTML=`<div class="
 
 function renderSettings(b,after,inDungeon){
   const h=document.createElement("h3");h.textContent="表示・省電力";b.appendChild(h);const cg=document.createElement("div");cg.className="compactGrid";b.appendChild(cg);
-  for(const [k,lbl] of [["map","ミニマップ"],["dmg","ダメージ数値"],["dps","DPS"],["loot","取得アイテム"],["timer","タイマー"],["shake","画面の揺れ"],["stick","移動キー表示"],["eco","省電力モード"]]){const d=document.createElement("div");d.className="btn "+(S.settings[k]?"gold":"gh");d.textContent=lbl+"："+(S.settings[k]?"ON":"OFF");tapEl(d,()=>{S.settings[k]=S.settings[k]?0:1;if(k==="eco")resize();save();after();});cg.appendChild(d);}
-  const controlHead=document.createElement("h3");controlHead.textContent="操作モード";b.appendChild(controlHead);const controlModes=document.createElement("div");controlModes.className="compactGrid";for(const [k,n] of [["manual","フル手動"],["onehand","片手"],["auto","完全オート"]]){const disabled=k==="auto"&&S.diveFloor>=S.deepest,d=document.createElement("div");d.className="btn "+(disabled?"no":S.settings.controlMode===k?"gold":"gh");d.textContent=n;tapEl(d,()=>{if(disabled)return;S.settings.controlMode=k;save();after();});controlModes.appendChild(d);}b.appendChild(controlModes);const presets=document.createElement("div");presets.className="compactGrid";for(const [k,n] of [["aggressive","積極"],["conserve","温存"],["survival","生存優先"]]){const d=document.createElement("div");d.className="btn "+(S.settings.autoPreset===k?"gold":"gh");d.textContent=n;tapEl(d,()=>{S.settings.autoPreset=k;save();after();});presets.appendChild(d);}b.appendChild(presets);const edit=document.createElement("div");edit.className="btn gh";edit.textContent="条件スロット編集（任意）";tapEl(edit,()=>{S.settings.automationEditor=!S.settings.automationEditor;save();after();});b.appendChild(edit);if(S.settings.automationEditor){const note=document.createElement("div");note.className="st";note.textContent="6スロットを上から評価。利用可能な語彙: "+AUTOMATION_CONDITIONS.join(" / ");b.appendChild(note);}
+  /* ON/OFF の切り替えに一番強い金色を使うと、既定で7個ONなので画面が金一色になり
+     「選ばれているもの」が見分けられない。金は択一の選択中だけに残し、切り替えは control 表示にする。 */
+  for(const [k,lbl] of [["map","ミニマップ"],["dmg","ダメージ数値"],["dps","DPS"],["loot","取得アイテム"],["timer","タイマー"],["shake","画面の揺れ"],["stick","移動キー表示"],["eco","省電力モード"]]){const d=document.createElement("div");d.className="btn toggle"+(S.settings[k]?" on":"");d.innerHTML=`${lbl}<em>${S.settings[k]?"ON":"OFF"}</em>`;tapEl(d,()=>{S.settings[k]=S.settings[k]?0:1;if(k==="eco")resize();save();after();});cg.appendChild(d);}
+  const controlHead=document.createElement("h3");controlHead.textContent="操作モード";b.appendChild(controlHead);
+  const controlNote=document.createElement("div");controlNote.className="setNote";controlNote.textContent="片手＝移動だけ手動、攻撃は自動。完全オートは移動も自動（未到達の深度では選べません）。";b.appendChild(controlNote);
+  const controlModes=document.createElement("div");controlModes.className="compactGrid";for(const [k,n] of [["manual","フル手動"],["onehand","片手"],["auto","完全オート"]]){const disabled=k==="auto"&&S.diveFloor>=S.deepest,d=document.createElement("div");d.className="btn "+(disabled?"no":S.settings.controlMode===k?"gold":"gh");d.textContent=n;tapEl(d,()=>{if(disabled)return;S.settings.controlMode=k;save();after();});controlModes.appendChild(d);}b.appendChild(controlModes);
+  // 見出しが無く、操作モードの3つと同じ見た目で並んでいたため別設定だと分からなかった。
+  const presetHead=document.createElement("h3");presetHead.textContent="自動時の戦い方";b.appendChild(presetHead);
+  const presetNote=document.createElement("div");presetNote.className="setNote";presetNote.textContent="片手・完全オートのとき、技とアイテムをどう使うか。";b.appendChild(presetNote);
+  const presets=document.createElement("div");presets.className="compactGrid";for(const [k,n] of [["aggressive","積極"],["conserve","温存"],["survival","生存優先"]]){const d=document.createElement("div");d.className="btn "+(S.settings.autoPreset===k?"gold":"gh");d.textContent=n;tapEl(d,()=>{S.settings.autoPreset=k;save();after();});presets.appendChild(d);}b.appendChild(presets);const edit=document.createElement("div");edit.className="btn gh";edit.textContent="条件スロット編集（任意）";tapEl(edit,()=>{S.settings.automationEditor=!S.settings.automationEditor;save();after();});b.appendChild(edit);if(S.settings.automationEditor){const note=document.createElement("div");note.className="st";note.textContent="6スロットを上から評価。利用可能な語彙: "+AUTOMATION_CONDITIONS.join(" / ");b.appendChild(note);}
   const mh=document.createElement("h3");mh.textContent="記録・管理";b.appendChild(mh);
   {const misc=document.createElement("div");misc.className="compactGrid";const rec=document.createElement("div");rec.className="btn gh";rec.textContent="プレイ記録を見る";tapEl(rec,()=>openRecords(after));misc.appendChild(rec);const reset=document.createElement("div");reset.className="btn gh";reset.textContent="初期化";tapEl(reset,()=>ask("ゲームをリセット","すべての進行・装備・通貨が消えます。",()=>{localStorage.removeItem(KEY);location.reload();}));misc.appendChild(reset);b.appendChild(misc);}
-  const inp=document.createElement("input");inp.setAttribute("aria-label","モード切替コード");inp.autocomplete="off";inp.style.cssText="width:100%;padding:9px;margin-top:7px;background:#0a0810;border:1px solid var(--line);color:var(--ink)";b.appendChild(inp);
+  // ラベルの無い空欄が置いてあるだけで、何を入れる所なのか画面から分からなかった。
+  const inp=document.createElement("input");inp.setAttribute("aria-label","モード切替コード");inp.autocomplete="off";
+  inp.placeholder="コード入力";inp.style.cssText="width:100%;padding:9px;margin-top:7px;background:#0a0810;border:1px solid var(--line);color:var(--ink);font-size:12px";b.appendChild(inp);
   inp.addEventListener("input",()=>{const code=inp.value.trim();if(code!=="pM97342Gamt"&&code!=="omiomi")return;if(code==="omiomi")S.debug=true;else S.admin=true;inp.value="";SFX.lvl();toast(code==="omiomi"?"デバッグモード":"管理者モード");save();after();});
   if(!(S.admin||S.debug))return;
   const modes=document.createElement("div");modes.className="compactGrid";b.appendChild(modes);for(const [key,n] of [["admin","管理者"],["debug","デバッグ"]])if(S[key]){const d=document.createElement("div");d.className="btn gh";d.textContent=n+"モードを終了";tapEl(d,()=>{S[key]=false;save();after();});modes.appendChild(d);}
@@ -2631,6 +2764,11 @@ function renderInv(b){
   b.appendChild(bar);
   const mats=document.createElement("div");mats.className="card";mats.innerHTML=`<div class="ty">強化素材（上位1個 = 下位4個）</div><div class="st">結晶 ${Object.entries(matBucket("crystal")).map(([t,n])=>`階梯${t}:${n}`).join(" / ")||"なし"}<br>核 ${Object.entries(matBucket("core")).map(([t,n])=>`階梯${t}:${n}`).join(" / ")||"なし"}</div>`;b.appendChild(mats);
   const list=invFiltered();
+  /* グリッドの記号は今まで無説明だった。色・▲・E・数字が何なのか画面から分かるようにする。 */
+  const legend=document.createElement("div");legend.className="invLegend";
+  legend.innerHTML=`<span><b style="color:#7ad04e">▲</b> 装備中より強い</span><span><b style="color:var(--gold)">E</b> 装備中</span>`
+    +`<span><b>右下の数字</b> 深度</span><span><b>枠の色</b> ${CFG.RARITY.map((r,i)=>`<i class="${RC[i]}">${r[0]}</i>`).join("")}</span>`;
+  b.appendChild(legend);
   if(!list.length){const d=document.createElement("div");d.className="card";d.innerHTML=`<div class="st">該当する装備がない。</div>`;b.appendChild(d);}
   const g=document.createElement("div");g.className="grid";
   for(const it of list){

@@ -67,7 +67,8 @@ const regressionSnippets = [
   '装備・能力',
   'aria-label","モード切替コード',
   '全装備オプション（自由入力）',
-  'この編成で潜る',
+  'function renderDiveBar',   // 潜る操作。旧「この編成で潜る」ボタンから常駐の出撃バーへ移した
+  'confirmDive(S.diveFloor)',
   'function openProfileIconPick',
   'function openFormationChoices',
   'function confirmSelectedSell',
