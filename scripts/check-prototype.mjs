@@ -89,6 +89,16 @@ const regressionSnippets = [
   'function openHelpSheet',   // 管理者モードからテストプレイ用の仕様を引ける
   'const HELP_SECTIONS=',
   'const NEUTRAL_BASE=',
+  'const effScore=',          // ▲は職業・属性の補正込みで比べる
+  'const hasUpgrade=',
+  'function craftableCount',  // 調合は個数指定と確認つき
+  'CRAFT_STOCK_CAP:',
+  'const DAILY_MAT_LIMIT',    // ゴールドで買える日替わり素材
+  'function buyDailyMaterial',
+  'const CLASS_MARK=',        // 枠の職業マーク
+  'function editPlayerName',
+  'id="townName"',
+  'テスト用ジェム購入',
   'function openProfileIconPick',
   'function openFormationChoices',
   'function confirmSelectedSell',
