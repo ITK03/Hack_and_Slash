@@ -206,6 +206,7 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .compactGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.compactGrid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
 .compactGrid .btn{margin-top:0;padding:9px 5px;font-size:10px}
 .adminGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.adminGrid .btn{margin:0;padding:9px 3px;font-size:9px}
 .slot{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
@@ -299,6 +300,10 @@ body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
 .fold.on::after{transform:rotate(180deg)}
 .fold em{font-style:normal;font-size:10px;color:var(--ink3);margin-left:auto;padding-right:8px}
 .foldBody{padding-top:8px}
+#btnBack small{display:block;font-size:9px;font-weight:700;opacity:.75;margin-top:2px}
+.matLine{display:flex;justify-content:space-between;gap:12px;margin:9px 0 2px;padding:8px 11px;
+  border:1px solid var(--line);border-radius:3px;background:#100d18;font-size:11px;color:var(--ink3);font-weight:700}
+.matLine b{color:var(--ink2);font-weight:800}
 .qhead{display:flex;align-items:baseline;justify-content:space-between;margin:2px 0 7px}
 .qhead b{font-size:11px;color:var(--ink2);letter-spacing:.08em}
 .qhead em{font-style:normal;font-size:11px;color:var(--ink2)}
@@ -749,7 +754,11 @@ const SKILL_POOL={
     {id:"charge", n:"疾駆",    dep:25,tag:"移動・長距離",c:18,cd:1.4,k:"dash",dmg:[62,90],w:1.45,len:6.6,
       d:"突進斬りより遠く、太く、軽い。火力は落ちるが移動技として回る。"},
     {id:"verdict",n:"断罪",    dep:40,tag:"単体・大打撃",c:52,cd:7.0,k:"slam",dmg:[190,265],r:2.6,stun:2.8,
-      d:"足元だけを砕く代わりに一撃が重い。ボスに張り付いて撃つ技。"}],
+      d:"足元だけを砕く代わりに一撃が重い。ボスに張り付いて撃つ技。"},
+    {id:"cry",    n:"鬨の声",  dep:20,tag:"自己強化",    c:30,cd:16,k:"cry",dmg:[0,0],atk:1.28,dr:.14,dur:12,heal:.06,
+      d:"12秒間、攻撃力+28%と被ダメ-14%。少し回復もする。ボス戦の開幕に置く技。"},
+    {id:"bulwark",n:"不動",    dep:35,tag:"自己強化・防御",c:26,cd:22,k:"cry",dmg:[0,0],atk:1.05,dr:.34,dur:9,heal:.14,col:"#7ad0ff",
+      d:"9秒間、被ダメ-34%と大きめの回復。火力は伸びない、耐えるための技。"}],
   mage:[
     {id:"ball",  n:"火球",    dep:0, tag:"遠距離・連射",c:24,cd:.7,k:"ball",dmg:[37,53],sp:11,r:2.2,col:"#ff8a3a",
       d:"炸裂する火の玉を飛ばす。距離を保ったまま削り続けられる。"},
@@ -762,7 +771,11 @@ const SKILL_POOL={
     {id:"inferno",n:"業火の渦",dep:25,tag:"全周・大範囲",c:46,cd:4.2,k:"nova",dmg:[96,138],r:5.6,col:"#ff7a3a",
       d:"足止めを捨てて範囲と威力を取った渦。凍結も跳躍も無い。"},
     {id:"emperor",n:"雷帝",   dep:40,tag:"多数・遠連鎖",c:96,cd:3.4,k:"chain",dmg:[104,150],jumps:10,range:6.4,
-      d:"連鎖雷撃の上位。跳ぶ数も届く距離も伸びるが、MPを深く食う。"}],
+      d:"連鎖雷撃の上位。跳ぶ数も届く距離も伸びるが、MPを深く食う。"},
+    {id:"spear", n:"貫きの矢",dep:20,tag:"直線・貫通",  c:34,cd:1.6,k:"pierce",dmg:[86,124],sp:19,pierce:5,col:"#c8a0ff",
+      d:"直線上の敵を最大5体まで貫く。通路で並んだ相手をまとめて刺す。"},
+    {id:"ruin",  n:"滅びの光",dep:35,tag:"直線・大貫通",c:64,cd:3.2,k:"pierce",dmg:[170,242],sp:24,pierce:9,col:"#ff6ad0",
+      d:"止まらない光の線。数がいるほど伸びるが、外すと丸ごと無駄になる。"}],
 };
 const DEFAULT_SKILLS={warrior:["cleave","dash","slam"],mage:["ball","nova","chain"]};
 const skillDef=(cls,id)=>(SKILL_POOL[cls]||[]).find(s=>s.id===id)||null;
@@ -1126,7 +1139,7 @@ const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   settings:{map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0},admin:false,debug:false,debugFloor:1,adminOpts:{},chars:{},characterStates:{},avatars:{},
   combo:0,comboT:0,dmgLog:[],dps:0,startFloor:1,runGold:0,
   inv:{filters:[],sort:"score",sellSel:[],sellRar:1},mats:{crystal:{},core:{}},consumables:{},loadout:["heal",null,null,null],runItems:[0,0,0,0],itemSlot:0,
-  formation:[],partyIndex:0,diveFloor:1,stamina:3,premium:0,profileAvatar:null,shopSub:"gacha",alloc:null,breakthroughs:{},weeklyCore:{week:"",bought:0},beginnerClaimed:false,prepMissionsOpen:false,skillLoadout:{},
+  formation:[],partyIndex:0,diveFloor:1,stamina:3,premium:0,profileAvatar:null,shopSub:"gacha",alloc:null,breakthroughs:{},weeklyCore:{week:"",bought:0},beginnerClaimed:false,prepMissionsOpen:false,invLegendOpen:false,skillLoadout:{},
   paidInventory:{catalysts:[],feathers:[],slots:[]},tactical:{trap:null,reveal:false},
   daily:null,dailyMatMul:1,
   unlockedCharacters:["warrior:gai"],tutorial:{phase:"training_intro",gearIndex:0},training:false,returnInvulnerable:false,
@@ -1706,7 +1719,20 @@ function useSkill(i){
       for(const e of S.enemies){if(hit.has(e))continue;const d=d2(fx,fy,e.x,e.y);
         if(d<nd&&d<sk.range*sk.range){nd=d;nx=e;}}
       cur=nx;}
-    SFX.cast(880);shk(4);break;}}
+    SFX.cast(880);shk(4);break;}
+  case "pierce":{
+    /* 直線を貫く一撃。爆風が無い代わりに並んだ敵を串刺しにする */
+    S.bullets.push({x:p.x,y:p.y,vx:Math.cos(a)*sk.sp,vy:Math.sin(a)*sk.sp,
+      dmg:dmg()[0],crit:false,mine:1,col:sk.col,r:.22,t:0,
+      pierce:Math.round(sk.pierce*mul),hit:new Set()});
+    SFX.cast(520);break;}
+  case "cry":{
+    /* 自己強化。攻撃と被ダメ軽減を一定時間だけ上げる。
+       祭壇と同じ時計（shrineT）を使うと祭壇の効果を上書きするので buffT を使う。 */
+    p.buffAtk=sk.atk;p.buffDr=sk.dr;p.buffT=sk.dur;
+    if(sk.heal)p.hp=Math.min(p.max,p.hp+p.max*sk.heal);
+    S.fx.push({t:"ring",x:p.x,y:p.y,tm:0,R:2.6,col:sk.col||"#ffd24a"});
+    SFX.lvl();buzz(22);updBuffs();break;}}
   updHUD();}
 function useItem(slot=S.itemSlot){const p=S.p,key=S.loadout[slot],def=CONSUMABLES[key];
   if(!def||!S.runItems[slot]||p.itemCd>0||p.itemLock>0)return false;
@@ -1877,6 +1903,10 @@ function update(dt){
           breakPot(q);if(b.boom)S.fx.push({t:"boom",x:b.x,y:b.y,tm:0,R:b.boom,col:b.col,dmg:b.dmg*.7,hit:new Set()});dead=true;break;}
         if(dead)break;
         for(const e of S.enemies)if(d2(b.x,b.y,e.x,e.y)<Math.pow(.28+e.r,2)){
+          /* 貫通弾は同じ敵を二度殴らないよう、当てた相手を覚えて素通りする */
+          if(b.pierce){if(b.hit.has(e))continue;b.hit.add(e);
+            hurtE(e,b.dmg,b.crit,b.vx*.02,b.vy*.02,b.hit.size>1);
+            if(b.hit.size>=b.pierce)dead=true;break;}
           if(b.boom)S.fx.push({t:"boom",x:b.x,y:b.y,tm:0,R:b.boom,col:b.col,dmg:b.dmg*.7,hit:new Set()});
           hurtE(e,b.dmg,b.crit,b.vx*.02,b.vy*.02);dead=true;break;}
       }else if(d2(b.x,b.y,p.x,p.y)<.16){
@@ -2497,7 +2527,13 @@ function updBuffs(){const p=S.p,c=$("buffs");c.innerHTML="";
     d.textContent=p.shrine.n+" "+Math.ceil(p.shrineT)+"s";c.appendChild(d);}
   if(p&&p.slowT>0){const d=document.createElement("div");d.className="buff";
     d.style.borderLeftColor="#e0525b";d.textContent="減速 "+Math.ceil(p.slowT)+"s";c.appendChild(d);}
-  for(const k in p.itemBuffs){const d=document.createElement("div");d.className="buff";d.textContent=CONSUMABLES[k].n+" "+Math.ceil(p.itemBuffs[k])+"s";c.appendChild(d);}}
+  for(const k in p.itemBuffs){const d=document.createElement("div");d.className="buff";d.textContent=CONSUMABLES[k].n+" "+Math.ceil(p.itemBuffs[k])+"s";c.appendChild(d);}
+  /* 自己強化の技は効果時間が見えないと切れ目が分からず、置き直す判断ができない */
+  if(p&&p.buffT>0){const d=document.createElement("div");d.className="buff";
+    d.style.borderLeftColor="#65db78";
+    const parts=[];if(p.buffAtk>1)parts.push("攻+"+Math.round((p.buffAtk-1)*100)+"%");
+    if(p.buffDr>0)parts.push("被ダメ-"+Math.round(p.buffDr*100)+"%");
+    d.textContent=(parts.join(" ")||"強化")+" "+Math.ceil(p.buffT)+"s";c.appendChild(d);}}
 let tT=null;
 function toast(m,kind){const el=$("toast");el.textContent=m;el.className=kind||"";el.classList.add("on");
   clearTimeout(tT);tT=setTimeout(()=>{el.classList.remove("on","ok","ng");},1300);}
@@ -2557,8 +2593,9 @@ function endRun(alive,cause){
       body.appendChild(d);}}
   S.bag.length=0;$("scEnd").classList.add("on");
   clearTimeout(deathReturnTimer);clearInterval(deathCountdownTimer);
-  if(!alive){let left=10;$("btnBack").textContent=`拠点へ戻る（${left}秒）`;
-    deathCountdownTimer=setInterval(()=>{left--;$("btnBack").textContent=`拠点へ戻る（${Math.max(0,left)}秒）`;},1000);
+  /* 「拠点へ戻る（10秒）」だと10秒待たされるように読める。押せばすぐ戻れることを書く。 */
+  if(!alive){let left=10;const paint=()=>{$("btnBack").innerHTML=`拠点へ戻る<small>あと${Math.max(0,left)}秒で自動 / 押せばすぐ</small>`;};
+    paint();deathCountdownTimer=setInterval(()=>{left--;paint();},1000);
     deathReturnTimer=setTimeout(leaveEnd,10000);}else $("btnBack").textContent="拠点へ";}
 
 /* ---------- 拠点 ---------- */
@@ -2920,11 +2957,11 @@ function renderSettings(b,after,inDungeon){
   for(const [k,lbl] of [["map","ミニマップ"],["dmg","ダメージ数値"],["dps","DPS"],["loot","取得アイテム"],["timer","タイマー"],["shake","画面の揺れ"],["stick","移動キー表示"],["eco","省電力モード"]]){const d=document.createElement("div");d.className="btn toggle"+(S.settings[k]?" on":"");d.innerHTML=`${lbl}<em>${S.settings[k]?"ON":"OFF"}</em>`;tapEl(d,()=>{S.settings[k]=S.settings[k]?0:1;if(k==="eco")resize();save();after();});cg.appendChild(d);}
   const controlHead=document.createElement("h3");controlHead.textContent="操作モード";b.appendChild(controlHead);
   const controlNote=document.createElement("div");controlNote.className="setNote";controlNote.textContent="片手＝移動だけ手動、攻撃は自動。オートは移動も自動（未到達の深度では選べません）。戦闘中は右端の切替ボタンからも変えられます。";b.appendChild(controlNote);
-  const controlModes=document.createElement("div");controlModes.className="compactGrid";for(const [k,n] of CONTROL_MODES){const disabled=k==="auto"&&S.diveFloor>=S.deepest,d=document.createElement("div");d.className="btn "+(disabled?"no":S.settings.controlMode===k?"gold":"gh");d.textContent=n;tapEl(d,()=>{if(disabled)return;S.settings.controlMode=k;save();after();});controlModes.appendChild(d);}b.appendChild(controlModes);
+  const controlModes=document.createElement("div");controlModes.className="compactGrid three";for(const [k,n] of CONTROL_MODES){const disabled=k==="auto"&&S.diveFloor>=S.deepest,d=document.createElement("div");d.className="btn "+(disabled?"no":S.settings.controlMode===k?"gold":"gh");d.textContent=n;tapEl(d,()=>{if(disabled)return;S.settings.controlMode=k;save();after();});controlModes.appendChild(d);}b.appendChild(controlModes);
   // 見出しが無く、操作モードの3つと同じ見た目で並んでいたため別設定だと分からなかった。
   const presetHead=document.createElement("h3");presetHead.textContent="自動時の戦い方";b.appendChild(presetHead);
   const presetNote=document.createElement("div");presetNote.className="setNote";presetNote.textContent="片手・オートのとき、技とアイテムをどう使うか。";b.appendChild(presetNote);
-  const presets=document.createElement("div");presets.className="compactGrid";for(const [k,n] of [["aggressive","積極"],["conserve","温存"],["survival","生存優先"]]){const d=document.createElement("div");d.className="btn "+(S.settings.autoPreset===k?"gold":"gh");d.textContent=n;tapEl(d,()=>{S.settings.autoPreset=k;save();after();});presets.appendChild(d);}b.appendChild(presets);const edit=document.createElement("div");edit.className="btn gh";edit.textContent="条件スロット編集（任意）";tapEl(edit,()=>{S.settings.automationEditor=!S.settings.automationEditor;save();after();});b.appendChild(edit);if(S.settings.automationEditor){const note=document.createElement("div");note.className="st";note.textContent="6スロットを上から評価。利用可能な語彙: "+AUTOMATION_CONDITIONS.join(" / ");b.appendChild(note);}
+  const presets=document.createElement("div");presets.className="compactGrid three";for(const [k,n] of [["aggressive","積極"],["conserve","温存"],["survival","生存優先"]]){const d=document.createElement("div");d.className="btn "+(S.settings.autoPreset===k?"gold":"gh");d.textContent=n;tapEl(d,()=>{S.settings.autoPreset=k;save();after();});presets.appendChild(d);}b.appendChild(presets);const edit=document.createElement("div");edit.className="btn gh";edit.textContent="条件スロット編集（任意）";tapEl(edit,()=>{S.settings.automationEditor=!S.settings.automationEditor;save();after();});b.appendChild(edit);if(S.settings.automationEditor){const note=document.createElement("div");note.className="st";note.textContent="6スロットを上から評価。利用可能な語彙: "+AUTOMATION_CONDITIONS.join(" / ");b.appendChild(note);}
   const mh=document.createElement("h3");mh.textContent="記録・管理";b.appendChild(mh);
   {const misc=document.createElement("div");misc.className="compactGrid";const rec=document.createElement("div");rec.className="btn gh";rec.textContent="プレイ記録を見る";tapEl(rec,()=>openRecords(after));misc.appendChild(rec);const reset=document.createElement("div");reset.className="btn gh";reset.textContent="初期化";tapEl(reset,()=>ask("ゲームをリセット","すべての進行・装備・通貨が消えます。",()=>{localStorage.removeItem(KEY);location.reload();}));misc.appendChild(reset);b.appendChild(misc);}
   // ラベルの無い空欄が置いてあるだけで、何を入れる所なのか画面から分からなかった。
@@ -3040,13 +3077,22 @@ function renderInv(b){
   if(F.sellMode)mk("低レア一括選択",openInvSell,0);
   if(F.dismantleMode)mk("低レア一括選択",openInvSell,0);
   b.appendChild(bar);
-  const mats=document.createElement("div");mats.className="card";mats.innerHTML=`<div class="ty">強化素材（上位1個 = 下位4個）</div><div class="st">結晶 ${Object.entries(matBucket("crystal")).map(([t,n])=>`階梯${t}:${n}`).join(" / ")||"なし"}<br>核 ${Object.entries(matBucket("core")).map(([t,n])=>`階梯${t}:${n}`).join(" / ")||"なし"}</div>`;b.appendChild(mats);
+  /* 素材は1行に畳む。「結晶 なし / 核 なし」を言うのにカード1枚（180px）は要らない。 */
+  const crystal=Object.entries(matBucket("crystal")).map(([t,n])=>`階梯${t}:${n}`).join(" / ")||"なし";
+  const core=Object.entries(matBucket("core")).map(([t,n])=>`階梯${t}:${n}`).join(" / ")||"なし";
+  const mats=document.createElement("div");mats.className="matLine";
+  mats.innerHTML=`<span>結晶 <b>${crystal}</b></span><span>核 <b>${core}</b></span>`;b.appendChild(mats);
   const list=invFiltered();
-  /* グリッドの記号は今まで無説明だった。色・▲・E・数字が何なのか画面から分かるようにする。 */
-  const legend=document.createElement("div");legend.className="invLegend";
-  legend.innerHTML=`<span><b style="color:#7ad04e">▲</b> 装備中より強い</span><span><b style="color:var(--gold)">E</b> 装備中</span>`
-    +`<span><b>右下の数字</b> 深度</span><span><b>枠の色</b> ${CFG.RARITY.map((r,i)=>`<i class="${RC[i]}">${r[0]}</i>`).join("")}</span>`;
-  b.appendChild(legend);
+  /* グリッドの記号は無説明だと読めないが、常時出しておくと毎回90px取られる。
+     一度読めば済むものなので「？」で開閉し、状態を覚える。 */
+  const legendHead=document.createElement("div");legendHead.className="fold"+(S.invLegendOpen?" on":"");
+  legendHead.innerHTML="<span>記号の見かた</span><em>▲ E 数字 枠色</em>";
+  tapEl(legendHead,()=>{S.invLegendOpen=!S.invLegendOpen;save();openTown();});
+  b.appendChild(legendHead);
+  if(S.invLegendOpen){const legend=document.createElement("div");legend.className="invLegend";
+    legend.innerHTML=`<span><b style="color:#7ad04e">▲</b> 装備中より強い</span><span><b style="color:var(--gold)">E</b> 装備中</span>`
+      +`<span><b>右下の数字</b> 深度</span><span><b>枠の色</b> ${CFG.RARITY.map((r,i)=>`<i class="${RC[i]}">${r[0]}</i>`).join("")}</span>`;
+    b.appendChild(legend);}
   if(!list.length){const d=document.createElement("div");d.className="card";d.innerHTML=`<div class="st">該当する装備がない。</div>`;b.appendChild(d);}
   const g=document.createElement("div");g.className="grid";
   for(const it of list){
@@ -3303,7 +3349,7 @@ const KEY="descent_v5";
 function save(){storeActiveCharacter();try{localStorage.setItem(KEY,JSON.stringify({cls:S.cls,deepest:S.deepest,
   gold:S.gold,stash:S.stash,gear:S.gear,base:S.base,log:S.log,mats:S.mats,consumables:S.consumables,loadout:S.loadout,consumableVersion:1,
   matTierVersion:2,
-  settings:S.settings,admin:S.admin,debug:S.debug,debugFloor:S.debugFloor,adminOpts:S.adminOpts,chars:S.chars,characterStates:S.characterStates,avatars:S.avatars,formation:S.formation,diveFloor:S.diveFloor,stamina:S.stamina,daily:S.daily,premium:S.premium,paidInventory:S.paidInventory,profileAvatar:S.profileAvatar,shopSub:S.shopSub,gearSub:S.gearSub,unlockedCharacters:S.unlockedCharacters,tutorial:S.tutorial,returnInvulnerable:S.returnInvulnerable,breakthroughs:S.breakthroughs,breakthroughProgress:S.breakthroughProgress,weeklyCore:S.weeklyCore,beginnerClaimed:S.beginnerClaimed,prepMissionsOpen:S.prepMissionsOpen,skillLoadout:S.skillLoadout}));}catch(e){}}
+  settings:S.settings,admin:S.admin,debug:S.debug,debugFloor:S.debugFloor,adminOpts:S.adminOpts,chars:S.chars,characterStates:S.characterStates,avatars:S.avatars,formation:S.formation,diveFloor:S.diveFloor,stamina:S.stamina,daily:S.daily,premium:S.premium,paidInventory:S.paidInventory,profileAvatar:S.profileAvatar,shopSub:S.shopSub,gearSub:S.gearSub,unlockedCharacters:S.unlockedCharacters,tutorial:S.tutorial,returnInvulnerable:S.returnInvulnerable,breakthroughs:S.breakthroughs,breakthroughProgress:S.breakthroughProgress,weeklyCore:S.weeklyCore,beginnerClaimed:S.beginnerClaimed,prepMissionsOpen:S.prepMissionsOpen,invLegendOpen:S.invLegendOpen,skillLoadout:S.skillLoadout}));}catch(e){}}
 /* セーブの数値は必ず有限な数へ均す。文字列や負値がそのまま入ると
    S.gold+=500 が文字列連結になったり、深度が負のまま階梯計算へ流れる。 */
 const numAt=(v,fallback,min)=>{const n=Number(v);return Number.isFinite(n)?(min==null?n:Math.max(min,n)):fallback;};
@@ -3334,7 +3380,7 @@ function load(){try{
   S.gear=ng;
   S.consumables=Object.assign({},d.consumables||{});if(!d.consumableVersion)S.consumables.heal=(S.consumables.heal||0)+3;S.loadout=(d.loadout||["heal",null,null,null]).slice(0,6);while(S.loadout.length<loadoutCapacity())S.loadout.push(null);S.runItems=[0,0,0,0];S.log=d.log||{runs:[]};
   S.settings=Object.assign({map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0,controlMode:"manual",autoPreset:"aggressive",automationEditor:0},d.settings||{});
-  S.admin=!!d.admin;S.debug=!!d.debug;S.debugFloor=numAt(d.debugFloor,1,1);S.adminOpts=d.adminOpts||{};S.chars=d.chars||{};S.characterStates=d.characterStates||{};S.avatars=d.avatars||{};S.breakthroughs=d.breakthroughs||{};S.breakthroughProgress=d.breakthroughProgress||{};S.weeklyCore=d.weeklyCore||{week:"",bought:0};S.beginnerClaimed=!!d.beginnerClaimed;S.prepMissionsOpen=!!d.prepMissionsOpen;S.skillLoadout=d.skillLoadout||{};
+  S.admin=!!d.admin;S.debug=!!d.debug;S.debugFloor=numAt(d.debugFloor,1,1);S.adminOpts=d.adminOpts||{};S.chars=d.chars||{};S.characterStates=d.characterStates||{};S.avatars=d.avatars||{};S.breakthroughs=d.breakthroughs||{};S.breakthroughProgress=d.breakthroughProgress||{};S.weeklyCore=d.weeklyCore||{week:"",bought:0};S.beginnerClaimed=!!d.beginnerClaimed;S.prepMissionsOpen=!!d.prepMissionsOpen;S.invLegendOpen=!!d.invLegendOpen;S.skillLoadout=d.skillLoadout||{};
   S.unlockedCharacters=Array.isArray(d.unlockedCharacters)&&d.unlockedCharacters.length?d.unlockedCharacters:["warrior:gai"];S.tutorial=d.tutorial||{phase:"done",gearIndex:0};S.returnInvulnerable=!!d.returnInvulnerable;
   S.formation=(Array.isArray(d.formation)?d.formation:[]).filter(k=>S.unlockedCharacters.includes(k)).slice(0,formationCapacity());S.diveFloor=numAt(d.diveFloor,1,1);
   /* 1Fのまま保存された古いセーブは、毎回1Fから潜り直す羽目になるので最深へ寄せる */

@@ -170,8 +170,8 @@ for (const [width, height, name] of sizes) {
     unlocked: SKILL_POOL[S.cls].filter(skillUnlocked).length,
   }));
   if (skillTab.slots !== 3) problems.push(`技タブ: 枠が ${skillTab.slots}個（3枠のはず）`);
-  if (skillTab.cards !== 6) problems.push(`技タブ: 選択肢が ${skillTab.cards}個（職ごとに6種のはず）`);
-  if (skillTab.unlocked !== 6) problems.push(`技タブ: 深度60で解放済みが ${skillTab.unlocked}種`);
+  if (skillTab.cards !== 8) problems.push(`技タブ: 選択肢が ${skillTab.cards}個（職ごとに8種のはず）`);
+  if (skillTab.unlocked !== 8) problems.push(`技タブ: 深度60で解放済みが ${skillTab.unlocked}種`);
   const swapped = await page.evaluate(() => {
     S.skillLoadout[S.cls] = ['whirl', 'charge', 'verdict']; S.p = newPlayer(); beginRun(20); S.paused = false;
     return [1, 2, 3].map(i => $('s' + i).querySelector('.skName').textContent);
