@@ -405,6 +405,11 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
 .rateLink{margin-top:6px;font-size:10px;font-weight:700;color:#8fb4e8;
   text-decoration:underline;text-underline-offset:2px;display:inline-block}
 .gachaHold{margin-top:7px;font-size:10px;color:var(--ink3);text-align:right;font-weight:700}
+.helpHead{margin:14px 0 5px;font-size:12px;font-weight:900;color:var(--gold);
+  border-bottom:1px solid var(--line);padding-bottom:4px}
+.helpList{margin:0;padding-left:17px;font-size:11px;line-height:1.75;color:#a49cb8}
+.helpList li{margin:3px 0}
+.helpList b{color:var(--ink)}
 .rateRow{display:flex;justify-content:space-between;align-items:center;gap:10px;
   padding:8px 2px;border-bottom:1px solid var(--line);font-size:12px;font-weight:700}
 .rateRow b{font-variant-numeric:tabular-nums;color:var(--ink)}
@@ -1208,8 +1213,13 @@ function makeItem(fl,mf,luk,forceRar){
     :"《"+pick(PRE)+pick(SUF)+"》"+it.base;
   it.score=iScore(it);return it;}
 // 職業に合わない防具は主ステが6割しか出ない
-const itemBaseMultiplier=it=>it&&it.element==="neutral"?1.15:1;
-const mainV=it=>Math.round(it.main.v*(1+(it.lv-1)*ENHANCE_PER_LV)*((it.ac&&it.ac!==S.cls)?.6:1)*itemBaseMultiplier(it)); // 無属性は共鳴しない代わり基礎値+15%
+/* 無属性は共鳴しない代わりの基礎値倍率。
+   ただしこれは「無属性ビルドだけ」の調整値ではない。属性ビルドも一部の部位に
+   無属性を混ぜるため、ここを動かすとすべてのビルドの地力が動く。全体の強さを
+   動かしたくない場合は、この値ではなく敵側か属性倍率で調整すること。 */
+const NEUTRAL_BASE=1.15;
+const itemBaseMultiplier=it=>it&&it.element==="neutral"?NEUTRAL_BASE:1;
+const mainV=it=>Math.round(it.main.v*(1+(it.lv-1)*ENHANCE_PER_LV)*((it.ac&&it.ac!==S.cls)?.6:1)*itemBaseMultiplier(it)); // 無属性は共鳴しない代わりに基礎値を上乗せ（NEUTRAL_BASE）
 const fuseNeed=it=>Math.round(56+4*Math.sqrt(Math.max(1,Number(it&&it.ilvl)||1)));
 const fuseGold=it=>Math.round((25+it.ilvl*7)*[1,1.4,2.2,3.6,7][it.rar]);
 const fuseXP=f=>Math.round((14+f.ilvl*2.4)*(1+f.rar*.55)*(1+(f.lv-1)*.32));
@@ -3296,6 +3306,9 @@ function renderSettings(b,after,inDungeon){
   inp.addEventListener("input",()=>{const code=inp.value.trim();if(code!=="pM97342Gamt"&&code!=="omiomi")return;if(code==="omiomi")S.debug=true;else S.admin=true;inp.value="";SFX.lvl();toast(code==="omiomi"?"デバッグモード":"管理者モード");save();after();});
   if(!(S.admin||S.debug))return;
   const modes=document.createElement("div");modes.className="compactGrid";b.appendChild(modes);for(const [key,n] of [["admin","管理者"],["debug","デバッグ"]])if(S[key]){const d=document.createElement("div");d.className="btn gh";d.textContent=n+"モードを終了";tapEl(d,()=>{S[key]=false;save();after();});modes.appendChild(d);}
+  /* テストプレイ時に仕様をその場で引けるようにする。リリース時はこのブロックごと消える。 */
+  {const h=document.createElement("div");h.className="btn gold";h.textContent="遊び方・仕様を見る";
+   tapEl(h,openHelpSheet);b.appendChild(h);}
   const number=(label,initial,fn,min=-999999999,max=999999999)=>{const v=prompt(label,String(initial));if(v===null||!Number.isFinite(+v))return;fn(clamp(+v,min,max));S.p.d=derive();recalcHP(S.p);save();after();};
   const grid=document.createElement("div");grid.className="adminGrid";b.appendChild(grid);const action=(label,fn)=>{const d=document.createElement("div");d.className="btn gh";d.textContent=label;tapEl(d,fn);grid.appendChild(d);};
   // デバッグモードは検証に必要な3項目だけ。管理者モードでは全項目を開放する。
@@ -3330,6 +3343,59 @@ function invFiltered(){
   list.sort((a,c)=>F.sort==="rar"?(c.rar-a.rar||c.score-a.score)
     :F.sort==="ilvl"?(c.ilvl-a.ilvl||c.score-a.score):(c.score-a.score));
   return list;}
+/* テストプレイ用の仕様書き。管理者モードからのみ開く。
+   リリース時は管理者モードごと削除するので、ここも一緒に消える。
+   数字は定義から組み立てて、表と本文がずれないようにする。 */
+const HELP_SECTIONS=[
+  ["基本の流れ",()=>[
+    "拠点で編成・装備・持ち込みを決めて<b>潜る</b>。深度を1つずつ下りながら、階段で次の深度へ進む。",
+    "帰還ポータルへ戻ると戦利品が確定する。<b>倒れると未帰還の装備は失う</b>（ゴールドと経験値は残る）。",
+    `開始深度は到達済みの手前まで${CFG.SKIP_STEP}階層ごとに選べる。出撃バーの数字を押すと一覧が開く。`,
+    `${CFG.BOSS_EVERY}深度ごとにボスが出る。倒すと次の深度が解放される。`]],
+  ["操作",()=>[
+    "左半分がスティック、右下が<b>攻撃</b>、その周りの3つが<b>技</b>。右端の縦一列が<b>持ち込みアイテム</b>で1タップで使う。",
+    "右端いちばん上の丸で<b>操作モード</b>を切り替える。手動 → 片手（移動だけ手動）→ オート（全自動）。",
+    "オートは未到達の深度では選べない。自動時の判断は設定の「自動時の戦い方」で決める。"]],
+  ["属性と共鳴",()=>[
+    "装備7部位のうち同じ属性が3個で共鳴、5個・7個でさらに強くなる。",
+    "火→木→水→火 の三すくみ。光と闇は互いに弱点。",
+    "深度の帯ごとに優勢属性が決まっている。<b>その帯に合わせて持ち替えるのが一番深くまで行ける</b>。",
+    "無属性装備は共鳴しない代わりに基礎値が1.15倍。"]],
+  ["技",()=>[
+    `技は3枠。職ごとの共通プール${(SKILL_POOL[S.cls]||[]).length}種＋そのキャラクターの固有技1種から選ぶ。`,
+    "共通の技は<b>最大到達深度</b>で解放される。課金では解放できない。",
+    "固有技は本人しか差せない。技の編成はキャラクターごとに保存される。"]],
+  ["キャラクター",()=>[
+    `等級は ${TIER_ORDER.join(" < ")}。上ほど能力補正が強く、固有技も強い。`,
+    "<b>N は配布枠でガチャからは出ない</b>。R以上はガチャからのみ。",
+    "同じキャラクターが重なると限界突破（最大5凸）。最大まで行くと重複分は核に変わる。",
+    "控えに置いたキャラクターは、対応する属性の共鳴をわずかに後押しする。"]],
+  ["敵とボス",()=>[
+    "深いほど、まっすぐ追ってこない敵が増える。蛇行・周回・横跳び・正面防御・吸収・分裂。",
+    "<b>盾番</b>は正面からの攻撃が通りにくい。向き直りが遅いので回り込む。",
+    `ボスは属性ごとに2体で全${Object.values(BOSSES).flat().length}体。${CFG.BOSS_EVERY*5}深度で属性が一巡し、二巡目に別の個体が出る。`,
+    "ボスはHP半分で激昂して手数が増える。出現時に攻略の要点が一度出る。"]],
+  ["育成と経済",()=>[
+    "装備は倉庫で共有。装備中の品は他のキャラクターでは使えない。",
+    "分解で結晶、ボスで核。結晶は装備強化、核は限界突破に使う。上位1個＝下位4個で交換できる。",
+    "日替わり任務3つと全達成ボーナス、日次ボーナス（結晶と核が2倍）がある。",
+    "ガチャの10連は単発10回と同額。利点は下限保証だけで、割引は無い。"]],
+  ["この画面について",()=>[
+    "この説明は<b>管理者モード専用</b>。リリース時には管理者モードごと削除する。",
+    `現在の状態: 深度${S.deepest} / Lv${S.base.lv} / ${currentCharacter().n}（${charTier(currentCharacter()).n}）`]],
+];
+function openHelpSheet(){
+  const c=$("itC");c.classList.remove("sellSheet");
+  c.innerHTML='<div style="font-size:15px;font-weight:800;margin-bottom:4px">遊び方・仕様</div>'
+    +'<div class="sub">テストプレイ用の控え。管理者モードからのみ開ける。</div>';
+  for(const [title,body] of HELP_SECTIONS){
+    const h=document.createElement("div");h.className="helpHead";h.textContent=title;c.appendChild(h);
+    const ul=document.createElement("ul");ul.className="helpList";
+    for(const line of body()){const li=document.createElement("li");li.innerHTML=line;ul.appendChild(li);}
+    c.appendChild(ul);}
+  const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";
+  tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);
+  $("itPop").classList.add("on");}
 /* 提供割合の開示。何が何%で出るのか画面のどこにも書いていなかった。 */
 function openGachaRates(kind){
   invMenu("提供割合",c=>{

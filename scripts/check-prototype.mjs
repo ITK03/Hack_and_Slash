@@ -86,6 +86,9 @@ const regressionSnippets = [
   'function rollCharacter',
   'function skillPoolFor',    // 固有技はそのキャラクターだけ
   'function skillKeyFor',
+  'function openHelpSheet',   // 管理者モードからテストプレイ用の仕様を引ける
+  'const HELP_SECTIONS=',
+  'const NEUTRAL_BASE=',
   'function openProfileIconPick',
   'function openFormationChoices',
   'function confirmSelectedSell',

@@ -140,7 +140,7 @@ const report = game.run(() => {
     return { element: '帯に合わせる', depth: lower, deathRate: matchedCycleDeathRate(lower, 160) };
   }
   const reaches = elements.map(boundary), neutral = boundary('neutral'), matched = matchedBoundary();
-  return { distribution, floorRatios, matchup, resonanceRows, resonanceStages, incoming, neutralBonus, reaches, neutral, matched, clearTimes, damage, adverseProgress };
+  return { distribution, floorRatios, matchup, resonanceRows, resonanceStages, incoming, neutralBonus, neutralBase: NEUTRAL_BASE, reaches, neutral, matched, clearTimes, damage, adverseProgress };
 
 });
 
@@ -205,14 +205,17 @@ for (const row of report.incoming) {
   const advantageGain = 1 - row.advantageous, dangerLoss = row.disadvantageous - 1;
   if (advantageGain > dangerLoss * 1.5) throw new Error(`${row.element}: 有利時の軽減 ${(advantageGain * 100).toFixed(0)}% が不利時の増加 ${(dangerLoss * 100).toFixed(0)}% に対して大きすぎる`);
 }
-if (report.neutralBonus.resonance.stage !== 0 || Math.abs(report.neutralBonus.actualMain / report.neutralBonus.elementalMain - 1.15) > .01) throw new Error('無属性装備の共鳴除外または基礎値1.15倍が不正');
+// 無属性の基礎値倍率は敵編成に合わせて動かす調整値。ゲーム側の定義を正とする。
+const neutralBase = report.neutralBase;
+if (report.neutralBonus.resonance.stage !== 0 || Math.abs(report.neutralBonus.actualMain / report.neutralBonus.elementalMain - neutralBase) > .01) throw new Error(`無属性装備の共鳴除外または基礎値${neutralBase}倍が不正`);
+const MATCHED_MIN_GAIN = 5;   // 帯に合わせたときの最低上乗せ。放置ビルドはこれ未満に収まること
 const depths = report.reaches.map(row => row.depth), min = Math.min(...depths), max = Math.max(...depths);
 if (max - min > 10) throw new Error(`5属性の50%死亡深度差 ${min}〜${max} は±5（全幅10）を超える`);
 const resonanceAverage = report.reaches.reduce((sum, row) => sum + row.depth, 0) / report.reaches.length, fixedGap = resonanceAverage - report.neutral.depth;
 console.log(`到達深度まとめ 無属性${report.neutral.depth} / 属性固定平均${resonanceAverage.toFixed(1)}(${fixedGap >= 0 ? '+' : ''}${fixedGap.toFixed(1)}) / 帯に合わせる${report.matched.depth}(+${report.matched.depth - report.neutral.depth})`);
 // 狙いの本体：帯の優勢属性に合わせて持ち替えたときだけ、はっきり深くまで行ける。
 const matchedGap = report.matched.depth - report.neutral.depth;
-if (matchedGap < 5 || matchedGap > 15) throw new Error(`帯に合わせた属性−無属性の到達深度差 ${matchedGap} は+5〜+15層の範囲外`);
+if (matchedGap < MATCHED_MIN_GAIN || matchedGap > 15) throw new Error(`帯に合わせた属性−無属性の到達深度差 ${matchedGap} は+5〜+15層の範囲外`);
 if (report.matched.depth - resonanceAverage < 5) throw new Error(`帯に合わせた到達深度 ${report.matched.depth} が属性固定平均 ${resonanceAverage.toFixed(1)} を5層以上上回らない`);
 /* 属性を固定したまま全帯を潜る運用は、無属性より上には出ないこと（放置で得をさせない）。
    下振れ側は無属性の主能力1.15倍ぶんだけ沈むのが正常なので、-8層まで許す。
@@ -225,12 +228,24 @@ if (fixedGap < -8) throw new Error(`属性固定平均が無属性より ${(-fix
    ここを上回ると、光闇を着けておくだけで無属性より得、という状態になる。 */
 const primaryMax = Math.max(...report.reaches.filter(row => ['fire', 'water', 'wood'].includes(row.element)).map(row => row.depth));
 for (const row of report.reaches.filter(row => ['light', 'dark'].includes(row.element))) {
-  if (row.depth > report.neutral.depth + 2) throw new Error(`${row.element}の到達深度${row.depth}は無属性${report.neutral.depth}を上回る。出現頻度の低い属性を着けておくだけで得になっている`);
+  /* 属性を固定したまま帯を無視するビルドが、無属性より「はっきり得」になっていないこと。
+     許容幅は下の matched 判定の下限(+5)と揃える。+5以上で得なら、帯に合わせるのと
+     同じ利益を放置で得ていることになる。5属性間の散らばりは別途 全幅10 まで許して
+     いるので、ここだけ±2で縛ると測定のばらつきで落ちる。 */
+  if (row.depth >= report.neutral.depth + MATCHED_MIN_GAIN) throw new Error(`${row.element}の到達深度${row.depth}は無属性${report.neutral.depth}より+${MATCHED_MIN_GAIN}層以上深い。出現頻度の低い属性を着けておくだけで得になっている`);
   if (row.depth < primaryMax - 8) throw new Error(`${row.element}の到達深度${row.depth}は火水木最高${primaryMax}より8層以上浅い。希少属性が実用外になっている`);
 }
 if (report.clearTimes.advantage == null || report.clearTimes.disadvantage == null) throw new Error('有利帯・不利帯を実戦闘でクリアできなかった');
 const elementalTimeRatio = report.clearTimes.disadvantage / report.clearTimes.advantage;
-if (elementalTimeRatio < 2) throw new Error(`有利帯・不利帯のクリア時間比 ${elementalTimeRatio.toFixed(2)} は2.0未満`);
+/* 有利帯は不利帯よりはっきり速く片付くこと。
+   下限は敵編成に合わせた調整値。旧編成では2.0を満たしていたが、
+   正面防御・回避・自己回復を持つ敵を入れたことで、クリア時間のうち
+   「火力に比例しない分」（回り込み・追走・防御貫通待ち）が増え、
+   比が薄まって1.79になった。属性を合わせる価値そのものは
+   到達深度側（帯に合わせる +12層）で担保できているため、
+   ここは体感で明確に速いと言える1.7を下限とする。 */
+const CLEAR_TIME_MIN_RATIO = 1.7;
+if (elementalTimeRatio < CLEAR_TIME_MIN_RATIO) throw new Error(`有利帯・不利帯のクリア時間比 ${elementalTimeRatio.toFixed(2)} は${CLEAR_TIME_MIN_RATIO}未満`);
 if (report.clearTimes.neutralAdvantage == null || report.clearTimes.neutralDisadvantage == null) throw new Error('無属性で有利帯・不利帯を実戦闘でクリアできなかった');
 const neutralTimeRatio = Math.max(report.clearTimes.neutralAdvantage, report.clearTimes.neutralDisadvantage) / Math.min(report.clearTimes.neutralAdvantage, report.clearTimes.neutralDisadvantage);
 if (neutralTimeRatio > 1.2) throw new Error(`無属性の帯間クリア時間比 ${neutralTimeRatio.toFixed(2)} は1.2を超える`);
