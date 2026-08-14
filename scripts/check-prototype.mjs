@@ -79,6 +79,13 @@ const regressionSnippets = [
   'function renderSkillTab',
   'function openGachaRates',  // ガチャの提供割合を開示する
   '.gachaBtns',
+  'const BOSSES={',           // ボスは属性ごとに2体、挙動も別物
+  'function bossOf',
+  'const BOSS_AI={',
+  'const CTIER=',             // キャラクターの等級。配布はN、ガチャはR以上
+  'function rollCharacter',
+  'function skillPoolFor',    // 固有技はそのキャラクターだけ
+  'function skillKeyFor',
   'function openProfileIconPick',
   'function openFormationChoices',
   'function confirmSelectedSell',

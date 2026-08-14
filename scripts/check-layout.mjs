@@ -167,13 +167,15 @@ for (const [width, height, name] of sizes) {
   const skillTab = await page.evaluate(() => ({
     slots: document.querySelectorAll('.skillSlot').length,
     cards: document.querySelectorAll('.skillCard').length,
-    unlocked: SKILL_POOL[S.cls].filter(skillUnlocked).length,
+    unlocked: skillPoolFor().filter(skillUnlocked).length,
   }));
   if (skillTab.slots !== 3) problems.push(`技タブ: 枠が ${skillTab.slots}個（3枠のはず）`);
-  if (skillTab.cards !== 8) problems.push(`技タブ: 選択肢が ${skillTab.cards}個（職ごとに8種のはず）`);
-  if (skillTab.unlocked !== 8) problems.push(`技タブ: 深度60で解放済みが ${skillTab.unlocked}種`);
+  if (skillTab.cards !== 9) problems.push(`技タブ: 選択肢が ${skillTab.cards}個（共通8種＋固有1種のはず）`);
+  if (skillTab.unlocked !== 9) problems.push(`技タブ: 深度60で解放済みが ${skillTab.unlocked}種`);
   const swapped = await page.evaluate(() => {
-    S.skillLoadout[S.cls] = ['whirl', 'charge', 'verdict']; S.p = newPlayer(); beginRun(20); S.paused = false;
+    // 保存はキャラクター単位。直接キーを書かず、実際の差し替え口を通す
+    ['whirl', 'charge', 'verdict'].forEach((id, i) => setSkillSlot(S.cls, i, id));
+    S.p = newPlayer(); beginRun(20); S.paused = false;
     return [1, 2, 3].map(i => $('s' + i).querySelector('.skName').textContent);
   });
   if (swapped.join('/') !== '旋風/疾駆/断罪') problems.push(`技タブ: 差し替えが戦闘に反映されない（${swapped.join('/')}）`);
@@ -189,7 +191,7 @@ for (const [width, height, name] of sizes) {
     return bad;
   });
   if (skClip.length) problems.push(`技タブ: 差し替えた技名が円から切れる ${skClip.join(', ')}`);
-  await page.evaluate(() => { S.skillLoadout = {}; S.scene = 'town'; save(); openTown(); });
+  await page.evaluate(() => { S.skillLoadout = {}; S.scene = 'town'; S.training = false; save(); openTown(); });
   await page.waitForTimeout(300);
 
   // 商店に10連と提供割合があること

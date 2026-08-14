@@ -88,7 +88,7 @@ const report = game.run(() => {
       for (const enemy of S.enemies) { const distance = d2(S.p.x, S.p.y, enemy.x, enemy.y); if (distance < best) { best = distance; target = enemy; } }
       const angle = Math.atan2(target.y - S.p.y, target.x - S.p.x);
       S.p.x = target.x - Math.cos(angle) * 1.15; S.p.y = target.y - Math.sin(angle) * 1.15; S.p.face = angle;
-      if (mode === 'manual') for (let i = 0; i < 3; i++) if (S.p.cds[i] <= 0 && S.p.mp >= S.p.d.C.skills[i].c) useSkill(i);
+      if (mode === 'manual') for (let i = 0; i < 3; i++) if (S.p.cds[i] <= 0 && S.p.mp >= activeSkills()[i].c) useSkill(i);
       if (S.p.itemCd <= 0) {
         const usable = S.loadout.findIndex((key, index) => S.runItems[index] && (
           (key === 'heal' && S.p.hp < S.p.max * .7) ||
