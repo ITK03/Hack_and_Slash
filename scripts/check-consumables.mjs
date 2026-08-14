@@ -16,17 +16,29 @@ const result=game.run(()=>{
  const full=boundary(true,Math.max(1,none-8),Math.min(300,none+16));
  return {crystals,heals:crystals/CONSUMABLES.heal.crystal,none,full,difference:full-none};
 });
-// Exercise the real pointer handlers: open the fan, observe time advancing while it is open, then release.
-game.run(()=>{S.cls='warrior';S.base={lv:60,xp:0,pts:0,str:180,mag:0,def:60,agi:60,spi:0,luk:0};S.gear={};S.p=newPlayer();S.scene='dungeon';S.paused=false;S.training=false;S.loadout=['heal','power','hard','gale'];S.runItems=[1,1,1,1];S.consumables={heal:1,power:1,hard:1,gale:1};S.runT=0;});
+/* 右端のアイテム列を実際のDOMとハンドラで検査する。
+   持ち込み枠ぶんのボタンが並び、1タップで使え、ゲームは止まらないこと。
+   （長押しで扇を開く方式は廃止した。押しっぱなしが要り、選択中の中身も見えなかった。） */
+game.run(()=>{S.cls='warrior';S.base={lv:60,xp:0,pts:0,str:180,mag:0,def:60,agi:60,spi:0,luk:0};S.gear={};S.p=newPlayer();S.scene='dungeon';S.paused=false;S.training=false;S.loadout=['heal','power','hard','gale'];S.runItems=[1,1,1,1];S.consumables={heal:1,power:1,hard:1,gale:1};S.runT=0;S.p.itemCd=0;S.p.itemLock=0;S.p.hp=S.p.max*.5;renderRail();updHUD();});
 game.clearTimers();  // 計測中に積み上がった未発火タイマーを切り離してから操作を検査する
-game.dispatch('pot','pointerdown',{pointerId:1,pointerType:'mouse',clientX:20,clientY:20,buttons:1});
-game.advance(400);   // 長押し判定(360ms)を仮想時間で越える
-const fanStart=game.run(()=>({open:document.querySelector('#itemFan').classList.contains('on'),paused:S.paused,time:S.runT}));
-// 扇が開いている間もゲーム更新が進むことを、実際に update() を回して確かめる
+/* DOMスタブは querySelectorAll を持たないため、ここではロジックだけを見る。
+   ボタンが実際に並んで押せるか・重ならないかは実ブラウザで確認する（scripts/check-layout.mjs）。 */
+const before=game.run(()=>({残:S.runItems.slice(),hp:Math.round(S.p.hp),time:S.runT,paused:S.paused}));
+const used=game.run(()=>useItem(0));
 game.run(()=>{for(let i=0;i<12;i++)update(1/60);});
-game.dispatch('pot','pointermove',{pointerId:1,pointerType:'mouse',clientX:70,clientY:5,buttons:1});
-game.advance(120);
-const fanDuring=game.run(()=>({open:document.querySelector('#itemFan').classList.contains('on'),paused:S.paused,time:S.runT}));
-game.dispatch('pot','pointerup',{pointerId:1,pointerType:'mouse',clientX:70,clientY:5,buttons:0});
-result.fanDoesNotPause=fanStart.open&&fanDuring.open&&!fanStart.paused&&!fanDuring.paused&&fanDuring.time>fanStart.time;
-console.log('消耗品実測',result);if(result.heals<3||result.heals>5)throw new Error(`深度10一周の回復薬換算 ${result.heals.toFixed(2)} は約4個でない`);if(result.difference<5||result.difference>10)throw new Error(`50%死亡深度差 ${result.difference} は+5〜+10でない`);if(!result.fanDoesNotPause)throw new Error('長押し中に停止した');
+const after=game.run(()=>({残:S.runItems.slice(),hp:Math.round(S.p.hp),time:S.runT,paused:S.paused}));
+result.枠=game.run(()=>loadoutCapacity());
+result.itemUseWorks=used&&after.残[0]===before.残[0]-1&&after.hp>before.hp;
+result.doesNotPause=!after.paused&&after.time>before.time;
+// 操作モードの切替が戦闘中に呼べること（右端の切替ボタンから使う関数）
+result.modes=game.run(()=>{S.floor=5;S.deepest=50;S.settings.controlMode='manual';
+  const seen=[];for(let i=0;i<4;i++){cycleControlMode();seen.push(S.settings.controlMode);}return seen;});
+result.autoBlockedAtFrontier=game.run(()=>{S.floor=50;S.deepest=50;S.settings.controlMode='onehand';
+  cycleControlMode();return S.settings.controlMode;});
+console.log('消耗品実測',result);
+if(result.heals<3||result.heals>5)throw new Error(`深度10一周の回復薬換算 ${result.heals.toFixed(2)} は約4個でない`);
+if(result.difference<5||result.difference>10)throw new Error(`50%死亡深度差 ${result.difference} は+5〜+10でない`);
+if(!result.itemUseWorks)throw new Error('アイテムを1タップ相当の呼び出しで使用できない');
+if(!result.doesNotPause)throw new Error('アイテム使用でゲームが停止した');
+if(new Set(result.modes).size!==3)throw new Error(`操作モードの巡回が3種類にならない（${result.modes.join(',')}）`);
+if(result.autoBlockedAtFrontier==='auto')throw new Error('未到達の深度でオートに切り替わった');

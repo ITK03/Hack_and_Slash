@@ -69,6 +69,16 @@ const regressionSnippets = [
   '全装備オプション（自由入力）',
   'function renderDiveBar',   // 潜る操作。旧「この編成で潜る」ボタンから常駐の出撃バーへ移した
   'confirmDive(S.diveFloor)',
+  'function openFloorPick',   // ±だけでは最深まで何十回も押すことになる
+  'function maxStartFloor',
+  'function renderPartySection',  // 拠点は編成が先、任務は折りたたみの下
+  'function renderMissionSection',
+  'const SKILL_POOL=',        // 技は3枠を職ごとの6種から選ぶ
+  'function activeSkills',
+  'function setSkillSlot',
+  'function renderSkillTab',
+  'function openGachaRates',  // ガチャの提供割合を開示する
+  '.gachaBtns',
   'function openProfileIconPick',
   'function openFormationChoices',
   'function confirmSelectedSell',
