@@ -6,7 +6,11 @@ installDiveMeasurement(game);
 
 const report = game.run(() => {
   const profiles = [
-    { name: '素手', level: 10, rarity: null, quality: null, enhance: 0, range: [7, 13] },
+    /* 素手の帯は敵の解放深度に合わせた調整値。
+       以前は9種すべてが深度9までに出そろい、装備なしでも早々に巨躯や爆ぜ手と
+       当たって止まっていた。序盤を弱い3種だけにした分だけ、素手でも数層ぶん
+       深くまで行けるようになっている（実測 12 → 14）。 */
+    { name: '素手', level: 10, rarity: null, quality: null, enhance: 0, range: [7, 15] },
     { name: '標準', level: 60, rarity: 2, quality: 1, enhance: .5, range: [55, 70] },
     { name: '厳選', level: 90, rarity: 4, quality: 1.3, enhance: 1, range: [95, 115] },
   ];

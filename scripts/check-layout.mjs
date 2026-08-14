@@ -66,9 +66,13 @@ for (const [width, height, name] of sizes) {
       // 円に内接する正方形（一辺 r√2）に収まっていれば、縦位置が多少ずれても丸い縁で削れない
       const safe = r * Math.SQRT2 - 2;
       if (text.width > safe) clipped.push(`${label.textContent}: 文字${Math.round(text.width)}px が内接正方形${Math.round(safe)}px を超える`);
-      // ラベルが円の中央から外れると、その高さの弦が狭くなって削れやすくなる
-      const drift = Math.abs((text.top + text.bottom) / 2 - cy);
-      if (drift > 4) clipped.push(`${label.textContent}: ラベルが円の中心から${Math.round(drift)}pxずれている`);
+      /* 「技名＋消費MP」をひとかたまりとして見たときの重心が円の中心にあること。
+         名前だけを中心に置くと、下にぶら下がる消費の分だけ組が下へ傾く。 */
+      const cost = document.getElementById('s' + i).querySelector('.cost');
+      const cbox = cost ? cost.getBoundingClientRect() : text;
+      const groupTop = Math.min(text.top, cbox.top), groupBottom = Math.max(text.bottom, cbox.bottom);
+      const drift = Math.abs((groupTop + groupBottom) / 2 - cy);
+      if (drift > 4) clipped.push(`${label.textContent}: 技名と消費の組が円の中心から${Math.round(drift)}pxずれている`);
       // 四隅が円の内側にあること（最終確認）
       const corners = [[text.left, text.top], [text.right, text.top], [text.left, text.bottom], [text.right, text.bottom]];
       const outside = corners.filter(([x, y]) => Math.hypot(x - cx, y - cy) > r - 1);

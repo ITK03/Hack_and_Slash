@@ -107,6 +107,23 @@ await page.goto(base); await page.waitForTimeout(500);
   notes.push(`回復薬: 持ち込み${heal.start} → 道中で${heal.end}（上限${heal.cap}）`);
 }
 
+/* 2c. 敵の種類が深さとともに増え、序盤は弱い型だけであること */
+{
+  const ladder = await page.evaluate(() => {
+    const heavy = ['brute', 'bomber', 'warden', 'phaser', 'splitter', 'leech'];
+    // ボスは種類数に数えない（5層ごとに必ず出るため、通常敵の増え方が読めなくなる）
+    const kinds = f => { S.deepest = Math.max(S.deepest, f); enterFloor(f); return [...new Set(S.enemies.filter(e => !e.boss).map(e => e.k))]; };
+    const shallow = new Set(); for (const f of [1, 3, 5, 8, 10]) for (const k of kinds(f)) shallow.add(k);
+    const counts = [1, 10, 30, 60].map(f => ({ f, n: kinds(f).length }));
+    return { 序盤に重い型: [...shallow].filter(k => heavy.includes(k)), counts };
+  });
+  if (ladder.序盤に重い型.length) problems.push(`深度10までに重い敵が出る: ${ladder.序盤に重い型.join(',')}`);
+  for (let i = 1; i < ladder.counts.length; i++)
+    if (ladder.counts[i].n < ladder.counts[i - 1].n)
+      problems.push(`深度${ladder.counts[i].f}の敵の種類が深度${ladder.counts[i - 1].f}より少ない`);
+  notes.push(`敵の種類: ${ladder.counts.map(c => `${c.f}F=${c.n}種`).join(' → ')}`);
+}
+
 /* 3. 帰還して拠点へ戻れること */
 {
   const back = await page.evaluate(() => { endRun(true); return { scene: S.scene }; });

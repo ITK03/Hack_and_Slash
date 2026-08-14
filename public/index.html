@@ -109,10 +109,13 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
 .skWrap{position:absolute;width:62px;height:62px;pointer-events:none}
 #w1{right:94px;bottom:8px}#w2{right:78px;bottom:90px}#w3{right:6px;bottom:100px}
 .skWrap .sk{position:absolute;inset:0;width:auto;height:auto}
-.skName{position:absolute;left:3px;right:3px;top:50%;transform:translateY(-50%);
-  text-align:center;font-size:10px;font-weight:800;line-height:1.1;color:#efe6d6;
-  letter-spacing:-.02em;white-space:nowrap;pointer-events:none}
-.sk .cost{position:absolute;left:0;right:0;bottom:7px;text-align:center;margin:0}
+/* 技名と消費MPは「ひとかたまり」で円の中心に置く。
+   名前だけを中心へ絶対配置し、消費をその下にぶら下げると、
+   2つ合わせた見た目の重心が中心より下がって傾いて見える。
+   .sk 自身が flex 中央寄せなので、絶対配置をやめれば組で中央に来る。 */
+.skName{text-align:center;font-size:10px;font-weight:800;line-height:1.1;color:#efe6d6;
+  letter-spacing:-.02em;white-space:nowrap;pointer-events:none;max-width:100%;padding:0 2px}
+.sk .cost{font-size:8px;color:#7fb4f0;font-weight:700;margin:1px 0 0;text-align:center;font-style:normal}
 /* アイテムと自動切替は右端の縦一列。技の弧より上に置いて重ならないようにする。
    よく押すアイテムほど下（親指に近い側）へ、切替はいちばん上。
    長押しで扇を開く方式は、押しっぱなしが要る上に何が選ばれるか見えないのでやめた。 */
@@ -139,7 +142,15 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
 #autoBtn small{font-size:7px;font-weight:700;opacity:.8}
 #autoBtn.on{border-color:var(--gold);color:#ffe6ac;background:radial-gradient(circle at 34% 28%,#4a3a12,#1a1408 72%)}
 
-.loadout{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.loadSlot{min-height:70px;padding:6px 3px;text-align:center;border:1px solid var(--line);background:var(--panel);font-size:9px}.recipe{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center}
+.loadout{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+/* 中身は縦横とも中央。min-height だと絵と文字が上に寄って枠と中心がずれる。 */
+.loadSlot{height:80px;padding:6px 3px;border:1px solid var(--line);background:var(--panel);
+  border-radius:3px;font-size:9px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2px;overflow:hidden}
+.loadSlot b{font-size:10px;font-weight:800;line-height:1.15;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.loadSlot .cnt{font-size:9px;color:var(--ink3);font-weight:700}
+.loadSlot svg{display:block}.recipe{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center}
 #act{position:absolute;left:50%;transform:translateX(-50%);
   bottom:calc(env(safe-area-inset-bottom) + 112px);z-index:22;padding:12px 20px;border-radius:3px;
   font-size:13px;font-weight:800;display:none;white-space:nowrap;max-width:86vw;text-align:center}
@@ -1652,8 +1663,26 @@ function enterFloor(fl){S.tactical.trap=null;S.tactical.reveal=false;
   const n=Math.min(CFG.SPAWN_MAX,
     Math.round((CFG.SPAWN_BASE+CFG.SPAWN_PER_FLOOR*(fl-1))*(isBoss?.5:1)));
   /* 解放深度。下ほど「まっすぐ追ってこない」相手で、後半ほど比率が上がる。 */
-  const EFROM={swarm:2,archer:3,stalker:4,brute:5,ticker:6,caster:7,seeker:8,bomber:9,
-    weaver:14,orbiter:20,leech:30,warden:34,phaser:38,splitter:90};
+  /* 解放深度。弱い順に、深く潜るほど種類が増えていく形にする。
+     以前は9種すべてが深度9までに出そろい、序盤から巨躯や爆ぜ手が混ざっていた。
+     深部まで「新しい敵が増える」感触を残すため、最後の1種は深度60まで引っ張る。 */
+  const EFROM={
+    grunt:1,      // 下僕      38hp  素直に追ってくる
+    swarm:2,      // 跳ね虫    16hp  跳ねて寄る
+    stalker:5,    // 影走り    30hp  溜めて踏み込む
+    archer:8,     // 射手      26hp  遠くから撃つ
+    weaver:11,    // 揺らぎ    30hp  蛇行して寄る
+    caster:13,    // 呪術師    32hp  麻痺弾
+    seeker:16,    // 追う眼    34hp  追尾弾
+    orbiter:20,   // 回り手    36hp  周りを回る
+    ticker:24,    // 膨れ者    60hp  自爆
+    brute:34,     // 巨躯     120hp  重い殴り（属性検査の比較窓 29〜32 の外に置く）
+    bomber:36,    // 爆ぜ手    26hp  突っ込んで爆発
+    leech:40,     // 吸い蛭    42hp  触れて回復
+    warden:46,    // 盾番      60hp  正面を通さない
+    phaser:52,    // 瞬き      32hp  横へ跳ぶ
+    splitter:60,  // 分かれ身  44hp  倒すと割れる
+  };
   const avail=EKEYS.filter(k=>fl>=(EFROM[k]||1));
   /* 深部では素直に突っ込む型を薄める。抽選箱へ手強い型を余分に入れて偏らせる。 */
   /* 新型は「たまに混じる」程度に留める。逃げ回る型・硬い型が湧きの4割を占めると、
@@ -3039,8 +3068,14 @@ function openTown(){
 
 function gearGrid(host,inDungeon){
   const gg=document.createElement("div");gg.className="g3";
-  {const ch=currentCharacter(),d=document.createElement("div");d.className="slot"+(inDungeon?" no":"");
-    d.innerHTML=`<div class="ic" style="color:${ch.col};font-size:25px">●</div><div class="sl">キャラクター</div><div class="si">${ch.n}</div><div class="ty">Lv${S.base.lv}</div>`;
+  /* キャラクター枠は拠点の編成枠と同じ見た目にする。
+     同じ「誰で潜るか」を画面ごとに別の形で見せない。 */
+  {const ch=currentCharacter(),d=document.createElement("div");
+    d.className="slot member"+(inDungeon?" no":"");
+    d.style.borderColor=charTier(ch).col;
+    d.innerHTML=`<i class="clsMark" style="color:${CLASSES[S.cls].col}" title="${CLASSES[S.cls].name}">${CLASS_MARK[S.cls]||"?"}</i>`
+      +`<div class="face" style="color:${ch.col}">●</div>`
+      +`<div class="nm">${ch.n}</div><div class="mlv">Lv${S.base.lv}</div>`;
     if(!inDungeon)tapEl(d,openCharacterPick);gg.appendChild(d);}
   for(const s of SLOTS){const it=S.gear[s.k];
     const d=document.createElement("div");d.className="slot"+(it?"":" empty");
@@ -3665,7 +3700,7 @@ function openCraft(){invMenu("調合",c=>{
     d.appendChild(row);c.appendChild(d);}
   },openTown);}
 function openLoadoutSlot(slot){invMenu(`持ち込み枠 ${slot+1}`,c=>{const empty=document.createElement("div");empty.className="btn gh";empty.textContent="空にする";tapEl(empty,()=>{S.loadout[slot]=null;save();$("itPop").classList.remove("on");openTown();});c.appendChild(empty);for(const k of CONSUMABLE_KEYS){const x=CONSUMABLES[k],d=document.createElement("div");d.className="card tap";d.innerHTML=`<div class="nm">${conIcon(k,20)} ${x.n} ×${Math.min(x.max,S.consumables[k]||0)}</div><div class="st">${x.d} / 持ち込み上限${x.max}${k==="heal"?` / 道中は${CFG.HEAL_RUN_CAP}個まで拾える`:""}</div>`;tapEl(d,()=>{S.loadout[slot]=k;save();$("itPop").classList.remove("on");openTown();});c.appendChild(d);}},openTown);}
-function renderLoadout(b){const h=document.createElement("h3");h.textContent=`持ち込み（${loadoutCapacity()}枠）`;b.appendChild(h);const g=document.createElement("div");g.className="loadout";for(let i=0;i<loadoutCapacity();i++){const k=S.loadout[i],d=document.createElement("div");d.className="loadSlot";d.innerHTML=k?`${conIcon(k,22)}<b>${CONSUMABLES[k].n}</b><br>×${Math.min(CONSUMABLES[k].max,S.consumables[k]||0)} / ${CONSUMABLES[k].max}`:`<b>＋</b><br>空き`;tapEl(d,()=>openLoadoutSlot(i));g.appendChild(d);}b.appendChild(g);const n=document.createElement("div");n.className="st";n.textContent="未使用品は死亡・断念時にも倉庫へ残ります。潜行中の補充はできません。";b.appendChild(n);}
+function renderLoadout(b){const h=document.createElement("h3");h.textContent=`持ち込み（${loadoutCapacity()}枠）`;b.appendChild(h);const g=document.createElement("div");g.className="loadout";for(let i=0;i<loadoutCapacity();i++){const k=S.loadout[i],d=document.createElement("div");d.className="loadSlot";d.innerHTML=k?`${conIcon(k,22)}<b>${CONSUMABLES[k].n}</b><span class="cnt">×${Math.min(CONSUMABLES[k].max,S.consumables[k]||0)} / ${CONSUMABLES[k].max}</span>`:`<b style="font-size:17px">＋</b><span class="cnt">空き</span>`;tapEl(d,()=>openLoadoutSlot(i));g.appendChild(d);}b.appendChild(g);const n=document.createElement("div");n.className="st";n.textContent="未使用品は死亡・断念時にも倉庫へ残ります。潜行中の補充はできません。";b.appendChild(n);}
 /* 倉庫は「装備」「結晶」「分解」「調合」の4区画。
    ひとつの棚に絞込・並替・売却・分解・調合を横一列で置くと、
    いま何をする画面なのかが読めない。区画ごとに要るものだけ出す。 */

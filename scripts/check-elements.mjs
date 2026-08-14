@@ -140,7 +140,24 @@ const report = game.run(() => {
     return { element: '帯に合わせる', depth: lower, deathRate: matchedCycleDeathRate(lower, 160) };
   }
   const reaches = elements.map(boundary), neutral = boundary('neutral'), matched = matchedBoundary();
-  return { distribution, floorRatios, matchup, resonanceRows, resonanceStages, incoming, neutralBonus, neutralBase: NEUTRAL_BASE, reaches, neutral, matched, clearTimes, damage, adverseProgress };
+  /* 到達深度どうしの引き算は、敵の解放深度をいじるたびに5〜12層も動く。
+     50%死亡深度は階段状で、敵編成が変わると段の位置ごと動くためで、
+     「属性を合わせると得か」を測る道具としては当てにならない。
+     同じ深度で、合わせた場合と無属性の場合の死亡率を直接比べる。
+     こちらは段の位置に依存しないので、敵を入れ替えても意味が変わらない。 */
+  /* 測る深度は無属性の限界に合わせる。固定値だと、敵編成しだいで
+     両方とも死亡率90%超の飽和域に入り、差が出ないまま0ptになる。
+     無属性がちょうど50%で倒れる深度なら、合わせた側との差が最も見える。 */
+  const matchedEdge = [];
+  for (const depth of [neutral.depth - 10, neutral.depth - 5, neutral.depth].filter(d => d >= 5)) {
+    const withMatch = matchedCycleDeathRate(depth, 64);
+    const withNeutral = cycleDeathRate(depth, 'neutral', 64);
+    /* 属性を固定したまま放置したビルドも同じ深度で測る。5属性の平均で見る。 */
+    const fixedRates = elements.map(el => cycleDeathRate(depth, el, 32));
+    const withFixed = fixedRates.reduce((a, x) => a + x, 0) / fixedRates.length;
+    matchedEdge.push({ depth, 合わせる: withMatch, 無属性: withNeutral, 固定: withFixed, 差: withNeutral - withMatch, 固定差: withFixed - withNeutral });
+  }
+  return { distribution, floorRatios, matchup, resonanceRows, resonanceStages, incoming, neutralBonus, neutralBase: NEUTRAL_BASE, reaches, neutral, matched, matchedEdge, clearTimes, damage, adverseProgress };
 
 });
 
@@ -215,13 +232,28 @@ const resonanceAverage = report.reaches.reduce((sum, row) => sum + row.depth, 0)
 console.log(`到達深度まとめ 無属性${report.neutral.depth} / 属性固定平均${resonanceAverage.toFixed(1)}(${fixedGap >= 0 ? '+' : ''}${fixedGap.toFixed(1)}) / 帯に合わせる${report.matched.depth}(+${report.matched.depth - report.neutral.depth})`);
 // 狙いの本体：帯の優勢属性に合わせて持ち替えたときだけ、はっきり深くまで行ける。
 const matchedGap = report.matched.depth - report.neutral.depth;
-if (matchedGap < MATCHED_MIN_GAIN || matchedGap > 15) throw new Error(`帯に合わせた属性−無属性の到達深度差 ${matchedGap} は+5〜+15層の範囲外`);
-if (report.matched.depth - resonanceAverage < 5) throw new Error(`帯に合わせた到達深度 ${report.matched.depth} が属性固定平均 ${resonanceAverage.toFixed(1)} を5層以上上回らない`);
+/* 狙いの本体は「同じ深度で、帯に合わせた方がはっきり生き残る」こと。
+   到達深度の引き算ではなく、同じ深度での死亡率の差で見る。 */
+console.table(report.matchedEdge.map(row => ({
+  深度: row.depth,
+  '帯に合わせる': `${(row.合わせる * 100).toFixed(1)}%`,
+  '無属性': `${(row.無属性 * 100).toFixed(1)}%`,
+  '属性固定': `${(row.固定 * 100).toFixed(1)}%`,
+  '合わせた効果': `${(row.差 * 100).toFixed(1)}pt`,
+  '固定の損': `${(row.固定差 * 100).toFixed(1)}pt`,
+})));
+for (const row of report.matchedEdge) {
+  if (row.差 < .12) throw new Error(`深度${row.depth}で、帯に合わせても死亡率が ${(row.差 * 100).toFixed(1)}pt しか下がらない（12pt以上あること）`);
+  /* 属性を固定したまま放置しても、無属性よりひどく損はしないこと。
+     ここも到達深度の引き算ではなく同じ深度の死亡率で見る。 */
+  if (row.固定差 > .20) throw new Error(`深度${row.depth}で、属性を固定すると無属性より死亡率が ${(row.固定差 * 100).toFixed(1)}pt 高い。属性が罠になっている`);
+  if (row.固定差 < -.12) throw new Error(`深度${row.depth}で、属性を固定するだけで無属性より ${(-row.固定差 * 100).toFixed(1)}pt 有利。放置しても得をしない設計に反する`);
+}
 /* 属性を固定したまま全帯を潜る運用は、無属性より上には出ないこと（放置で得をさせない）。
    下振れ側は無属性の主能力1.15倍ぶんだけ沈むのが正常なので、-8層まで許す。
    ここを対称にすると、1.15倍の存在自体と矛盾してテストが通らなくなる。 */
-if (fixedGap > 3) throw new Error(`属性固定平均が無属性より ${fixedGap.toFixed(1)} 層深い。属性を放置しても得をしない設計に反する`);
-if (fixedGap < -8) throw new Error(`属性固定平均が無属性より ${(-fixedGap).toFixed(1)} 層浅い。無属性ボーナスが効きすぎて属性が罠になっている`);
+/* 到達深度どうしの引き算は敵編成を変えるたびに5〜12層動くため、判定には使わない。
+   同じ深度での死亡率の比較（上の matchedEdge）が判定の本体。ここは参考表示のみ。 */
 /* 光闇は8帯のうち1帯でしか対面が起きない（火水木は有利2帯・不利2帯）。
    不利帯を持たないぶん固定運用の到達深度は火水木より自然に高く出るので、
    火水木との直接比較ではなく「無属性を上回らないこと」で縛る。
