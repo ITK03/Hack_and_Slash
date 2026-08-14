@@ -90,6 +90,23 @@ await page.goto(base); await page.waitForTimeout(500);
   notes.push(`深度21で30秒: ${run.killed}体撃破 / 戦利品${run.戦利品}個 / ${run.金}G / 敵残${run.敵残}`);
 }
 
+/* 2b. 回復薬は道中で持ち込み上限を超えて拾えること */
+{
+  const heal = await page.evaluate(() => {
+    S.consumables.heal = 3; S.loadout = ['heal', 'power', 'sonic', 'gale'];
+    beginRun(20); S.paused = false;
+    const start = S.runItems[0];
+    for (let i = 0; i < 12; i++) {
+      S.drops.push({ x: S.p.x, y: S.p.y, pot: 1, t: 1 });
+      for (let f = 0; f < 12; f++) update(1 / 60);
+    }
+    return { start, end: S.runItems[0], cap: CFG.HEAL_RUN_CAP };
+  });
+  if (heal.end <= heal.start) problems.push(`道中で回復薬を1つも拾えない（持ち込み${heal.start}個のまま）`);
+  if (heal.end !== heal.cap) problems.push(`道中の回復薬が ${heal.end}個で止まる（上限${heal.cap}のはず）`);
+  notes.push(`回復薬: 持ち込み${heal.start} → 道中で${heal.end}（上限${heal.cap}）`);
+}
+
 /* 3. 帰還して拠点へ戻れること */
 {
   const back = await page.evaluate(() => { endRun(true); return { scene: S.scene }; });
@@ -127,6 +144,45 @@ await page.goto(base); await page.waitForTimeout(500);
     if (!ok) problems.push(`装備タブに「${label}」が無い`);
     await page.waitForTimeout(250);
   }
+  // 倉庫の4区画すべてが開くこと
+  await tap('#scTown .tab[data-t="inv"]'); await page.waitForTimeout(250);
+  for (const label of ['装備', '結晶', '分解', '調合']) {
+    const ok = await page.evaluate(l => {
+      const b = [...document.querySelectorAll('.innerTabs .btn')].find(e => e.textContent === l);
+      if (!b) return false; b.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); return true;
+    }, label);
+    if (!ok) { problems.push(`倉庫に「${label}」タブが無い`); continue; }
+    await page.waitForTimeout(250);
+    const n = await page.evaluate(() => document.querySelector('#scTown .sbody').children.length);
+    if (n < 2) problems.push(`倉庫の「${label}」タブが空`);
+  }
+  // 枠の大きさが揃っていること（装備あり/なしで段の高さが変わっていた）
+  // 一部だけ装備した状態にして、埋まった段と空の段を並べて測る
+  await page.evaluate(() => {
+    S.gearSub = 'equip'; S.tab = 'gear';
+    for (const slot of SLOTK) S.gear[slot] = null;
+    for (const slot of ['weapon', 'helm', 'armor']) { let it; do it = makeItem(30, 0, 0, 3); while (it.slot !== slot || (it.ac && it.ac !== S.cls) || (it.wt && WCLS[it.wt] !== S.cls)); it.lv = 5; S.gear[slot] = it; }
+    save(); openTown();
+  });
+  await page.waitForTimeout(350);
+  const sizes = await page.evaluate(() => {
+    const h = [...document.querySelectorAll('.slot')].map(e => Math.round(e.getBoundingClientRect().height));
+    const m = [...document.querySelectorAll('.member')].map(e => Math.round(e.getBoundingClientRect().height));
+    return { 装備: [...new Set(h)], 編成: [...new Set(m)] };
+  });
+  if (!sizes.装備.length) problems.push('装備枠が1つも描画されていない');
+  if (sizes.装備.length > 1) problems.push(`装備枠の高さが揃っていない ${sizes.装備.join('/')}`);
+  // 固有技が一覧の先頭にあること
+  await page.evaluate(() => [...document.querySelectorAll('.innerTabs .btn')].find(e => e.textContent === '技').dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
+  await page.waitForTimeout(300);
+  const firstSkill = await page.evaluate(() => {
+    const c = document.querySelector('.skillCard');
+    return c ? { uniq: c.classList.contains('uniqSkill'), name: c.querySelector('.nm').textContent.trim() } : null;
+  });
+  if (!firstSkill || !firstSkill.uniq) problems.push(`技一覧の先頭が固有技でない（${firstSkill ? firstSkill.name : '無し'}）`);
+  notes.push(`装備枠 ${sizes.装備.join('/')}px / 技一覧の先頭 ${firstSkill ? firstSkill.name : '無し'}`);
+  await tap('#scTown .tab[data-t="prep"]'); await page.waitForTimeout(250);
+
   // 階層一覧・提供割合・編成
   await tap('#scTown .tab[data-t="prep"]'); await page.waitForTimeout(250);
   await tap('#diveBar .fl'); await page.waitForTimeout(300);

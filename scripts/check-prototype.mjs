@@ -99,6 +99,17 @@ const regressionSnippets = [
   'function editPlayerName',
   'id="townName"',
   'テスト用ジェム購入',
+  'const INV_TABS=',          // 倉庫は 装備/結晶/分解/調合 の4区画
+  'function renderMaterialPanel',
+  'function renderCraftPanel',
+  'const matSellValue=',
+  'HEAL_RUN_CAP:',            // 回復薬は道中だけ多く持てる
+  'const runCap=',
+  'const conIcon=',           // 消耗品はアイコンで見分ける
+  'c_heal:',
+  'c_returnScroll:',
+  '.formationOrder{',         // 番手は枠の外
+  '.skillCard.uniqSkill{',    // 固有技は一覧の先頭
   'function openProfileIconPick',
   'function openFormationChoices',
   'function confirmSelectedSell',
