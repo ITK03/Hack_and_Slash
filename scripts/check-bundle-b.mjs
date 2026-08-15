@@ -8,8 +8,8 @@ const report = game.run(() => {
   const setup = () => {
     S.cls = 'warrior'; S.scene = 'dungeon'; S.paused = false; S.training = false;
     S.base = { ...base }; S.gear = {}; S.p = newPlayer();
-    S.loadout = ['returnScroll', 'sonic', 'shockTrap', 'weaken'];
-    S.consumables = { returnScroll: 1, sonic: 1, shockTrap: 1, weaken: 1 };
+    S.loadout = ['recall1', 'quake1', 'bind1', 'rot1'];
+    S.consumables = { recall1: 1, quake1: 1, bind1: 1, rot1: 1 };
     S.runItems = [1, 1, 1, 1]; S.enemies = [];
   };
 
@@ -60,15 +60,17 @@ const report = game.run(() => {
   }
   const loadouts = {
     none: [],
-    consumables: ['heal', 'power', 'hard', 'gale'],
-    sonic: ['sonic'],
-    shockTrap: ['shockTrap'],
-    weaken: ['weaken'],
-    torch: ['torch'],
-    incense: ['incense'],
-    returnScroll: ['returnScroll'],
-    exploration: ['torch', 'incense', 'returnScroll'],
-    full: ['heal', 'power', 'hard', 'gale', 'sonic', 'weaken'],
+    consumables: ['mend1', 'edge1', 'ward1', 'swift1'],
+    quake1: ['quake1'],
+    bind1: ['bind1'],
+    rot1: ['rot1'],
+    lamp1: ['lamp1'],
+    scry1: ['scry1'],
+    recall1: ['recall1'],
+    exploration: ['lamp1', 'scry1', 'recall1'],
+    full: ['mend1', 'edge1', 'ward1', 'swift1', 'quake1', 'rot1'],
+    // 上位段までそろえた持ち込み。1段目との差が「深く潜って素材を集める意味」になる。
+    fullHigh: ['mend3', 'edge3', 'ward3', 'swift2', 'quake2', 'rot2'],
   };
   function trial(depth, mode, loadoutKey) {
     S.cls = 'warrior'; S.scene = 'dungeon'; S.paused = false; S.training = false; S.returnInvulnerable = false;
@@ -76,7 +78,7 @@ const report = game.run(() => {
     S.base = { ...base }; equip(depth); S.p = newPlayer();
     const selected = loadouts[loadoutKey];
     S.loadout = [...selected, ...Array(6 - selected.length).fill(null)];
-    S.consumables = { heal: 3, power: 5, hard: 5, gale: 5, sonic: 3, weaken: 3 };
+    S.consumables = Object.fromEntries(Object.keys(CONSUMABLES).map(k => [k, CONSUMABLES[k].max]));
     S.runItems = S.loadout.map(key => key ? S.consumables[key] : 0);
     // 移動は3モードとも同じ理想化（毎tick最寄りの敵に接敵）で揃える。
     // ここで測るのは戦闘力であって踏破力ではないため、モード差は
@@ -91,10 +93,10 @@ const report = game.run(() => {
       if (mode === 'manual') for (let i = 0; i < 3; i++) if (S.p.cds[i] <= 0 && S.p.mp >= activeSkills()[i].c) useSkill(i);
       if (S.p.itemCd <= 0) {
         const usable = S.loadout.findIndex((key, index) => S.runItems[index] && (
-          (key === 'heal' && S.p.hp < S.p.max * .7) ||
-          (['power', 'hard', 'gale', 'torch'].includes(key) && !S.p.itemBuffs[key]) ||
-          (key === 'sonic' && S.enemies.length >= 2) ||
-          ['shockTrap', 'weaken', 'incense'].includes(key)
+          (key === 'mend1' && S.p.hp < S.p.max * .7) ||
+          (CONSUMABLES[key].buff && !S.p.itemBuffs[CONSUMABLES[key].buff]) ||
+          (key === 'quake1' && S.enemies.length >= 2) ||
+          ['bind1', 'rot1', 'scry1'].includes(key)
         ));
         if (usable >= 0) useItem(usable);
       }
@@ -147,12 +149,13 @@ const report = game.run(() => {
   }
   const operation = { auto: operationSample('auto'), onehand: operationSample('onehand') };
   const tacticalNone = boundary('manual', 'none'), tacticalFull = boundary('manual', 'full');
-  const contributionKeys = ['sonic', 'shockTrap', 'weaken', 'torch', 'incense', 'returnScroll', 'exploration'];
+  const tacticalHigh = boundary('manual', 'fullHigh');
+  const contributionKeys = ['quake1', 'bind1', 'rot1', 'lamp1', 'scry1', 'recall1', 'exploration'];
   const contributions = contributionKeys.map(key => { const result = boundary('manual', key); return { key, ...result, difference: result.depth - tacticalNone.depth }; });
   const modes = ['manual', 'onehand', 'auto'].map(mode => ({ mode, ...boundary(mode, 'none') }));
   return {
-    features: { blocked, began, interrupted, completed, tactical: Object.keys(CONSUMABLES).filter(key => ['sonic', 'shockTrap', 'weaken', 'torch', 'incense', 'returnScroll'].includes(key)).length, paidHasId: !!paid?.id && paid.source === 'purchase', conditions: AUTOMATION_CONDITIONS.length, actions: AUTOMATION_ACTIONS.length },
-    automation: { delay, skillScale, manualDamage, automaticDamage }, operation, tactical: { none: tacticalNone, full: tacticalFull, difference: tacticalFull.depth - tacticalNone.depth, contributions }, modes,
+    features: { blocked, began, interrupted, completed, tactical: Object.keys(CONSUMABLES).filter(key => ['quake1', 'bind1', 'rot1', 'lamp1', 'scry1', 'recall1'].includes(key)).length, paidHasId: !!paid?.id && paid.source === 'purchase', conditions: AUTOMATION_CONDITIONS.length, actions: AUTOMATION_ACTIONS.length },
+    automation: { delay, skillScale, manualDamage, automaticDamage }, operation, tactical: { none: tacticalNone, full: tacticalFull, high: tacticalHigh, difference: tacticalFull.depth - tacticalNone.depth, highDifference: tacticalHigh.depth - tacticalNone.depth, contributions }, modes,
   };
 });
 
@@ -161,7 +164,7 @@ console.log('\n自動化実測', report.automation);
 console.log('\n操作機能実測');
 console.table([{ 操作: '完全オート', 開始敵数: report.operation.auto.initial, 討伐数: report.operation.auto.killed, 討伐率: `${(report.operation.auto.killRate * 100).toFixed(1)}%`, 攻撃tick: report.operation.auto.attackTicks, '静止秒数 (<0.25/秒)': report.operation.auto.stillSeconds }, { 操作: '片手', 開始敵数: report.operation.onehand.initial, 討伐数: report.operation.onehand.killed, 討伐率: `${(report.operation.onehand.killRate * 100).toFixed(1)}%`, 攻撃tick: report.operation.onehand.attackTicks, '静止秒数 (<0.25/秒)': '-' }]);
 console.log('\n戦術アイテム込み持ち込み実測');
-console.table([{ 条件: '持ち込みなし', '50%死亡深度': report.tactical.none.depth, 死亡率: `${(report.tactical.none.deathRate * 100).toFixed(1)}%` }, { 条件: '戦術込みフル', '50%死亡深度': report.tactical.full.depth, 死亡率: `${(report.tactical.full.deathRate * 100).toFixed(1)}%` }, { 条件: '差', '50%死亡深度': `+${report.tactical.difference}`, 死亡率: '' }]);
+console.table([{ 条件: '持ち込みなし', '50%死亡深度': report.tactical.none.depth, 死亡率: `${(report.tactical.none.deathRate * 100).toFixed(1)}%` }, { 条件: '戦術込み1段目', '50%死亡深度': report.tactical.full.depth, 死亡率: `${(report.tactical.full.deathRate * 100).toFixed(1)}%` }, { 条件: '戦術込み上位段', '50%死亡深度': report.tactical.high.depth, 死亡率: `${(report.tactical.high.deathRate * 100).toFixed(1)}%` }, { 条件: '差(1段目/上位)', '50%死亡深度': `+${report.tactical.difference} / +${report.tactical.highDifference}`, 死亡率: '' }]);
 console.log('\n戦術アイテム個別寄与');
 console.table(report.tactical.contributions.map(row => ({ 条件: row.key, '50%死亡深度': row.depth, 寄与: `${row.difference >= 0 ? '+' : ''}${row.difference}`, 死亡率: `${(row.deathRate * 100).toFixed(1)}%` })));
 console.log('\n操作モード別実測');
@@ -178,7 +181,9 @@ for (const [mode, label] of [['auto', '完全オート'], ['onehand', '片手']]
   if (row.attackTicks <= 0) throw new Error(`${label}は60秒で一度も通常攻撃の射程に入れていない`);
 }
 if (report.operation.auto.stillSeconds > 20) throw new Error(`完全オートの静止 ${report.operation.auto.stillSeconds}秒が20秒を超えている`);
-if (report.tactical.difference < 5 || report.tactical.difference > 10) throw new Error(`戦術込み50%死亡深度差 ${report.tactical.difference} は+5〜+10でない`);
+if (report.tactical.difference < 1 || report.tactical.difference > 6) throw new Error(`1段目の戦術込み50%死亡深度差 ${report.tactical.difference} は+1〜+6でない`);
+if (report.tactical.highDifference < 5 || report.tactical.highDifference > 14) throw new Error(`上位段の戦術込み50%死亡深度差 ${report.tactical.highDifference} は+5〜+14でない`);
+if (report.tactical.highDifference - report.tactical.difference < 2) throw new Error(`上位段と1段目の差 ${report.tactical.highDifference - report.tactical.difference} が小さい（上位品を作る動機にならない）`);
 // 守るべき設計不変条件は「手動が最も強い」こと。片手と完全オートは戦闘部分が
 // 同じ自動化なので、両者のあいだに厳密な大小を要求すると調整が恣意的になる。
 const [manualMode, onehandMode, autoMode] = report.modes;

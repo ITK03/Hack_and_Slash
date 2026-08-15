@@ -108,6 +108,20 @@ const regressionSnippets = [
   'const conIcon=',           // 消耗品はアイコンで見分ける
   'c_heal:',
   'c_returnScroll:',
+  'const PARTS=',             // 特定の敵からしか落ちない固有素材
+  'const PART_BY_ENEMY=',
+  'const PART_DROP=',
+  'function dropPart',
+  'function renderPartPanel',
+  'const partIcon=',
+  'p_shard:',
+  'const rareFrame=',         // 枠の色＝レア度（装備と同じ等級表）
+  'function craftMissing',    // 足りない材料を名指しする
+  'function craftCostText',
+  'mend1:', 'mend3:',         // 消耗品は系統ごとに段階を持つ
+  'edge3:', 'ward3:', 'clear2:', 'swift2:', 'quake2:', 'bind2:', 'rot2:',
+  'craft:{crystal:',
+  'riftcore:1}', 
   '.formationOrder{',         // 番手は枠の外
   '.skillCard.uniqSkill{',    // 固有技は一覧の先頭
   'function refreshSkillButtons',  // 交代しても技ボタンの表示が中身と一致する

@@ -66,7 +66,7 @@ await page.goto(base); await page.waitForTimeout(500);
     S.deepest = 40; S.base.lv = 40; S.base.str = 120; S.base.def = 50;
     for (const slot of SLOTK) { let it; do it = makeItem(25, 0, 0, 2); while (it.slot !== slot || (it.ac && it.ac !== S.cls) || (it.wt && WCLS[it.wt] !== S.cls)); S.gear[slot] = it; }
     for (const k of CONSUMABLE_KEYS) S.consumables[k] = 5;
-    S.loadout = ['heal', 'power', 'sonic', 'gale'];
+    S.loadout = ['mend1', 'edge1', 'quake1', 'swift1'];
     beginRun(21); S.paused = false;
     const xp0 = S.base.xp, lv0 = S.base.lv;
     let killed = 0;
@@ -93,7 +93,7 @@ await page.goto(base); await page.waitForTimeout(500);
 /* 2b. 回復薬は道中で持ち込み上限を超えて拾えること */
 {
   const heal = await page.evaluate(() => {
-    S.consumables.heal = 3; S.loadout = ['heal', 'power', 'sonic', 'gale'];
+    S.consumables.mend1 = 3; S.loadout = ['mend1', 'edge1', 'quake1', 'swift1'];
     beginRun(20); S.paused = false;
     const start = S.runItems[0];
     for (let i = 0; i < 12; i++) {
@@ -132,7 +132,7 @@ await page.goto(base); await page.waitForTimeout(500);
     S.formation = ['warrior:leon', 'warrior:gai'];
     selectCharacter('warrior', 'leon', () => { });
     setSkillSlot('warrior', 0, 'u_leon');       // 1人目に固有技を差す
-    S.loadout = ['heal', null, null, null]; S.consumables.heal = 3;
+    S.loadout = ['mend1', null, null, null]; S.consumables.mend1 = 3;
     beginRun(20); S.paused = false;
     const before = { 表示: [1, 2, 3].map(i => $('s' + i).querySelector('.skName').textContent), 中身: activeSkills().map(x => x.n) };
     S.partyIndex = 0; S.p.hp = 0; endRun(false, 'テスト');
@@ -146,22 +146,99 @@ await page.goto(base); await page.waitForTimeout(500);
   notes.push(`交代: ${swap.before.表示.join('/')} → ${swap.after.誰} ${swap.after.表示.join('/')}`);
 }
 
-/* 2e. 持ち込みアイテムは枠の色と中身の色が一致すること */
+/* 2e. 枠の色＝レア度、絵の色＝系統。この2つの役割が入れ替わっていないこと。
+       同じ系統の1段目と3段目を並べて、枠だけが変わることまで見る。 */
 {
   const colors = await page.evaluate(() => {
-    S.loadout = ['heal', 'gale', 'sonic', 'focus'];
+    const rgbOf = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)).join(', ');
+    S.loadout = ['mend1', 'mend3', 'quake1', 'swift1'];
     for (const k of CONSUMABLE_KEYS) S.consumables[k] = 3;
     beginRun(20); S.paused = false;
-    const bad = [];
+    const bad = [], frames = {};
     for (const el of document.querySelectorAll('#railR .railBtn')) {
       const key = S.loadout[+el.dataset.slot]; if (!key) continue;
-      const want = CONSUMABLES[key].col;
-      const rgb = [1, 3, 5].map(i => parseInt(want.slice(i, i + 2), 16)).join(', ');
-      if (!el.style.borderColor.includes(rgb)) bad.push(`${CONSUMABLES[key].n}(枠 ${el.style.borderColor})`);
+      const def = CONSUMABLES[key];
+      if (!el.style.borderColor.includes(rgbOf(rareFrame(def.rar))))
+        bad.push(`${def.n} の枠がレア度の色でない(${el.style.borderColor})`);
+      if (!el.style.color.includes(rgbOf(def.col)))
+        bad.push(`${def.n} の絵が系統の色でない(${el.style.color})`);
+      frames[key] = el.style.borderColor;
     }
+    if (frames.mend1 && frames.mend1 === frames.mend3) bad.push('癒血の1段目と3段目で枠の色が同じ');
     return bad;
   });
-  if (colors.length) problems.push(`アイテムの枠の色が中身と合っていない: ${colors.join(', ')}`);
+  if (colors.length) problems.push(`アイテムの色分けが規則どおりでない: ${colors.join(', ')}`);
+}
+
+/* 2f. 素材。固有素材が敵から落ち、倉庫にレア度の枠つきで並ぶこと。 */
+{
+  const parts = await page.evaluate(() => {
+    const rgbOf = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)).join(', ');
+    // 出どころの敵を倒したときに、その素材だけが落ちること
+    S.stock = {}; S.training = false; S.drops = [];
+    let tries = 0, got = null;
+    while (tries++ < 4000 && !got) {
+      S.drops.length = 0;
+      dropPart({ k: 'grunt', x: 5, y: 5 });
+      if (S.drops.length) got = S.drops[0].part;
+    }
+    const wrongSource = [];
+    S.drops.length = 0;
+    for (let i = 0; i < 3000; i++) dropPart({ k: 'grunt', x: 5, y: 5 });
+    for (const d of S.drops) if (d.part !== 'ashfang') wrongSource.push(d.part);
+    const rate = S.drops.length / 3000;
+    // 倉庫の素材棚
+    S.stock = Object.fromEntries(PART_KEYS.map(k => [k, 5]));
+    S.tab = 'inv'; S.invSub = 'mat'; openTown();
+    const cards = [...document.querySelectorAll('#townBody .card')];
+    const badFrames = [];
+    for (const key of PART_KEYS) {
+      const card = cards.find(c => c.textContent.includes(PARTS[key].n));
+      if (!card) { badFrames.push(`${PARTS[key].n} が倉庫に出ない`); continue; }
+      if (!card.style.borderColor.includes(rgbOf(rareFrame(PARTS[key].rar))))
+        badFrames.push(`${PARTS[key].n} の枠がレア度の色でない`);
+      if (!card.querySelector('svg')) badFrames.push(`${PARTS[key].n} に絵が無い`);
+    }
+    // 絵は全種で違う形であること（形が同じだと一目で見分けられない）
+    const shapes = new Set(PART_KEYS.map(k => PARTS[k].ic));
+    return { got, wrongSource: [...new Set(wrongSource)], rate, badFrames, shapes: shapes.size, total: PART_KEYS.length };
+  });
+  if (parts.got !== 'ashfang') problems.push(`下僕から落ちる素材が想定と違う（${parts.got}）`);
+  if (parts.wrongSource.length) problems.push(`下僕から別の素材が落ちた: ${parts.wrongSource.join(', ')}`);
+  if (parts.rate > .12) problems.push(`固有素材のドロップ率 ${(parts.rate * 100).toFixed(1)}% が高すぎる`);
+  if (parts.badFrames.length) problems.push(`素材の表示: ${parts.badFrames.join(', ')}`);
+  if (parts.shapes !== parts.total) problems.push(`素材の絵が重複している（${parts.shapes}/${parts.total}種）`);
+  notes.push(`固有素材: ${parts.total}種 / 灰の牙 ${(parts.rate * 100).toFixed(1)}%`);
+}
+
+/* 2g. 調合。1段目は結晶だけ、上の段は固有素材が要ること。 */
+{
+  const craft = await page.evaluate(() => {
+    S.mats = { crystal: { 1: 9999 }, core: { 1: 9999 } }; S.stock = {}; S.consumables = {};
+    const onlyCrystal = CONSUMABLE_KEYS.filter(k => craftableCount(k) > 0);
+    const needParts = CONSUMABLE_KEYS.filter(k => CONSUMABLES[k].craft.parts);
+    const before = craftableCount('mend3');
+    S.stock = Object.fromEntries(PART_KEYS.map(k => [k, 99]));
+    const after = craftableCount('mend3');
+    // 段が上がるほど効果が強いこと
+    const heals = ['mend1', 'mend2', 'mend3'].map(k => CONSUMABLES[k].heal);
+    const rising = heals.every((v, i) => i === 0 || v > heals[i - 1]);
+    // 実際に作れること（材料が減り、所持数が増える）
+    const stock = partCount('sapvein');
+    const made = craftItem('mend3', 1);
+    askFn && askFn();   // 確認ダイアログは実際に「はい」を押したときだけ消費する
+    return { onlyCrystal, needParts: needParts.length, before, after, rising,
+      made: !!made, spent: stock - partCount('sapvein'), have: S.consumables.mend3 || 0 };
+  });
+  const g1 = craft.onlyCrystal.filter(k => k.endsWith('1'));
+  if (craft.onlyCrystal.some(k => !k.endsWith('1')))
+    problems.push(`結晶だけで2段目以降が作れる: ${craft.onlyCrystal.filter(k => !k.endsWith('1')).join(', ')}`);
+  if (!g1.length) problems.push('結晶だけでは1段目すら作れない');
+  if (craft.needParts < 10) problems.push(`固有素材を要求する消耗品が ${craft.needParts} 種しかない`);
+  if (craft.before !== 0 || craft.after <= 0) problems.push(`上位品が固有素材なしで作れる（前 ${craft.before} / 後 ${craft.after}）`);
+  if (!craft.rising) problems.push('癒血の効果が段階で上がっていない');
+  if (!craft.made || craft.spent <= 0 || craft.have < 1) problems.push(`調合が成立しない（${JSON.stringify(craft)}）`);
+  notes.push(`調合: 結晶のみ ${g1.length}種 / 固有素材要求 ${craft.needParts}種`);
 }
 
 /* 3. 帰還して拠点へ戻れること */

@@ -33,7 +33,7 @@ for (const [width, height, name] of sizes) {
     S.tutorial = { phase: 'done' }; S.deepest = 60; S.base.lv = 50; S.base.str = 150; S.base.def = 80;
     for (const slot of SLOTK) { let item; do item = makeItem(30, 0, 0, 3); while (item.slot !== slot || (item.ac && item.ac !== S.cls) || (item.wt && WCLS[item.wt] !== S.cls)); S.gear[slot] = item; }
     for (const key of CONSUMABLE_KEYS) S.consumables[key] = 5;
-    S.loadout = ['heal', 'power', 'sonic', 'gale']; S.p = newPlayer(); beginRun(20); S.paused = false;
+    S.loadout = ['mend1', 'edge1', 'quake1', 'swift1']; S.p = newPlayer(); beginRun(20); S.paused = false;
   });
   await page.waitForTimeout(600);
 
@@ -125,7 +125,7 @@ for (const [width, height, name] of sizes) {
     S.base.lv = 50;
     for (const slot of SLOTK) { let it; do it = makeItem(30, 0, 0, 3); while (it.slot !== slot || (it.ac && it.ac !== S.cls) || (it.wt && WCLS[it.wt] !== S.cls)); S.gear[slot] = it; }
     for (const key of CONSUMABLE_KEYS) S.consumables[key] = 5;
-    S.loadout = ['heal', 'power', 'sonic', 'gale']; save();
+    S.loadout = ['mend1', 'edge1', 'quake1', 'swift1']; save();
   });
   await page.reload(); await page.waitForTimeout(600);
 

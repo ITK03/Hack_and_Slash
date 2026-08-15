@@ -147,9 +147,28 @@ const report = game.run(() => {
      こちらは段の位置に依存しないので、敵を入れ替えても意味が変わらない。 */
   /* 測る深度は無属性の限界に合わせる。固定値だと、敵編成しだいで
      両方とも死亡率90%超の飽和域に入り、差が出ないまま0ptになる。
-     無属性がちょうど50%で倒れる深度なら、合わせた側との差が最も見える。 */
+     無属性がちょうど50%で倒れる深度なら、合わせた側との差が最も見える。
+
+     ただし境界の二分探索（boundary）はこの用途には使えない。探索は1深度あたり
+     6試行しか回さないのに対し、勝敗は「90秒で掃除しきれるか」で二極化するため、
+     少数標本では偶然そろった結果で早すぎる深度を境界と判定する。
+     実際、無属性の境界は60と出たのに同じ深度を160試行で測ると死亡率88.8%だった。
+     そこで判定に使う深度は、十分な試行数の粗い走査で直接求める。 */
+  function findEdge() {
+    let coarse = null;
+    for (const depth of [15, 25, 35, 45, 55, 65, 75, 90]) {
+      if (cycleDeathRate(depth, 'neutral', 32) >= .5) { coarse = depth; break; }
+    }
+    if (coarse == null) return 90;
+    // 粗い走査で越えた区間を5刻みで詰め、50%を最初に超える深度を採る。
+    for (let depth = Math.max(5, coarse - 10); depth <= coarse; depth += 5) {
+      if (cycleDeathRate(depth, 'neutral', 64) >= .5) return depth;
+    }
+    return coarse;
+  }
+  const edge = findEdge();
   const matchedEdge = [];
-  for (const depth of [neutral.depth - 10, neutral.depth - 5, neutral.depth].filter(d => d >= 5)) {
+  for (const depth of [edge - 10, edge - 5, edge].filter(d => d >= 5)) {
     const withMatch = matchedCycleDeathRate(depth, 64);
     const withNeutral = cycleDeathRate(depth, 'neutral', 64);
     /* 属性を固定したまま放置したビルドも同じ深度で測る。5属性の平均で見る。 */
@@ -157,7 +176,7 @@ const report = game.run(() => {
     const withFixed = fixedRates.reduce((a, x) => a + x, 0) / fixedRates.length;
     matchedEdge.push({ depth, 合わせる: withMatch, 無属性: withNeutral, 固定: withFixed, 差: withNeutral - withMatch, 固定差: withFixed - withNeutral });
   }
-  return { distribution, floorRatios, matchup, resonanceRows, resonanceStages, incoming, neutralBonus, neutralBase: NEUTRAL_BASE, reaches, neutral, matched, matchedEdge, clearTimes, damage, adverseProgress };
+  return { distribution, floorRatios, matchup, resonanceRows, resonanceStages, incoming, neutralBonus, neutralBase: NEUTRAL_BASE, reaches, neutral, matched, edge, matchedEdge, clearTimes, damage, adverseProgress };
 
 });
 
@@ -234,6 +253,7 @@ console.log(`到達深度まとめ 無属性${report.neutral.depth} / 属性固�
 const matchedGap = report.matched.depth - report.neutral.depth;
 /* 狙いの本体は「同じ深度で、帯に合わせた方がはっきり生き残る」こと。
    到達深度の引き算ではなく、同じ深度での死亡率の差で見る。 */
+console.log(`判定に使う深度（無属性の死亡率が50%を超える最初の深度）: ${report.edge}`);
 console.table(report.matchedEdge.map(row => ({
   深度: row.depth,
   '帯に合わせる': `${(row.合わせる * 100).toFixed(1)}%`,

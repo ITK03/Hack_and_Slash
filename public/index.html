@@ -456,6 +456,10 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
 .helpList b{color:var(--ink)}
 .craftRow .row{align-items:center}
 .craftRow.no{opacity:.6}
+/* 系統の見出し。段階が続く塊の切れ目を作る。 */
+.craftFam{display:flex;align-items:center;gap:6px;margin:14px 0 6px;font-size:12px;font-weight:800;
+  letter-spacing:.06em;color:#cfc6dd;border-bottom:1px solid rgba(207,198,221,.16);padding-bottom:4px}
+.craftFam:first-child{margin-top:6px}
 .craftBtns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:9px}
 .craftBtns .btn{margin:0;padding:9px 2px;font-size:10px;line-height:1.2}
 .craftBtns .btn small{display:block;font-size:8px;opacity:.8;margin-top:2px}
@@ -1022,6 +1026,17 @@ const ICONP={
   c_torch:'M12 2 Q16 7 16 11 A4 4 0 0 1 8 11 Q8 7 12 2 Z M12 15 L12 22 M9 22 L15 22 M10 15 L14 15',
   c_incense:'M2 12 Q7 5 12 5 Q17 5 22 12 Q17 19 12 19 Q7 19 2 12 Z M12 9 A3 3 0 1 0 12 15 A3 3 0 1 0 12 9 Z',
   c_returnScroll:'M6 4 A2 3 0 0 0 6 10 L18 10 A2 3 0 0 1 18 4 Z M6 10 L6 20 A2 3 0 0 0 8 20 L20 20 A2 3 0 0 1 20 14 L8 14 M10 6 L16 6',
+  /* 素材。消耗品とは別の輪郭にして、倉庫で混ざって見えないようにする。 */
+  m_crystal:'M12 2 L19 9 L12 22 L5 9 Z M5 9 L19 9 M12 2 L12 22',
+  m_core:'M12 2 A10 10 0 1 0 12 22 A10 10 0 1 0 12 2 Z M12 8 A4 4 0 1 0 12 16 A4 4 0 1 0 12 8 Z M12 2 L12 8 M12 16 L12 22',
+  p_fang:'M5 3 L19 3 L15 9 L12 21 L9 9 Z M8 6 L16 6',
+  p_silk:'M3 6 Q7.5 1.5 12 6 T21 6 M3 12 Q7.5 7.5 12 12 T21 12 M3 18 Q7.5 13.5 12 18 T21 18',
+  p_bead:'M12 1 L12 6 M6 12 A6 6 0 1 1 18 12 A6 6 0 1 1 6 12 Z M9 9 L15 15 M15 9 L9 15',
+  p_lens:'M12 3 L21 12 L12 21 L3 12 Z M12 8 A4 4 0 1 0 12 16 A4 4 0 1 0 12 8 Z M11 12 L13 12',
+  p_sac:'M10 2 L14 2 L14 6 Q21 9 20 15 A8 8 0 0 1 4 15 Q3 9 10 6 Z M9 15 A4 3 0 0 0 15 15',
+  p_husk:'M12 2 L20 7 L20 17 L12 22 L4 17 L4 7 Z M8 9 L16 9 M8 15 L16 15',
+  p_vein:'M12 22 L12 12 L6 6 M12 12 L18 6 M9 9 L4 11 M15 9 L20 11 M12 17 L8 19 M12 17 L16 19',
+  p_shard:'M9 2 L17 6 L20 14 L13 22 L5 17 L7 9 Z M11 7 L15 12 L10 16',
 };
 const iconKey=it=>{if(!it)return "helm";if(it.slot!=="weapon")return it.slot;
   if(it.base.includes("アックス"))return "axe";if(it.base.includes("ハンマー"))return "hammer";if(it.base.includes("パルチザン"))return "spear";
@@ -1100,19 +1115,92 @@ const ET={
 };
 const EKEYS=Object.keys(ET);
 /* 状態異常。自分にも敵にも乗る。防御が高いほど自分は入りにくい。 */
+/* ---------- 素材 ----------
+   結晶と核は「どこでも出る汎用材」。それとは別に、特定の敵からしか落ちない
+   固有素材を置く。調合の難しさはこちらで作る（結晶をためるだけでは上位品を
+   作れないようにする）。出どころの敵が深いほど素材のレア度も上がる。 */
+const PARTS={
+  ashfang:  {n:"灰の牙",   rar:0,col:"#c8c4bc",ic:"p_fang",from:["grunt","swarm"],       d:"浅い層の徒党が落とす。もっとも手に入りやすい。"},
+  gloomsilk:{n:"薄闇の糸", rar:1,col:"#5ad06a",ic:"p_silk",from:["stalker","weaver"],    d:"影に潜む相手から。揺らぐ動きの元になっている繊維。"},
+  hexbead:  {n:"呪縛の珠", rar:1,col:"#5ad06a",ic:"p_bead",from:["archer","caster"],     d:"術を使う相手の核。状態異常を扱う品に要る。"},
+  voidlens: {n:"虚ろの眼", rar:2,col:"#5a8fe0",ic:"p_lens",from:["seeker","orbiter"],    d:"追う眼と回り手から。見通しを広げる品に要る。"},
+  burstsac: {n:"膨れ胞",   rar:2,col:"#5a8fe0",ic:"p_sac",from:["ticker","bomber"],     d:"破裂する相手から。衝撃を扱う品に要る。"},
+  ironhusk: {n:"鉄錆の殻", rar:3,col:"#e0c040",ic:"p_husk",from:["brute","warden"],      d:"重装の相手から。硬さを移す品に要る。"},
+  sapvein:  {n:"吸脈",     rar:3,col:"#e0c040",ic:"p_vein",from:["leech","phaser"],      d:"喰らい付く相手から。生命に触れる品に要る。"},
+  riftcore: {n:"裂界の欠片",rar:4,col:"#ff8adf",ic:"p_shard",from:["splitter"],boss:1,    d:"分かたれる者とボスから稀に。極みの品にだけ使う。"},
+};
+const PART_KEYS=Object.keys(PARTS);
+/* 出どころの敵 → 素材。killE から引く。 */
+const PART_BY_ENEMY={};
+for(const [key,def] of Object.entries(PARTS))for(const k of def.from)PART_BY_ENEMY[k]=key;
+/* ドロップ率。レア度が上がるほど落ちにくい。深度では変えない
+   （深い敵ほど元々レア度の高い素材を落とすため、二重に効かせない）。 */
+const PART_DROP=[.075,.055,.035,.020,.010];
+/* 固有素材の袋。S.parts は演出の粒子配列に使われているので別名にする。 */
+const partsBag=()=>S.stock||(S.stock={});
+const partCount=key=>partsBag()[key]||0;
+const addPart=(key,n=1)=>{const b=partsBag();b[key]=(b[key]||0)+n;return n;};
+function spendPart(key,n){const b=partsBag();if((b[key]||0)<n)return false;b[key]-=n;return true;}
+
+/* ---------- 消耗品 ----------
+   同じ系統を3段階まで用意し、深く潜って上位素材を集めるほど強い品が作れる。
+   1段目は結晶だけで作れるが効果は弱く短い。上の段ほど固有素材が要る。
+   効果が強い系統（回復・攻撃・防御）ほど、上位段に稀な素材を求める。
+   名前は既存作品と重ならないよう、この世界の言い回しで統一している。 */
 const CONSUMABLES={
-  heal:{n:"回復薬",col:"#ff6a7a",crystal:13,max:3,d:"HPを最大値の20%回復"},
-  healG:{n:"上級回復薬",col:"#ff8ad0",crystal:7,core:1,max:2,d:"HPを45%回復（半分は3秒継続）"},
-  power:{n:"力の丸薬",col:"#ff9a4a",crystal:5,max:5,d:"物理・特殊攻撃力 +7.5% / 60秒"},
-  hard:{n:"硬化薬",col:"#8aa0c8",crystal:5,max:5,d:"防御 +12%、ノックバック無効 / 60秒"},
-  focus:{n:"気付け薬",col:"#5ab4ff",crystal:7,core:1,max:2,d:"MP回復速度 +80% / 60秒"},
-  gale:{n:"疾風の粉",col:"#6ae0b0",crystal:5,max:5,d:"移動速度 +7%、回避 +2% / 60秒"},
-  sonic:{n:"音爆弾",col:"#ffd24a",crystal:6,max:3,d:"周囲の敵を3秒スタン（ダメージなし）"},
-  shockTrap:{n:"しびれ罠",col:"#e0d040",crystal:6,max:2,d:"踏んだ敵を4秒麻痺（同時設置1個）"},
-  weaken:{n:"弱体の霧",col:"#a88ad0",crystal:7,max:3,d:"範囲内の敵の防御 -25% / 15秒"},
-  torch:{n:"松明",col:"#ff7a3a",crystal:4,max:3,d:"視界を1.6倍 / 90秒"},
-  incense:{n:"探知の香",col:"#7ad0c8",crystal:5,max:2,d:"そのフロアの宝箱・祭壇・階段を表示"},
-  returnScroll:{n:"帰還の巻物",col:"#d8c89a",crystal:8,core:1,max:1,d:"安全時に3秒詠唱して戦利品を保持し帰還"}
+  /* 回復 */
+  mend1:{fam:"癒血",g:1,n:"癒血の雫",  rar:0,col:"#ff6a7a",max:3,runMax:6,d:"HPを20%回復",
+    craft:{crystal:15},                                   heal:.20},
+  mend2:{fam:"癒血",g:2,n:"癒血の霊薬",rar:2,col:"#ff8a6a",max:3,runMax:5,d:"HPを30%回復",
+    craft:{crystal:26,parts:{gloomsilk:2}},               heal:.30},
+  mend3:{fam:"癒血",g:3,n:"癒血の秘薬",rar:4,col:"#ff8ad0",max:2,runMax:3,d:"HPを38%回復し、さらに24%を4秒かけて回復",
+    craft:{crystal:50,core:1,parts:{sapvein:2,riftcore:1}},heal:.38,hot:.24,hotT:4},
+  /* 攻撃 */
+  edge1:{fam:"闘気",g:1,n:"闘気の粉",  rar:0,col:"#ff9a4a",max:5,d:"攻撃力 +7% / 30秒",
+    craft:{crystal:10},                                   buff:"edge",dur:30,atk:1.07},
+  edge2:{fam:"闘気",g:2,n:"闘気の丸",  rar:2,col:"#ffb04a",max:4,d:"攻撃力 +11% / 45秒",
+    craft:{crystal:24,parts:{ashfang:3,hexbead:1}},       buff:"edge",dur:45,atk:1.11},
+  edge3:{fam:"闘気",g:3,n:"闘気の結晶",rar:4,col:"#ffd24a",max:2,d:"攻撃力 +20% / 75秒",
+    craft:{crystal:48,core:1,parts:{ironhusk:2,riftcore:1}},buff:"edge",dur:75,atk:1.20},
+  /* 防御 */
+  ward1:{fam:"鉄化",g:1,n:"鉄化の油",  rar:0,col:"#8aa0c8",max:5,d:"被ダメージ -9% / 30秒",
+    craft:{crystal:10},                                   buff:"ward",dur:30,dr:.09},
+  ward2:{fam:"鉄化",g:2,n:"鉄化の軟膏",rar:2,col:"#8ab4d8",max:4,d:"被ダメージ -14%、ノックバック無効 / 45秒",
+    craft:{crystal:24,parts:{ashfang:2,burstsac:1}},      buff:"ward",dur:45,dr:.14,steady:1},
+  ward3:{fam:"鉄化",g:3,n:"鉄化の護符",rar:4,col:"#a8d0f0",max:2,d:"被ダメージ -22%、ノックバック無効 / 75秒",
+    craft:{crystal:48,core:1,parts:{ironhusk:3,riftcore:1}},buff:"ward",dur:75,dr:.22,steady:1},
+  /* MP */
+  clear1:{fam:"澄心",g:1,n:"澄心の露",  rar:1,col:"#5ab4ff",max:3,d:"MP回復速度 +45% / 30秒",
+    craft:{crystal:14,parts:{ashfang:2}},                 buff:"clear",dur:30,mreg:1.45},
+  clear2:{fam:"澄心",g:2,n:"澄心の宝珠",rar:3,col:"#7ad0ff",max:2,d:"MP回復速度 +95% / 60秒",
+    craft:{crystal:36,core:1,parts:{hexbead:2,voidlens:1}},buff:"clear",dur:60,mreg:1.95},
+  /* 機動 */
+  swift1:{fam:"韋駄",g:1,n:"韋駄の砂",  rar:1,col:"#6ae0b0",max:4,d:"移動速度 +7%、回避 +2% / 30秒",
+    craft:{crystal:12,parts:{gloomsilk:1}},               buff:"swift",dur:30,ms:1.07,dodge:.02},
+  swift2:{fam:"韋駄",g:2,n:"韋駄の翼片",rar:3,col:"#8af0c8",max:2,d:"移動速度 +12%、回避 +4% / 60秒",
+    craft:{crystal:32,parts:{gloomsilk:3,sapvein:1}},     buff:"swift",dur:60,ms:1.12,dodge:.04},
+  /* 制圧 */
+  quake1:{fam:"震撼",g:1,n:"震撼の礫",  rar:1,col:"#ffd24a",max:3,d:"周囲の敵を2秒スタン",
+    craft:{crystal:12,parts:{ashfang:2}},                 stun:2,radius:5},
+  quake2:{fam:"震撼",g:2,n:"震撼の雷核",rar:3,col:"#ffe27a",max:2,d:"広く5秒スタン",
+    craft:{crystal:32,parts:{burstsac:2,hexbead:1}},      stun:5,radius:7},
+  /* 罠 */
+  bind1:{fam:"緊縛",g:1,n:"緊縛の環",   rar:1,col:"#e0d040",max:2,d:"踏んだ敵を3秒麻痺（同時1個）",
+    craft:{crystal:12,parts:{hexbead:1}},                 trap:3},
+  bind2:{fam:"緊縛",g:2,n:"緊縛の呪陣", rar:3,col:"#f0e070",max:2,d:"踏んだ敵を7秒麻痺（同時1個）",
+    craft:{crystal:32,parts:{hexbead:3,voidlens:1}},      trap:7},
+  /* 弱体 */
+  rot1:{fam:"蝕み",g:1,n:"蝕みの靄",    rar:1,col:"#a88ad0",max:3,d:"範囲内の敵の防御 -18% / 12秒",
+    craft:{crystal:14,parts:{gloomsilk:1,hexbead:1}},     weaken:.18,weakenT:12,radius:5},
+  rot2:{fam:"蝕み",g:2,n:"蝕みの瘴気",  rar:3,col:"#c0a0e8",max:2,d:"広く敵の防御 -32% / 22秒",
+    craft:{crystal:36,parts:{sapvein:2,voidlens:1}},      weaken:.32,weakenT:22,radius:7},
+  /* 補助 */
+  lamp1:{fam:"灯芯",g:1,n:"灯芯の火",   rar:0,col:"#ff7a3a",max:3,d:"視界を1.6倍 / 90秒",
+    craft:{crystal:8},                                    buff:"lamp",dur:90},
+  scry1:{fam:"遠見",g:1,n:"遠見の眼水", rar:2,col:"#7ad0c8",max:2,d:"そのフロアの宝箱・祭壇・階段を表示",
+    craft:{crystal:16,parts:{voidlens:1}},                reveal:1},
+  recall1:{fam:"還路",g:1,n:"還路の符", rar:3,col:"#d8c89a",max:1,d:"安全時に3秒詠唱し、戦利品を保持して帰還",
+    craft:{crystal:28,core:1,parts:{voidlens:2}},         ret:1},
 };
 const CONSUMABLE_KEYS=Object.keys(CONSUMABLES);
 /* 潜行中に枠へ積める上限。持ち込み上限(max)とは別で、回復薬だけ道中で増やせる。
@@ -1124,8 +1212,23 @@ const hexA=(hex,a)=>{const h=String(hex).replace("#","");
   const n=h.length===3?h.split("").map(c=>c+c).join(""):h;
   const v=parseInt(n,16);
   return `rgba(${(v>>16)&255},${(v>>8)&255},${v&255},${a})`;};
-const conIcon=(key,sz)=>`<span style="color:${CONSUMABLES[key].col||"#cfc6dd"};display:inline-block;vertical-align:middle">${icon("c_"+key,sz||18)}</span>`;
-const runCap=key=>key==="heal"?CFG.HEAL_RUN_CAP:CONSUMABLES[key].max;
+const FAM_ICON={癒血:"c_heal",闘気:"c_power",鉄化:"c_hard",澄心:"c_focus",韋駄:"c_gale",
+  震撼:"c_sonic",緊縛:"c_shockTrap",蝕み:"c_weaken",灯芯:"c_torch",遠見:"c_incense",還路:"c_returnScroll"};
+const conIcon=(key,sz)=>{const d=CONSUMABLES[key];if(!d)return "";
+  return `<span style="color:${d.col||"#cfc6dd"};display:inline-block;vertical-align:middle">${icon(FAM_ICON[d.fam]||"c_heal",sz||18)}</span>`;};
+/* 素材の絵。結晶・核・固有素材で形を変える。 */
+const partIcon=(key,sz)=>{const d=PARTS[key];if(!d)return "";
+  return `<span style="color:${d.col};display:inline-block;vertical-align:middle">${icon(d.ic||"p_fang",sz||16)}</span>`;};
+/* レア度の枠色。装備と同じ等級表を消耗品・素材にも使う。等級が別体系だと
+   「この色は強いのか」を二度覚えることになるので、色と呼び名は共通にする。
+   絵の色は系統（癒血=赤、闘気=橙…）、枠の色は等級、と役割を分ける。 */
+const rarIdx=r=>Math.max(0,Math.min(4,r|0));
+const rareFrame=r=>{const c=CFG.RARITY[rarIdx(r)][3];return c==="RAINBOW"?"#ff8adf":c;};
+const rareName=r=>CFG.RARITY[rarIdx(r)][0];
+/* 潜行中に枠へ積める上限。回復薬だけ道中の拾得で増やせるが、
+   上位段ほど少なくする。ここを一律6にすると、苦労して作る上位の回復薬が
+   道中で拾い放題になり、調合の難しさが意味を失う。 */
+const runCap=key=>{const d=CONSUMABLES[key];return d?(d.runMax||d.max):0;};
 const ST={brn:{n:"燃焼",col:"#ff7a3a",dps:.055},psn:{n:"毒",col:"#7ad06a",dps:.022},
   frz:{n:"凍結",col:"#7ad0ff"},par:{n:"麻痺",col:"#e0d040"}};
 function applyST(t,k,dur,isPlayer){
@@ -1346,7 +1449,7 @@ const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   log:{runs:[]},tab:"prep",gearSub:"equip",skillPick:null,ptab:"drops",lvlQ:0,
   settings:{map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0},admin:false,debug:false,debugFloor:1,adminOpts:{},chars:{},characterStates:{},avatars:{},
   combo:0,comboT:0,dmgLog:[],dps:0,startFloor:1,runGold:0,
-  inv:{filters:[],sort:"score",sellSel:[],sellRar:1},mats:{crystal:{},core:{}},consumables:{},loadout:["heal",null,null,null],runItems:[0,0,0,0],itemSlot:0,
+  inv:{filters:[],sort:"score",sellSel:[],sellRar:1},mats:{crystal:{},core:{}},stock:{},consumables:{},loadout:["mend1",null,null,null],runItems:[0,0,0,0],itemSlot:0,
   playerName:"",invSub:"gear",formation:[],partyIndex:0,diveFloor:1,stamina:3,premium:0,profileAvatar:null,shopSub:"gacha",alloc:null,breakthroughs:{},weeklyCore:{week:"",bought:0},beginnerClaimed:false,prepMissionsOpen:false,invLegendOpen:false,skillLoadout:{},
   paidInventory:{catalysts:[],feathers:[],slots:[]},tactical:{trap:null,reveal:false},
   daily:null,dailyMatMul:1,
@@ -1428,7 +1531,7 @@ function refreshTutorial(){
   if(t.phase==="training_cleave")tutorialTarget("#s1","<b>薙ぎ払い</b>：強めの攻撃をしたい時に使います。出現した敵へ使ってみましょう。スキルはMPを消費します。");
   else if(t.phase==="training_dash")tutorialTarget("#s2","<b>突進斬り</b>：攻撃を避ける時や、素早い移動手段として使えます。敵へ使ってみましょう。");
   else if(t.phase==="training_slam")tutorialTarget("#s3","<b>大地砕き</b>：複数の敵をまとめて攻撃したい時に使います。3体へ使ってみましょう。");
-  else if(t.phase==="training_potion")tutorialTarget("#pot","HPが減ったら<b>ポーション</b>で回復できます。潜入のたび3個支給され、探索中は最大6個。4個以上持ち帰っても次回は3個からです。");
+  else if(t.phase==="training_potion")tutorialTarget("#pot",`HPが減ったら<b>${CONSUMABLES.mend1.n}</b>で回復できます。練習では3個。探索中は最大${runCap("mend1")}個まで拾えます。回復品は倉庫の調合で作り、深く潜って素材を集めるほど強い品が作れます。`);
   else if(t.phase==="training_return")tutorialTarget("#mmW","ミニマップには<b>橙の階段</b>と<b>青の帰還ポータル</b>への矢印が出ます。練習部屋の階段は使用できません。確認後、青矢印をたどって帰還してください。");
   else if(t.phase==="return")tutorialTarget(null,"ミニマップ下の<b>青い矢印</b>をたどり、帰還ポータルから拠点へ戻りましょう。");
   else if(t.phase==="equip_tab")tutorialTarget('#scTown .tab[data-t="gear"]',"まず下の<b>装備タブ</b>を開きます。");
@@ -1452,11 +1555,11 @@ function trainingEnemies(count){
   }
 }
 function beginTraining(){
-  $("scTown").classList.remove("on");S.scene="dungeon";S.paused=false;S.training=true;S.floor=1;S.p=newPlayer();S.p.mAtk=20;S.p.trainingAtk=200;S.consumables.heal=Math.max(3,S.consumables.heal||0);S.loadout=["heal",null,null,null];S.runItems=[3,0,0,0];
+  $("scTown").classList.remove("on");S.scene="dungeon";S.paused=false;S.training=true;S.floor=1;S.p=newPlayer();S.p.mAtk=20;S.p.trainingAtk=200;S.consumables.mend1=Math.max(3,S.consumables.mend1||0);S.loadout=["mend1",null,null,null];S.runItems=[3,0,0,0];
   map=new Uint8Array(MW*MH);seen=new Uint8Array(MW*MH);rooms=[{x:28,y:28,w:32,h:32,cx:44,cy:44}];rooms.stairIdx=0;for(let y=28;y<60;y++)for(let x=28;x<60;x++)map[y*MW+x]=1;
   S.p.x=44;S.p.y=44;S.enemies=[];S.drops=[];S.props=[];S.bullets=[];S.parts=[];S.nums=[];S.fx=[];S.corpses=[];S.boss=null;S.stairs={x:55,y:55,t:0,training:true};S.portal={x:33,y:33,t:0};MMBG=null;mmSeen=-1;
   $("pauseB").classList.add("show");refreshSkillButtons(DEFAULT_SKILLS.warrior.map(id=>skillDef("warrior",id)));renderRail();updHUD();draw();
-  ask("練習部屋へようこそ","ここではガイの3つの技、ポーション、ミニマップ、階段と帰還ポータルを練習します。\n練習中はダメージを受けず、物理攻撃力は200です。この補正は部屋を出ると解除されます。",()=>{S.tutorial.phase="training_cleave";trainingEnemies(1);S.paused=false;refreshTutorial();});}
+  ask("練習部屋へようこそ","ここではガイの3つの技、回復品、ミニマップ、階段と帰還ポータルを練習します。\n練習中はダメージを受けず、物理攻撃力は200です。この補正は部屋を出ると解除されます。",()=>{S.tutorial.phase="training_cleave";trainingEnemies(1);S.paused=false;refreshTutorial();});}
 function trainingSkillUsed(i){const p=(S.tutorial||{}).phase;if(S.enemies.length)return;
   if(p==="training_cleave"&&i===0){S.tutorial.phase="training_dash";trainingEnemies(1);}
   else if(p==="training_dash"&&i===1){S.tutorial.phase="training_slam";trainingEnemies(3);}
@@ -1520,7 +1623,7 @@ function derive(){
 /* 回避: 自分と階層の力量差で決まる。格上相手にはほとんど効かない。 */
 function dodgeRate(){const d=S.p.d;
   const gap=(S.base.lv*.5+4)-S.floor;
-  return clamp((.02+d.agiD*.0020+gap*.010)*(d.C.dodgeMul||1)+(S.p.itemBuffs.gale?.02:0),0,.30);}
+  return clamp((.02+d.agiD*.0020+gap*.010)*(d.C.dodgeMul||1)+(buffVal("swift","dodge",0)),0,.30);}
 function dodgeRateFor(d){const gap=(S.base.lv*.5+4)-S.floor;
   return clamp((.02+d.agiD*.0020+gap*.010)*(d.C.dodgeMul||1),0,.30);}
 function deriveWith(slot,item){
@@ -1745,14 +1848,14 @@ const shk=v=>{S.shake=Math.max(S.shake,v);S.shakeT=.2;};
 const hasPw=id=>S.p&&S.p.d.pw.includes(id);
 function pDmg(base,mul){const p=S.p;
   if(S.training)return 200*(mul||1);
-  let m=(mul||1)*p.mAtk*p.sAtk*p.buffAtk*(p.itemBuffs.power?1.075:1);
+  let m=(mul||1)*p.mAtk*p.sAtk*p.buffAtk*buffVal("edge","atk",1);
   if(hasPw("berserk"))m*=1+(1-p.hp/p.max)*.8;
   return (rr(base[0],base[1])+p.d.atkFlat)*m;}
 function hurtE(e,dmg,crit,kx,ky,quiet){
   if(e.hp<=0)return;
   const resonanceNow=resonance(),match=elementMultiplier(resonanceNow.element,e.element),weak=match>1;
   dmg*=resonanceDamageMultiplier(resonanceNow,e.element,S.floor)*(e.boss?1:(e.eleRes&&e.eleRes[resonanceNow.element]||1));
-  if(e.weaken>0)dmg/=.75; // 弱体の霧: 敵防御を25%低下した結果を被ダメージへ反映
+  if(e.weaken>0)dmg/=(1-(e.weakenAmt||.25)); // 蝕み: 落とした防御分だけ被ダメージへ反映
   /* 盾番: 正面からの攻撃を半分に減らす。向き直りが遅いので、回り込めば通る。 */
   if(e.front&&e.faceA!=null){
     let ang=Math.atan2(S.p.y-e.y,S.p.x-e.x)-e.faceA;
@@ -1783,6 +1886,14 @@ function hurtE(e,dmg,crit,kx,ky,quiet){
   if(heal>0)p.hp=Math.min(p.max,p.hp+heal);
   if(crit&&hasPw("vamp"))p.hp=Math.min(p.max,p.hp+p.max*.006);
   if(e.hp<=0)killE(e);}
+/* 固有素材のドロップ。出どころの敵からしか落ちない。
+   運やドロップ率補正は乗せない（結晶と違い、狩る相手を選ぶことが条件になる）。 */
+function dropPart(e){
+  if(S.training)return;
+  let key=e.boss?"riftcore":PART_BY_ENEMY[e.k];
+  if(!key)return;
+  const def=PARTS[key],rate=PART_DROP[def.rar]*(e.boss?6:1)*(e.elite?2:1);
+  if(rnd()<rate)S.drops.push({x:e.x,y:e.y,part:key,n:1,t:0});}
 function killE(e){
   const i=S.enemies.indexOf(e);if(i<0)return;
   S.enemies.splice(i,1);
@@ -1819,10 +1930,12 @@ function killE(e){
       S.bag.push(...TUTORIAL_SLOTS.map(tutorialItem));S.tutorial.phase="boss_message";S.returnInvulnerable=true;save();
       setTimeout(()=>ask("初回ボス撃破おめでとう！","深度3相当の訓練用装備一式を獲得しました。\n確認後はダメージを受けません。ミニマップ下の青い矢印をたどり、帰還ポータルから拠点へ戻りましょう。",()=>{S.tutorial.phase="return";S.paused=false;save();refreshTutorial();}),250);
     }else for(let k=0;k<ri(1,2);k++)dropItem(e.x+rr(-1,1),e.y+rr(-1,1),2);
+    dropPart(e);
     dropGold(e.x,e.y,300+S.floor*50);if(S.floor!==5||!["boss_message","return"].includes((S.tutorial||{}).phase))toast("ボス撃破 — 深度 "+(S.floor+1)+" 開始を解放");}
   else if(e.elite){if(rnd()<.5)dropItem(e.x,e.y,1);dropGold(e.x,e.y,50+S.floor*10);}
   else{const dm=p.mDrop*p.sDrop*(hasPw("greed")?1.8:1)*(1+p.d.mf);
     if(rnd()<CFG.CRYSTAL_ENEMY_DROP)S.drops.push({x:e.x,y:e.y,mat:"crystal",tier:materialTier(S.floor),n:materialScale(S.floor),t:0});
+    dropPart(e);
     if(rnd()<CFG.DROP_CHANCE*dm)dropItem(e.x,e.y);
     if(rnd()<CFG.GOLD_CHANCE)dropGold(e.x,e.y,Math.round((6+S.floor*3)*rr(.6,1.6)*(1+luk*.012)));
     if(rnd()<CFG.POTION_DROP)S.drops.push({x:e.x,y:e.y,pot:1,t:0});
@@ -1881,7 +1994,7 @@ function hurtP(dm,cause,force,attackerElement="neutral"){const p=S.p;if(S.traini
     S.nums.push({x:p.x,y:p.y,v:0,txt:"回避",t:0,c:"#8ad8ff"});
     tone(900,.06,"sine",.06,1300);return;}
   const incoming=attackerElement,r=resonance(),elementGuard=resonanceIncomingMultiplier(r,incoming);
-  const d=dm*elementGuard*(1-Math.min(.8,p.d.dr+p.mDr+p.sDr+p.buffDr+(p.itemBuffs.hard?(armorDR(p.d.armor*1.12)-armorDR(p.d.armor))*(p.d.C.defMul||1):0)+p.guardS*.2));
+  const d=dm*elementGuard*(1-Math.min(.8,p.d.dr+p.mDr+p.sDr+p.buffDr+buffVal("ward","dr",0)+p.guardS*.2));
   p.hp-=d;p.lastHit=0;if(p.returnCast>0){p.returnCast=0;p.returnSlot=-1;toast("帰還詠唱が中断された","ng");}p.hurtT=.42;S.flash=.18;shk(CFG.SHAKE_HURT);SFX.hurt();buzz(38);
   dnum(p.x,p.y,d,"#ff6060");
   if(hasPw("guard")){p.guardS=Math.min(3,p.guardS+1);p.guardT=2;}
@@ -2031,20 +2144,29 @@ function useSkill(i){
     S.fx.push({t:"ring",x:p.x,y:p.y,tm:0,R:2.6,col:sk.col||"#ffd24a"});
     SFX.lvl();buzz(22);updBuffs();break;}}
   updHUD();}
+/* 効果は定義から読む。以前は key の文字列で分岐しており、
+   同じ系統の段階違いを増やすたびに分岐を足す必要があった。 */
 function useItem(slot=S.itemSlot){const p=S.p,key=S.loadout[slot],def=CONSUMABLES[key];
   if(!def||!S.runItems[slot]||p.itemCd>0||p.itemLock>0)return false;
-  if(key==="returnScroll"){if(p.lastHit<5||p.returnCast>0)return false;p.returnCast=3;p.returnSlot=slot;p.itemLock=3;toast("帰還を詠唱中…");return true;}
-  if(key==="heal"&&p.hp>=p.max)return false;
+  if(def.ret){if(p.lastHit<5||p.returnCast>0)return false;p.returnCast=3;p.returnSlot=slot;p.itemLock=3;toast("帰還を詠唱中…");return true;}
+  if(def.heal&&p.hp>=p.max&&!def.hot)return false;
   S.runItems[slot]--;S.consumables[key]=Math.max(0,(S.consumables[key]||0)-1);S.itemSlot=slot;p.itemCd=8;p.itemLock=.5;
-  if(key==="heal")p.hp=Math.min(p.max,p.hp+p.max*.20);
-  if(key==="healG"){p.hp=Math.min(p.max,p.hp+p.max*.225);p.hot+=p.max*.225;p.hotT=3;}
-  if(["power","hard","focus","gale"].includes(key))p.itemBuffs[key]=60;
-  if(key==="sonic")for(const e of S.enemies)if(d2(p.x,p.y,e.x,e.y)<=25)e.stun=Math.max(e.stun||0,3);
-  if(key==="shockTrap")S.tactical.trap={x:p.x,y:p.y};
-  if(key==="weaken")for(const e of S.enemies)if(d2(p.x,p.y,e.x,e.y)<=25)e.weaken=15;
-  if(key==="torch")p.itemBuffs.torch=90;
-  if(key==="incense")S.tactical.reveal=true;
-  SFX.pot();buzz(18);burst(p.x,p.y,"#ffb060",12,1.2);if(S.training&&S.tutorial.phase==="training_potion"){S.tutorial.phase="training_return";setTimeout(refreshTutorial,300);}save();updBuffs();updHUD();return true;}
+  if(def.heal)p.hp=Math.min(p.max,p.hp+p.max*def.heal);
+  if(def.hot){p.hot+=p.max*def.hot;p.hotT=def.hotT||3;}
+  /* 効果中の値は buff 名ごとに1つだけ持つ。同系統の上位を飲めば上書きする。 */
+  if(def.buff){p.itemBuffs[def.buff]={t:def.dur||30,def};}
+  if(def.stun){const r=(def.radius||5)**2;
+    for(const e of S.enemies)if(d2(p.x,p.y,e.x,e.y)<=r)e.stun=Math.max(e.stun||0,def.stun);}
+  if(def.trap)S.tactical.trap={x:p.x,y:p.y,dur:def.trap};
+  if(def.weaken){const r=(def.radius||5)**2;
+    for(const e of S.enemies)if(d2(p.x,p.y,e.x,e.y)<=r){e.weaken=def.weakenT||15;e.weakenAmt=def.weaken;}}
+  if(def.reveal)S.tactical.reveal=true;
+  SFX.pot();buzz(18);burst(p.x,p.y,def.col||"#ffb060",12,1.2);if(S.training&&S.tutorial.phase==="training_potion"){S.tutorial.phase="training_return";setTimeout(refreshTutorial,300);}save();updBuffs();updHUD();return true;}
+/* 効果中の品から値を引く。無ければ既定値。 */
+function buffVal(name,field,fallback){const b=S.p&&S.p.itemBuffs&&S.p.itemBuffs[name];
+  return b&&b.def&&b.def[field]!=null?b.def[field]:fallback;}
+const hasBuff=name=>!!(S.p&&S.p.itemBuffs&&S.p.itemBuffs[name]);
+const isSteady=()=>!!buffVal("ward","steady",0);
 function usePotion(){return useItem(S.itemSlot);}
 
 
@@ -2090,7 +2212,7 @@ function update(dt){
   if(p.returnCast>0){p.returnCast-=dt;if(p.returnCast<=0){const slot=p.returnSlot,key=S.loadout[slot];S.runItems[slot]--;S.consumables[key]=Math.max(0,(S.consumables[key]||0)-1);p.returnSlot=-1;endRun(true);return;}}
   if(p.invulT>0)p.invulT-=dt;
   if(p.itemCd>0)p.itemCd=Math.max(0,p.itemCd-dt);if(p.itemLock>0)p.itemLock=Math.max(0,p.itemLock-dt);
-  for(const k in p.itemBuffs)if((p.itemBuffs[k]-=dt)<=0)delete p.itemBuffs[k];
+  for(const k in p.itemBuffs)if((p.itemBuffs[k].t-=dt)<=0)delete p.itemBuffs[k];
   updateAutomation(dt);
   if(p.hotT>0){const tick=Math.min(dt,p.hotT);p.hp=Math.min(p.max,p.hp+p.hot/Math.max(p.hotT,tick)*tick);p.hot-=p.hot/Math.max(p.hotT,tick)*tick;p.hotT-=tick;}
   if(p.buffT>0){p.buffT-=dt;if(p.buffT<=0){p.buffAtk=1;p.buffDr=0;}}
@@ -2100,7 +2222,7 @@ function update(dt){
     if(p.shrineT<=0){p.sAtk=1;p.sDr=0;p.sMs=1;p.sAs=1;p.sDrop=1;p.shrine=null;updBuffs();}}
   if(p.slowT>0){p.slowT-=dt;if(p.slowT<=0){p.slowMs=1;updBuffs();}}
   p.st=p.st||{};tickST(p,dt,true);if(p.hp<=0)return;
-  p.mp=clamp(p.mp+p.d.mpReg*(p.itemBuffs.focus?1.8:1)*dt,0,p.d.mpMax);
+  p.mp=clamp(p.mp+p.d.mpReg*buffVal("clear","mreg",1)*dt,0,p.d.mpMax);
 
   if(p.dashT>0){p.dashT-=dt;mv(p,p.dashX*dt,p.dashY*dt);
     if(p.dashHit)p.dashHit();
@@ -2108,7 +2230,7 @@ function update(dt){
     if(p.dashT<=0){p.dashT=0;p.invulT=.18;p.dashHit=null;}}
   else if((IN.dx||IN.dy)&&!stActive(p,"frz")&&p.itemLock<=0){
     const w=s2w(IN.dx,IN.dy),
-      sp=CFG.P_SPEED*p.d.ms*p.mMs*p.sMs*(p.slowMs||1)*(p.itemBuffs.gale?1.07:1)*w.mag*(stActive(p,"par")?.55:1);
+      sp=CFG.P_SPEED*p.d.ms*p.mMs*p.sMs*(p.slowMs||1)*buffVal("swift","ms",1)*w.mag*(stActive(p,"par")?.55:1);
     mv(p,w.x*sp*dt,w.y*sp*dt);
     const fl=Math.hypot(w.x,w.y)||1;p.face=Math.atan2(w.y/fl,w.x/fl);}
 
@@ -2142,7 +2264,7 @@ function update(dt){
     e.x+=e.kbx;e.y+=e.kby;e.kbx*=.78;e.kby*=.78;
     if(!walk(e.x,e.y,e.r)){e.x-=e.kbx;e.y-=e.kby;e.kbx=e.kby=0;}
     const d=Math.hypot(p.x-e.x,p.y-e.y);
-    if(e.weaken>0)e.weaken=Math.max(0,e.weaken-dt);if(S.tactical.trap&&d2(e.x,e.y,S.tactical.trap.x,S.tactical.trap.y)<.5){applyST(e,"par",4,false);S.tactical.trap=null;}
+    if(e.weaken>0)e.weaken=Math.max(0,e.weaken-dt);if(S.tactical.trap&&d2(e.x,e.y,S.tactical.trap.x,S.tactical.trap.y)<.5){applyST(e,"par",S.tactical.trap.dur||4,false);S.tactical.trap=null;}
     if(!e.agro&&d<11)e.agro=true;
     if(!e.agro)continue;
     /* 盾番の向きはゆっくりしか変わらない。速く回り込めば背中を取れる。 */
@@ -2268,16 +2390,17 @@ function update(dt){
     const dist=Math.hypot(p.x-d.x,p.y-d.y);
     // 0.1秒後から吸着。0.5m圏内は足元で拾った時と同じく即時回収する。
     // 回復は満タンでも消費して回収できるため、回収不能な落下物として残らない。
-    if(d.t>=CFG.PICKUP_DELAY&&dist<=CFG.MAGNET_RADIUS&&dist>CFG.PICKUP_RADIUS&&!(d.pot&&!S.loadout.some((k,j)=>k==="heal"&&S.runItems[j]<runCap("heal")))){
+    if(d.t>=CFG.PICKUP_DELAY&&dist<=CFG.MAGNET_RADIUS&&dist>CFG.PICKUP_RADIUS&&!(d.pot&&!S.loadout.some((k,j)=>k&&CONSUMABLES[k].heal&&S.runItems[j]<runCap(k)))){
       const pull=Math.min(dist,CFG.MAGNET_SPEED*dt);d.x+=(p.x-d.x)/dist*pull;d.y+=(p.y-d.y)/dist*pull;}
     const pr=CFG.PICKUP_RADIUS;
     if(d.t>=CFG.PICKUP_DELAY&&d2(d.x,d.y,p.x,p.y)<pr*pr){
-      if(d.mat){const n=(d.n||1)*(S.dailyMatMul||1),added=d.mat==="core"?earnCore(d.tier,n):addMat(d.mat,d.tier,n);SFX.gold();if(added)toast(`${d.mat==="core"?"核":"結晶"} 階梯${d.tier} +${added}`);}
+      if(d.part){const def=PARTS[d.part];addPart(d.part,d.n||1);SFX.chest();toast(`${def.n} +${d.n||1}`,"ok");}
+      else if(d.mat){const n=(d.n||1)*(S.dailyMatMul||1),added=d.mat==="core"?earnCore(d.tier,n):addMat(d.mat,d.tier,n);SFX.gold();if(added)toast(`${d.mat==="core"?"核":"結晶"} 階梯${d.tier} +${added}`);}
       else if(d.shard){
         p.hp=Math.min(p.max,p.hp+p.max*CFG.SHARD_HEAL);
         burst(p.x,p.y,"#6ae0a0",6,1);tone(760,.07,"sine",.08,1040);}
       else if(d.gold){S.gold+=d.gold;S.runGold+=d.gold;SFX.gold();}
-      else if(d.pot){const j=S.loadout.findIndex((k,j)=>k==="heal"&&S.runItems[j]<runCap("heal"));if(j<0)continue;S.runItems[j]++;S.consumables.heal=(S.consumables.heal||0)+1;SFX.pot();}
+      else if(d.pot){const j=S.loadout.findIndex((k,j)=>k&&CONSUMABLES[k].heal&&S.runItems[j]<runCap(k));if(j<0)continue;const key=S.loadout[j];S.runItems[j]++;S.consumables[key]=(S.consumables[key]||0)+1;SFX.pot();}
       else{S.bag.push(d.it);SFX.gold();}
       S.drops.splice(i,1);}}
   for(const q of S.props)if(q.t==="shrine")q.tm+=dt;
@@ -2712,7 +2835,7 @@ function draw(){
     const yy=s.sy-22-k*28,tx=n.txt||n.v;
     ctx.strokeText(tx,s.sx,yy);ctx.fillStyle=n.c;ctx.fillText(tx,s.sx,yy);}
   ctx.globalAlpha=1;ctx.restore();
-  const pc=iso(p.x,p.y),lx=pc.sx+ox,ly=pc.sy+oy,LR=VW*CFG.LIGHT_R*(p.itemBuffs.torch?1.6:1);
+  const pc=iso(p.x,p.y),lx=pc.sx+ox,ly=pc.sy+oy,LR=VW*CFG.LIGHT_R*(hasBuff("lamp")?1.6:1);
   ctx.save();ctx.translate(lx,ly);ctx.scale(1,CFG.LIGHT_STRETCH);
   const g=ctx.createRadialGradient(0,0,LR*.2,0,0,LR);
   g.addColorStop(0,"rgba(0,0,0,0)");
@@ -2813,6 +2936,10 @@ function dBullet(b){const s=iso(b.x,b.y);
   ctx.globalCompositeOperation="source-over";}
 function dDrop(d){
   const s=iso(d.x,d.y);ctx.globalCompositeOperation="lighter";
+  /* 固有素材は菱形にして、結晶（丸）と一目で区別する。色はレア度。 */
+  if(d.part){const def=PARTS[d.part];ctx.fillStyle=def.col;
+    ctx.beginPath();ctx.moveTo(s.sx,s.sy-11);ctx.lineTo(s.sx+4.5,s.sy-6);ctx.lineTo(s.sx,s.sy-1);ctx.lineTo(s.sx-4.5,s.sy-6);ctx.closePath();ctx.fill();
+    ctx.globalCompositeOperation="source-over";return;}
   if(d.mat){ctx.fillStyle=d.mat==="core"?"#ff9f58":"#73d9ff";ctx.beginPath();ctx.arc(s.sx,s.sy-7,d.mat==="core"?5:3.5,0,TAU);ctx.fill();ctx.globalCompositeOperation="source-over";return;}
   if(d.gold){ctx.fillStyle="rgba(230,190,70,.95)";
     ctx.beginPath();ctx.arc(s.sx,s.sy-5,3.2,0,TAU);ctx.fill();
@@ -2995,7 +3122,9 @@ function updBuffs(){const p=S.p,c=$("buffs");c.innerHTML="";
     d.textContent=p.shrine.n+" "+Math.ceil(p.shrineT)+"s";c.appendChild(d);}
   if(p&&p.slowT>0){const d=document.createElement("div");d.className="buff";
     d.style.borderLeftColor="#e0525b";d.textContent="減速 "+Math.ceil(p.slowT)+"s";c.appendChild(d);}
-  for(const k in p.itemBuffs){const d=document.createElement("div");d.className="buff";d.textContent=CONSUMABLES[k].n+" "+Math.ceil(p.itemBuffs[k])+"s";c.appendChild(d);}
+  for(const k in p.itemBuffs){const b=p.itemBuffs[k],d=document.createElement("div");d.className="buff";
+    d.style.borderLeftColor=(b.def&&b.def.col)||"var(--gold)";
+    d.textContent=((b.def&&b.def.n)||k)+" "+Math.ceil(b.t)+"s";c.appendChild(d);}
   /* 自己強化の技は効果時間が見えないと切れ目が分からず、置き直す判断ができない */
   if(p&&p.buffT>0){const d=document.createElement("div");d.className="buff";
     d.style.borderLeftColor="#65db78";
@@ -3550,7 +3679,8 @@ function renderSettings(b,after,inDungeon){
     if(v===null||!Number.isFinite(+v))return;setLevelForAll(clamp(Math.floor(+v),1,999999));after();});
   action("ゴールド",()=>number("所持ゴールド",S.gold,v=>S.gold=Math.floor(v),0));action("最深階層",()=>number("最深階層",S.deepest,v=>S.deepest=Math.floor(v),1));
   if(!S.admin)return;
-  action("課金通貨",()=>number("課金通貨",S.premium,v=>S.premium=Math.floor(v),0));action("スタミナ",()=>number("スタミナ",S.stamina,v=>S.stamina=v,0,100));action("経験値",()=>number("経験値",S.base.xp,v=>S.base.xp=v,0));action("能力pt",()=>number("未割当ポイント",S.base.pts,v=>S.base.pts=Math.floor(v),0));action("回復薬",()=>number("回復薬",S.consumables.heal||0,v=>S.consumables.heal=Math.floor(v),0,999));
+  action("課金通貨",()=>number("課金通貨",S.premium,v=>S.premium=Math.floor(v),0));action("スタミナ",()=>number("スタミナ",S.stamina,v=>S.stamina=v,0,100));action("経験値",()=>number("経験値",S.base.xp,v=>S.base.xp=v,0));action("能力pt",()=>number("未割当ポイント",S.base.pts,v=>S.base.pts=Math.floor(v),0));action("消耗品を全種そろえる",()=>number("各消耗品の所持数",S.consumables.mend1||0,v=>{const n=Math.max(0,Math.floor(v));for(const k of CONSUMABLE_KEYS)S.consumables[k]=Math.min(CFG.CRAFT_STOCK_CAP,n);},0,99));
+  action("固有素材を全種そろえる",()=>number("各固有素材の所持数",partCount("ashfang"),v=>{const n=Math.max(0,Math.floor(v));for(const k of PART_KEYS)partsBag()[k]=n;},0,999));
   for(const [k,n] of STATDEF)action(n,()=>number(n,S.base[k],v=>S.base[k]=v));
   action("装備獲得",()=>{const count=clamp(Math.floor(+(prompt("生成数","1")||0)),1,500),rar=clamp(Math.floor(+(prompt("レア度 0〜4","2")||0)),0,4),fl=clamp(Math.floor(+(prompt("装備深度",String(S.deepest))||1)),1,999999);for(let i=0;i<count;i++)S.stash.push(makeItem(fl,0,0,rar));SFX.chest();save();after();});
   action("倉庫を空に",()=>{S.stash=[];save();after();});action("HP/MP回復",()=>{S.p.hp=S.p.max;S.p.mp=S.p.d.mpMax;save();after();});action("全階層解放",()=>{S.deepest=999999;save();after();});
@@ -3611,6 +3741,13 @@ const HELP_SECTIONS=[
     "<b>盾番</b>は正面からの攻撃が通りにくい。向き直りが遅いので回り込む。",
     `ボスは属性ごとに2体で全${Object.values(BOSSES).flat().length}体。${CFG.BOSS_EVERY*5}深度で属性が一巡し、二巡目に別の個体が出る。`,
     "ボスはHP半分で激昂して手数が増える。出現時に攻略の要点が一度出る。"]],
+  ["素材と調合",()=>[
+    "素材は2系統。<b>結晶と核</b>はどこでも出る汎用材、<b>固有素材</b>は決まった敵からしか落ちない。",
+    `固有素材は全${PART_KEYS.length}種。出どころの敵が深いほど等級が高く、落ちにくい（${Math.round(PART_DROP[0]*100)}% 〜 ${Math.round(PART_DROP[4]*1000)/10}%）。`,
+    "倉庫の<b>結晶</b>タブ下段に、どの素材がどの敵から落ちるかを出している。固有素材は売れない。",
+    `消耗品は系統ごとに最大3段。1段目は結晶だけで作れて効果は弱く短い。上の段ほど固有素材が要り、効果と持続が伸びる（例: 癒血の雫 12% → 秘薬 30%+継続回復）。`,
+    "つまり<b>強い持ち込みは深く潜らないと作れない</b>。結晶をためるだけでは上位品は作れない。",
+    "枠の色＝等級（装備と同じ表）、絵の色＝系統。"]],
   ["育成と経済",()=>[
     "装備は倉庫で共有。装備中の品は他のキャラクターでは使えない。",
     "分解で結晶、ボスで核。結晶は装備強化、核は限界突破に使う。上位1個＝下位4個で交換できる。",
@@ -3698,52 +3835,60 @@ function buyPaid(kind,cost){if(S.premium<cost)return false;if(kind==="slots"&&(S
 function adminGrantPaid(kind){if(!S.admin||!S.paidInventory[kind])return false;S.paidInventory[kind].push({id:paidId(),kind,source:"admin",admin:true,createdAt:Date.now()});save();return true;}
 function useCatalyst(fromTier){const a=S.paidInventory.catalysts;if(!a.length||(S.mats.crystal[fromTier]||0)<4)return false;S.mats.crystal[fromTier]-=4;S.mats.crystal[+fromTier+1]=(S.mats.crystal[+fromTier+1]||0)+1;a.shift();save();return true;}
 function loadoutCapacity(){return Math.min(6,4+(S.paidInventory.slots||[]).length);}
-/* いま何個作れるか。素材と、その持ち物の保有上限の両方で頭打ちになる。 */
-function craftableCount(key){const d=CONSUMABLES[key];
-  const byCrystal=d.crystal?Math.floor(materialCount("crystal")/d.crystal):Infinity;
-  const byCore=d.core?Math.floor(materialCount("core")/d.core):Infinity;
-  return Math.max(0,Math.min(byCrystal,byCore,CFG.CRAFT_STOCK_CAP-(S.consumables[key]||0)));}
+/* いま何個作れるか。結晶・核・固有素材・保有上限のうち、いちばん少ないところで決まる。 */
+function craftableCount(key){const d=CONSUMABLES[key],r=d.craft||{};
+  let n=CFG.CRAFT_STOCK_CAP-(S.consumables[key]||0);
+  if(r.crystal)n=Math.min(n,Math.floor(materialCount("crystal")/r.crystal));
+  if(r.core)n=Math.min(n,Math.floor(materialCount("core")/r.core));
+  for(const [pk,need] of Object.entries(r.parts||{}))n=Math.min(n,Math.floor(partCount(pk)/need));
+  return Math.max(0,n);}
+/* 足りない材料の一覧。何が足りなくて作れないのかを画面に出すため。 */
+function craftMissing(key){const r=CONSUMABLES[key].craft||{},out=[];
+  if(r.crystal&&materialCount("crystal")<r.crystal)out.push(`結晶 ${materialCount("crystal")}/${r.crystal}`);
+  if(r.core&&materialCount("core")<r.core)out.push(`核 ${materialCount("core")}/${r.core}`);
+  for(const [pk,need] of Object.entries(r.parts||{}))
+    if(partCount(pk)<need){const d=PARTS[pk],src=(ET[d.from[0]]&&ET[d.from[0]].n)||"";
+      out.push(`${d.n} ${partCount(pk)}/${need}${src?`（${src}）`:""}`);}
+  return out;}
+/* 材料の内訳を文字にする。確認と一覧の両方で使う。 */
+function craftCostText(key,n=1){const r=CONSUMABLES[key].craft||{},out=[];
+  if(r.crystal)out.push(`結晶${r.crystal*n}`);
+  if(r.core)out.push(`核${r.core*n}`);
+  for(const [pk,need] of Object.entries(r.parts||{}))out.push(`${PARTS[pk].n}${need*n}`);
+  return out.join(" / ");}
 /* n個まとめて調合する。確認してから消費する。 */
 function craftItem(key,n=1){
   const d=CONSUMABLES[key];n=Math.min(Math.max(1,Math.floor(n)),craftableCount(key));
   if(n<1)return false;
-  const crystal=d.crystal*n,core=(d.core||0)*n,have=S.consumables[key]||0;
-  ask(`${d.n} を ${n}個 調合`,
-    `使う素材: 結晶 ${crystal}個${core?` / 核 ${core}個`:""}\n`
-    +`結晶 ${materialCount("crystal")} → ${materialCount("crystal")-crystal}`
-    +(core?`\n核 ${materialCount("core")} → ${materialCount("core")-core}`:"")
-    +`\n${d.n} ${have} → ${have+n}個`,
-    ()=>{spendAny("crystal",crystal);if(core)spendAny("core",core);
-      S.consumables[key]=have+n;SFX.chest();toast(`${d.n} +${n}`,"ok");save();S.tab="inv";S.invSub="craft";openTown();});
+  const r=d.craft||{},have=S.consumables[key]||0;
+  const lines=[`使う材料: ${craftCostText(key,n)}`];
+  if(r.crystal)lines.push(`結晶 ${materialCount("crystal")} → ${materialCount("crystal")-r.crystal*n}`);
+  if(r.core)lines.push(`核 ${materialCount("core")} → ${materialCount("core")-r.core*n}`);
+  for(const [pk,need] of Object.entries(r.parts||{}))
+    lines.push(`${PARTS[pk].n} ${partCount(pk)} → ${partCount(pk)-need*n}`);
+  lines.push(`${d.n} ${have} → ${have+n}個`);
+  ask(`${d.n} を ${n}個 調合`,lines.join("\n"),()=>{
+    if(craftableCount(key)<n)return;
+    if(r.crystal)spendAny("crystal",r.crystal*n);
+    if(r.core)spendAny("core",r.core*n);
+    for(const [pk,need] of Object.entries(r.parts||{}))spendPart(pk,need*n);
+    S.consumables[key]=have+n;SFX.chest();toast(`${d.n} +${n}`,"ok");save();S.tab="inv";S.invSub="craft";openTown();});
   return true;}
-function openCraft(){invMenu("調合",c=>{
-  /* 何をどれだけ持っていて、何が作れるのかを最初に出す。
-     素材の残量が見えないまま「作る」だけ並べても、押せるかどうかしか分からない。 */
-  const head=document.createElement("div");head.className="matLine";
-  head.innerHTML=`<span>結晶 <b>${materialCount("crystal")}</b></span><span>核 <b>${materialCount("core")}</b></span>`;
-  c.appendChild(head);
-  const note=document.createElement("div");note.className="sub";
-  note.textContent=`結晶は階梯を問わず1個として消費します。上位品のみ核を使います。1種あたり${CFG.CRAFT_STOCK_CAP}個まで保有できます。`;
-  c.appendChild(note);
-  for(const k of CONSUMABLE_KEYS){
-    const x=CONSUMABLES[k],have=S.consumables[k]||0,max=craftableCount(k);
-    const d=document.createElement("div");d.className="card craftRow"+(max?"":" no");
-    d.innerHTML=`<div class="row"><div class="nm">${conIcon(k,20)} ${x.n}</div>`
-      +`<span class="tag">所持 ${have} / ${CFG.CRAFT_STOCK_CAP}</span></div>`
+/* 持ち込みの差し替え。持っている品を上に、まだ作れていない品を下にまとめる。
+   枠の色は等級。同じ系統でも段が違えば色が変わるので、取り違えにくい。 */
+function openLoadoutSlot(slot){invMenu(`持ち込み枠 ${slot+1}`,c=>{
+  const empty=document.createElement("div");empty.className="btn gh";empty.textContent="空にする";
+  tapEl(empty,()=>{S.loadout[slot]=null;save();$("itPop").classList.remove("on");openTown();});c.appendChild(empty);
+  const keys=CONSUMABLE_KEYS.slice().sort((a,z)=>((S.consumables[z]||0)>0)-((S.consumables[a]||0)>0));
+  for(const k of keys){const x=CONSUMABLES[k],have=S.consumables[k]||0,d=document.createElement("div");
+    d.className="card tap"+(have?"":" no");d.style.borderColor=hexA(rareFrame(x.rar),.75);
+    d.innerHTML=`<div class="row"><div class="nm">${conIcon(k,20)} ${x.n}`
+      +` <b class="${RC[rarIdx(x.rar)]}" style="font-size:10px">${rareName(x.rar)}</b></div>`
+      +`<span class="tag">${Math.min(x.max,have)} / ${x.max}</span></div>`
       +`<div class="st">${x.d}</div>`
-      +`<div class="ty">1個あたり 結晶${x.crystal}${x.core?` / 核${x.core}`:""} — <b style="color:${max?"#7ad04e":"#d05a54"}">いま${max}個まで作れる</b></div>`;
-    const row=document.createElement("div");row.className="craftBtns";
-    /* 個数を選んでから確認へ。まとめて作るときに何個消えるのかを先に見せる。 */
-    for(const n of [1,5,10]){const btn=document.createElement("div");
-      btn.className="btn "+(max>=n?"gh":"no");btn.textContent="×"+n;
-      tapEl(btn,()=>{if(max>=n)craftItem(k,n);});row.appendChild(btn);}
-    const all=document.createElement("div");all.className="btn "+(max?"gold":"no");
-    all.textContent=max?`最大 ×${max}`:"素材不足";
-    tapEl(all,()=>{if(max)craftItem(k,max);});row.appendChild(all);
-    d.appendChild(row);c.appendChild(d);}
-  },openTown);}
-function openLoadoutSlot(slot){invMenu(`持ち込み枠 ${slot+1}`,c=>{const empty=document.createElement("div");empty.className="btn gh";empty.textContent="空にする";tapEl(empty,()=>{S.loadout[slot]=null;save();$("itPop").classList.remove("on");openTown();});c.appendChild(empty);for(const k of CONSUMABLE_KEYS){const x=CONSUMABLES[k],d=document.createElement("div");d.className="card tap";d.innerHTML=`<div class="nm">${conIcon(k,20)} ${x.n} ×${Math.min(x.max,S.consumables[k]||0)}</div><div class="st">${x.d} / 持ち込み上限${x.max}${k==="heal"?` / 道中は${CFG.HEAL_RUN_CAP}個まで拾える`:""}</div>`;tapEl(d,()=>{S.loadout[slot]=k;save();$("itPop").classList.remove("on");openTown();});c.appendChild(d);}},openTown);}
-function renderLoadout(b){const h=document.createElement("h3");h.textContent=`持ち込み（${loadoutCapacity()}枠）`;b.appendChild(h);const g=document.createElement("div");g.className="loadout";for(let i=0;i<loadoutCapacity();i++){const k=S.loadout[i],d=document.createElement("div");d.className="loadSlot";if(k)d.style.borderColor=hexA(CONSUMABLES[k].col||"#cfc6dd",.45);
+      +`<div class="ty">${have?"":"未所持 — 倉庫の調合で作る / "}${x.heal?`持ち込み ${x.max} / 道中は${runCap(k)}個まで拾える`:`持ち込み上限 ${x.max}`}</div>`;
+    tapEl(d,()=>{S.loadout[slot]=k;save();$("itPop").classList.remove("on");openTown();});c.appendChild(d);}},openTown);}
+function renderLoadout(b){const h=document.createElement("h3");h.textContent=`持ち込み（${loadoutCapacity()}枠）`;b.appendChild(h);const g=document.createElement("div");g.className="loadout";for(let i=0;i<loadoutCapacity();i++){const k=S.loadout[i],d=document.createElement("div");d.className="loadSlot";if(k)d.style.borderColor=hexA(rareFrame(CONSUMABLES[k].rar),.7);
     d.innerHTML=k?`${conIcon(k,22)}<b>${CONSUMABLES[k].n}</b><span class="cnt">×${Math.min(CONSUMABLES[k].max,S.consumables[k]||0)} / ${CONSUMABLES[k].max}</span>`:`<b style="font-size:17px">＋</b><span class="cnt">空き</span>`;tapEl(d,()=>openLoadoutSlot(i));g.appendChild(d);}b.appendChild(g);const n=document.createElement("div");n.className="st";n.textContent="未使用品は死亡・断念時にも倉庫へ残ります。潜行中の補充はできません。";b.appendChild(n);}
 /* 倉庫は「装備」「結晶」「分解」「調合」の4区画。
    ひとつの棚に絞込・並替・売却・分解・調合を横一列で置くと、
@@ -3793,30 +3938,62 @@ function renderMaterialPanel(b){
         `階梯${from} を ${n*4}個 使って、階梯${from+1} を ${n}個 作ります。\n階梯${from}: ${bucket[from]} → ${bucket[from]-n*4}`,
         ()=>{bucket[from]-=n*4;addMat(kind,from+1,n);SFX.chest();toast(`階梯${from+1} +${n}`,"ok");save();openTown();});});
     rows.appendChild(x);}
-  conv.appendChild(rows);b.appendChild(conv);}
-/* 調合。倉庫のタブ内に直接置く（以前はポップアップだった）。 */
+  conv.appendChild(rows);b.appendChild(conv);
+  renderPartPanel(b);}
+/* 固有素材。どの敵から落ちるかを常に併記する。
+   「作れない → 何を狩ればいいのか」がここで分かる必要がある。
+   売却は置かない。金に換えられると、上位品の壁が金で崩れてしまう。 */
+function renderPartPanel(b){
+  const h=document.createElement("div");h.className="craftFam";h.textContent="固有素材";b.appendChild(h);
+  const n=document.createElement("div");n.className="st";n.style.margin="0 0 6px";
+  n.textContent="決まった敵からしか落ちません。深い層の敵ほど上位の素材を落とします。売却はできません。";
+  b.appendChild(n);
+  for(const key of PART_KEYS){
+    const d=PARTS[key],have=partCount(key);
+    const card=document.createElement("div");card.className="card"+(have?"":" no");
+    card.style.borderColor=hexA(rareFrame(d.rar),.75);   // 枠の色＝レア度
+    const src=d.from.map(k=>(ET[k]&&ET[k].n)||k).join("・")+(d.boss?"・ボス":"");
+    card.innerHTML=`<div class="row"><div class="nm">${partIcon(key,18)} ${d.n}`
+      +` <b class="${RC[rarIdx(d.rar)]}" style="font-size:10px">${rareName(d.rar)}</b></div>`
+      +`<span class="tag">${have}</span></div>`
+      +`<div class="st">${d.d}</div>`
+      +`<div class="ty">出どころ: ${src}（${Math.round(PART_DROP[rarIdx(d.rar)]*1000)/10}%）</div>`;
+    b.appendChild(card);}}
+/* 調合。倉庫のタブ内に直接置く（以前はポップアップだった）。
+   系統ごとにまとめ、段階が上がるほど強く・作りにくいことが見えるようにする。 */
 function renderCraftPanel(b){
   const head=document.createElement("div");head.className="matLine";
   head.innerHTML=`<span>結晶 <b>${materialCount("crystal")}</b></span><span>核 <b>${materialCount("core")}</b></span>`;
   b.appendChild(head);
   const note=document.createElement("div");note.className="st";note.style.margin="6px 0 0";
-  note.textContent=`結晶は階梯を問わず1個として消費します。上位品のみ核を使います。1種あたり${CFG.CRAFT_STOCK_CAP}個まで保有できます。`;
+  note.textContent=`上の段ほど強く、特定の敵からしか落ちない素材が要ります。1種あたり${CFG.CRAFT_STOCK_CAP}個まで保有できます。`;
   b.appendChild(note);
-  for(const k of CONSUMABLE_KEYS){
-    const x=CONSUMABLES[k],have=S.consumables[k]||0,max=craftableCount(k);
-    const d=document.createElement("div");d.className="card craftRow"+(max?"":" no");
-    d.innerHTML=`<div class="row"><div class="nm">${conIcon(k,20)} ${x.n}</div>`
-      +`<span class="tag">所持 ${have} / ${CFG.CRAFT_STOCK_CAP}</span></div>`
-      +`<div class="st">${x.d}</div>`
-      +`<div class="ty">1個あたり 結晶${x.crystal}${x.core?` / 核${x.core}`:""} — <b style="color:${max?"#7ad04e":"#d05a54"}">いま${max}個まで作れる</b></div>`;
-    const row=document.createElement("div");row.className="craftBtns";
-    for(const n of [1,5,10]){const btn=document.createElement("div");
-      btn.className="btn "+(max>=n?"gh":"no");btn.textContent="×"+n;
-      tapEl(btn,()=>{if(max>=n)craftItem(k,n);});row.appendChild(btn);}
-    const all=document.createElement("div");all.className="btn "+(max?"gold":"no");
-    all.textContent=max?`最大 ×${max}`:"素材不足";
-    tapEl(all,()=>{if(max)craftItem(k,max);});row.appendChild(all);
-    d.appendChild(row);b.appendChild(d);}}
+  /* 系統ごとに見出しを立てて、1段目→3段目の順に並べる */
+  const fams=[];for(const k of CONSUMABLE_KEYS){const f=CONSUMABLES[k].fam;if(!fams.includes(f))fams.push(f);}
+  for(const fam of fams){
+    const h=document.createElement("div");h.className="craftFam";
+    h.innerHTML=`${conIcon(CONSUMABLE_KEYS.find(k=>CONSUMABLES[k].fam===fam),16)} ${fam}`;
+    b.appendChild(h);
+    for(const k of CONSUMABLE_KEYS.filter(k=>CONSUMABLES[k].fam===fam)){
+      const x=CONSUMABLES[k],have=S.consumables[k]||0,max=craftableCount(k),miss=craftMissing(k);
+      const d=document.createElement("div");d.className="card craftRow"+(max?"":" no");
+      d.style.borderColor=hexA(rareFrame(x.rar),.75);   // 枠の色＝レア度
+      d.innerHTML=`<div class="row"><div class="nm">${conIcon(k,18)} ${x.n}`
+        +` <b class="${RC[rarIdx(x.rar)]}" style="font-size:10px">${rareName(x.rar)}</b></div>`
+        +`<span class="tag">所持 ${have} / ${CFG.CRAFT_STOCK_CAP}</span></div>`
+        +`<div class="st">${x.d}</div>`
+        +`<div class="ty">材料 ${craftCostText(k)} — `
+        +(max?`<b style="color:#7ad04e">いま${max}個まで作れる</b>`
+             :`<b style="color:#d05a54">不足: ${miss.join(" / ")}</b>`)+`</div>`;
+      const row=document.createElement("div");row.className="craftBtns";
+      for(const n of [1,5,10]){const btn=document.createElement("div");
+        btn.className="btn "+(max>=n?"gh":"no");btn.textContent="×"+n;
+        tapEl(btn,()=>{if(max>=n)craftItem(k,n);});row.appendChild(btn);}
+      const all=document.createElement("div");all.className="btn "+(max?"gold":"no");
+      all.textContent=max?`最大 ×${max}`:"材料不足";
+      tapEl(all,()=>{if(max)craftItem(k,max);});row.appendChild(all);
+      d.appendChild(row);b.appendChild(d);}}
+}
 function renderInv(b){
   const F=S.inv;F.filters=F.filters||[];F.sellSel=F.sellSel||[];
   const sub=INV_TABS.some(x=>x[0]===S.invSub)?S.invSub:"gear";S.invSub=sub;
@@ -4118,7 +4295,7 @@ function beginRun(fl){
 /* ---------- 保存 ---------- */
 const KEY="descent_v5";
 function save(){storeActiveCharacter();try{localStorage.setItem(KEY,JSON.stringify({cls:S.cls,deepest:S.deepest,
-  gold:S.gold,stash:S.stash,gear:S.gear,base:S.base,log:S.log,mats:S.mats,consumables:S.consumables,loadout:S.loadout,consumableVersion:1,
+  gold:S.gold,stash:S.stash,gear:S.gear,base:S.base,log:S.log,mats:S.mats,stock:S.stock,consumables:S.consumables,loadout:S.loadout,consumableVersion:1,
   matTierVersion:2,
   settings:S.settings,admin:S.admin,debug:S.debug,debugFloor:S.debugFloor,adminOpts:S.adminOpts,chars:S.chars,characterStates:S.characterStates,avatars:S.avatars,formation:S.formation,diveFloor:S.diveFloor,stamina:S.stamina,daily:S.daily,premium:S.premium,paidInventory:S.paidInventory,profileAvatar:S.profileAvatar,shopSub:S.shopSub,gearSub:S.gearSub,unlockedCharacters:S.unlockedCharacters,tutorial:S.tutorial,returnInvulnerable:S.returnInvulnerable,breakthroughs:S.breakthroughs,breakthroughProgress:S.breakthroughProgress,weeklyCore:S.weeklyCore,beginnerClaimed:S.beginnerClaimed,prepMissionsOpen:S.prepMissionsOpen,invLegendOpen:S.invLegendOpen,skillLoadout:S.skillLoadout,playerName:S.playerName,invSub:S.invSub}));}catch(e){}}
 /* セーブの数値は必ず有限な数へ均す。文字列や負値がそのまま入ると
@@ -4149,7 +4326,21 @@ function load(){try{
   const ng={};for(const k of SLOTK)ng[k]=null;
   for(const k in S.gear){const it=fix(S.gear[k]);if(it&&!ng[it.slot])ng[it.slot]=it;}
   S.gear=ng;
-  S.consumables=Object.assign({},d.consumables||{});if(!d.consumableVersion)S.consumables.heal=(S.consumables.heal||0)+3;S.loadout=(d.loadout||["heal",null,null,null]).slice(0,6);while(S.loadout.length<loadoutCapacity())S.loadout.push(null);S.runItems=[0,0,0,0];S.log=d.log||{runs:[]};
+  S.consumables=Object.assign({},d.consumables||{});
+  /* 消耗品を系統＋段階へ組み直した。旧キーは各系統の1段目へ引き継ぐ。 */
+  {const OLD={heal:"mend1",healG:"mend3",power:"edge1",hard:"ward1",focus:"clear1",gale:"swift1",
+    sonic:"quake1",shockTrap:"bind1",weaken:"rot1",torch:"lamp1",incense:"scry1",returnScroll:"recall1"};
+   for(const [o,nk] of Object.entries(OLD))if(S.consumables[o]!=null){
+     S.consumables[nk]=(S.consumables[nk]||0)+S.consumables[o];delete S.consumables[o];}
+   for(const k of Object.keys(S.consumables))if(!CONSUMABLES[k])delete S.consumables[k];}
+  S.stock=d.stock&&typeof d.stock==="object"?d.stock:{};
+  for(const k of Object.keys(S.stock))if(!PARTS[k])delete S.stock[k];
+  if(!d.consumableVersion)S.consumables.mend1=(S.consumables.mend1||0)+3;
+  S.loadout=(d.loadout||["mend1",null,null,null]).slice(0,6);
+  /* 旧キーが持ち込み枠に残っていると、参照先が無くて枠が死ぬ */
+  {const OLD={heal:"mend1",healG:"mend3",power:"edge1",hard:"ward1",focus:"clear1",gale:"swift1",
+    sonic:"quake1",shockTrap:"bind1",weaken:"rot1",torch:"lamp1",incense:"scry1",returnScroll:"recall1"};
+   S.loadout=S.loadout.map(k=>!k?null:CONSUMABLES[k]?k:(OLD[k]||null));}while(S.loadout.length<loadoutCapacity())S.loadout.push(null);S.runItems=[0,0,0,0];S.log=d.log||{runs:[]};
   S.settings=Object.assign({map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0,controlMode:"manual",autoPreset:"aggressive",automationEditor:0},d.settings||{});
   S.admin=!!d.admin;S.debug=!!d.debug;S.debugFloor=numAt(d.debugFloor,1,1);S.adminOpts=d.adminOpts||{};S.chars=d.chars||{};S.characterStates=d.characterStates||{};S.avatars=d.avatars||{};S.breakthroughs=d.breakthroughs||{};S.breakthroughProgress=d.breakthroughProgress||{};S.weeklyCore=d.weeklyCore||{week:"",bought:0};S.beginnerClaimed=!!d.beginnerClaimed;S.prepMissionsOpen=!!d.prepMissionsOpen;S.invLegendOpen=!!d.invLegendOpen;S.playerName=typeof d.playerName==="string"?d.playerName:"";S.invSub=d.invSub||"gear";S.skillLoadout=d.skillLoadout||{};
   /* 旧セーブは職ごとに1つだけ持っていた。その職の先頭キャラクターの設定として引き継ぐ。 */
@@ -4239,9 +4430,9 @@ function renderRail(){
     const d=document.createElement("div");d.className="railBtn"+(def?"":" empty");
     if(i===0)d.id="pot";                      // 練習部屋の案内が指す先
     d.dataset.slot=i;d.style.width=d.style.height=sz+"px";
-    if(def){/* 枠・地・数字をそのアイテムの色でそろえる。中身と枠の色が食い違わないように。 */
+    if(def){/* 枠＝等級、絵と地＝系統の色。倉庫・持ち込み・戦闘の3画面で同じ規則にする。 */
       const col=def.col||"#cfc6dd";
-      d.style.borderColor=hexA(col,.45);
+      d.style.borderColor=hexA(rareFrame(def.rar),.7);
       d.style.background=`radial-gradient(circle at 34% 28%,${hexA(col,.20)},rgba(14,11,20,.86) 72%)`;
       d.style.color=col;}
     d.innerHTML=def?`${conIcon(key,15)}<b>${S.runItems[i]||0}</b>`:'<small>空き</small>';
