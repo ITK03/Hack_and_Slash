@@ -88,15 +88,21 @@ const report = game.run(() => {
   const neutralBonus = { resonance: neutralResonance, actualMain: neutralMain, elementalMain: mainV(S.gear.weapon) };
 
   // 合成敵や hurtE の直呼びは使わず、実際に生成したフロアを update() だけで戦う。
+  /* 装備深度は戦うフロアに合わせる。以前は深度50固定の装備で深度29〜32を殴っており、
+     敵HP250〜530に対して通常攻撃が505〜666と、どのビルドも全敵を一撃で倒していた。
+     属性倍率は過剰火力に吸われ、有利でも不利でも同じ秒数になる（実測の差は1.10倍）。
+     装備とフロアを揃えると本来の差が出る（同1.32倍、深度71では1.57倍）。 */
   function clearTime(floor, element) {
-    prepare(); _s = 0x51f15e; equip(50, element); S.p = newPlayer(); _s = 0xdecafbad; enterFloor(floor);
+    prepare(); _s = 0x51f15e; equip(floor, element); S.p = newPlayer(); _s = 0xdecafbad; enterFloor(floor);
     const result = runCombat(90); if (!result.cleared) return null; return result.elapsed;
   }
   function routeTime(floors, element) {
     const times = floors.map(floor => clearTime(floor, element));
     return times.some(time => time == null) ? null : times.reduce((sum, time) => sum + time, 0) / times.length;
   }
-  const advantageFloors = [31, 32], disadvantageFloors = [29];
+  /* 51〜55は木優勢（火が有利）、46〜50は水優勢（火が不利）。
+     これより深いと不利帯で火ビルドが倒れて秒数が取れず、浅いと一撃圏に戻って差が消える。 */
+  const advantageFloors = [51, 52], disadvantageFloors = [46];
   const clearTimes = {
     advantageFloors, disadvantageFloors,
     advantage: routeTime(advantageFloors, 'fire'), disadvantage: routeTime(disadvantageFloors, 'fire'),
@@ -269,18 +275,8 @@ const CLEAR_TIME_MIN_RATIO = 1.7;
 if (elementalTimeRatio < CLEAR_TIME_MIN_RATIO) throw new Error(`有利帯・不利帯のクリア時間比 ${elementalTimeRatio.toFixed(2)} は${CLEAR_TIME_MIN_RATIO}未満`);
 /* 帯に合わせる価値の本判定。同じ有利帯を、合わせたビルドと無属性で走らせて
    クリア時間を比べる。死亡率と違い飽和しないので、敵編成を入れ替えても意味が変わらない。
-
-   【既知の設計課題】共鳴5個で与ダメージ4.5倍・被ダメージ0.75倍が乗るのに、
-   実測の速さは無属性の1.10倍しかない。フロアの敵のうち優勢属性は6割程度で、
-   残りには倍率が乗らないうえ、クリア時間の大半が移動で占められているため。
-   一方で「不利帯を無属性で回避する」価値は大きい（属性固定の帯間比1.89に対し
-   無属性は0.89＝帯に依存しない）。結果として現状は
-   「合わせる ≳ 無属性 ≫ 属性固定で放置」であり、SPECが謳う
-   「帯に合わせるのが一番深くまで行ける」との差は小さい。
-   これは本変更以前から同じ値（有利9.68秒／無属性10.65秒）であり、
-   属性の効き方そのものの調整は別途行う。ここでは退行検知として
-   実測値をわずかに下回る下限を置き、これ以上悪化したら落ちるようにする。 */
-const MATCHED_TIME_MIN_RATIO = 1.05;
+   共鳴5個で与ダメージ4.5倍・被ダメージ0.75倍が乗るぶん、明確に速くなること。 */
+const MATCHED_TIME_MIN_RATIO = 1.25;
 const matchedTimeRatio = report.clearTimes.neutralAdvantage / report.clearTimes.advantage;
 if (!(matchedTimeRatio >= MATCHED_TIME_MIN_RATIO)) throw new Error(`有利帯を、帯に合わせたビルドは無属性の ${matchedTimeRatio.toFixed(2)}倍の速さでしか片付けられない（${MATCHED_TIME_MIN_RATIO}倍以上あること）`);
 if (report.clearTimes.neutralAdvantage == null || report.clearTimes.neutralDisadvantage == null) throw new Error('無属性で有利帯・不利帯を実戦闘でクリアできなかった');
