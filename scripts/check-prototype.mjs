@@ -110,6 +110,11 @@ const regressionSnippets = [
   'c_returnScroll:',
   '.formationOrder{',         // 番手は枠の外
   '.skillCard.uniqSkill{',    // 固有技は一覧の先頭
+  'function refreshSkillButtons',  // 交代しても技ボタンの表示が中身と一致する
+  'function setLevelForAll',       // レベルは全キャラへ一括で入れられる
+  'const GACHA_RARITY=',           // 装備ガチャは専用の抽選表を持つ
+  'function gachaRarity',
+  'const hexA=',                   // 枠の色をアイテムの色から作る
   'function openProfileIconPick',
   'function openFormationChoices',
   'function confirmSelectedSell',

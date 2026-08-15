@@ -1119,6 +1119,11 @@ const CONSUMABLE_KEYS=Object.keys(CONSUMABLES);
    拾える上限を持ち込み上限と同じにしていたため、3個持って入ると
    道中の回復薬をひとつも拾えなくなっていた。 */
 /* 消耗品の絵と色。名前を読まなくても持ち物が判別できるようにする。 */
+/* #rrggbb を rgba へ。枠や地の淡い色を作るのに使う。 */
+const hexA=(hex,a)=>{const h=String(hex).replace("#","");
+  const n=h.length===3?h.split("").map(c=>c+c).join(""):h;
+  const v=parseInt(n,16);
+  return `rgba(${(v>>16)&255},${(v>>8)&255},${v&255},${a})`;};
 const conIcon=(key,sz)=>`<span style="color:${CONSUMABLES[key].col||"#cfc6dd"};display:inline-block;vertical-align:middle">${icon("c_"+key,sz||18)}</span>`;
 const runCap=key=>key==="heal"?CFG.HEAL_RUN_CAP:CONSUMABLES[key].max;
 const ST={brn:{n:"燃焼",col:"#ff7a3a",dps:.055},psn:{n:"毒",col:"#7ad06a",dps:.022},
@@ -1450,7 +1455,7 @@ function beginTraining(){
   $("scTown").classList.remove("on");S.scene="dungeon";S.paused=false;S.training=true;S.floor=1;S.p=newPlayer();S.p.mAtk=20;S.p.trainingAtk=200;S.consumables.heal=Math.max(3,S.consumables.heal||0);S.loadout=["heal",null,null,null];S.runItems=[3,0,0,0];
   map=new Uint8Array(MW*MH);seen=new Uint8Array(MW*MH);rooms=[{x:28,y:28,w:32,h:32,cx:44,cy:44}];rooms.stairIdx=0;for(let y=28;y<60;y++)for(let x=28;x<60;x++)map[y*MW+x]=1;
   S.p.x=44;S.p.y=44;S.enemies=[];S.drops=[];S.props=[];S.bullets=[];S.parts=[];S.nums=[];S.fx=[];S.corpses=[];S.boss=null;S.stairs={x:55,y:55,t:0,training:true};S.portal={x:33,y:33,t:0};MMBG=null;mmSeen=-1;
-  $("pauseB").classList.add("show");for(let i=0;i<3;i++){const sk=skillDef("warrior",DEFAULT_SKILLS.warrior[i]);$("w"+(i+1)).querySelector(".skName").textContent=sk.n;$("s"+(i+1)).querySelector(".cost").textContent=sk.c;}$("s0").querySelector("span").textContent="攻撃";renderRail();updHUD();draw();
+  $("pauseB").classList.add("show");refreshSkillButtons(DEFAULT_SKILLS.warrior.map(id=>skillDef("warrior",id)));renderRail();updHUD();draw();
   ask("練習部屋へようこそ","ここではガイの3つの技、ポーション、ミニマップ、階段と帰還ポータルを練習します。\n練習中はダメージを受けず、物理攻撃力は200です。この補正は部屋を出ると解除されます。",()=>{S.tutorial.phase="training_cleave";trainingEnemies(1);S.paused=false;refreshTutorial();});}
 function trainingSkillUsed(i){const p=(S.tutorial||{}).phase;if(S.enemies.length)return;
   if(p==="training_cleave"&&i===0){S.tutorial.phase="training_dash";trainingEnemies(1);}
@@ -1849,6 +1854,22 @@ function gainXP(v){const b=S.base;b.xp+=v;
     b.xp-=xpNeed(b.lv);b.lv++;b.pts+=CFG.STAT_PER_LV;
     S.p.d=derive();recalcHP(S.p);SFX.lvl();save();}   // 即保存: 死んでもレベルは残る
   updHUD();}
+/* 所持している全キャラクターのレベルを揃える。検証用。
+   操作中の1人は S.base、それ以外は characterStates[key].base に入っている。 */
+function setLevelForAll(lv){
+  const next=Math.max(1,Math.floor(lv));
+  storeActiveCharacter();
+  S.characterStates=S.characterStates||{};
+  for(const key of (S.unlockedCharacters||[])){
+    const st=S.characterStates[key]||(S.characterStates[key]={base:newBase(),gear:emptyGear()});
+    const b=st.base||(st.base=newBase());
+    const gained=Math.max(0,next-b.lv);
+    b.lv=next;b.xp=0;b.pts=(b.pts||0)+gained*CFG.STAT_PER_LV;}
+  /* 操作中のキャラクターの分を書き戻す */
+  const cur=S.characterStates[activeCharacterKey()];
+  if(cur&&cur.base)S.base=cur.base;
+  S.p.d=derive();recalcHP(S.p);SFX.lvl();
+  toast(`全${(S.unlockedCharacters||[]).length}人を Lv${next} にした`,"ok");save();}
 function forceLevel(lv){
   const b=S.base,next=Math.max(1,Math.floor(lv)),gained=Math.max(0,next-b.lv);
   b.lv=next;b.xp=0;b.pts+=gained*CFG.STAT_PER_LV;
@@ -3005,7 +3026,9 @@ function endRun(alive,cause){
   S.paused=true;
   if(!alive&&S.formation&&S.partyIndex+1<S.formation.length){
     S.partyIndex++;const [k,id]=S.formation[S.partyIndex].split(":");
-    selectCharacter(k,id,()=>{S.p=newPlayer();S.paused=false;enterFloor(S.floor);updBuffs();updHUD();toast(`${currentCharacter().n}に交代`);});return;}
+    selectCharacter(k,id,()=>{S.p=newPlayer();S.paused=false;enterFloor(S.floor);
+      /* 交代で技も持ち物の使い勝手も変わる。表示を新しいキャラクターに合わせ直す。 */
+      refreshSkillButtons();renderRail();updBuffs();updHUD();toast(`${currentCharacter().n}に交代`);});return;}
   const got=S.bag.slice();
   // boss_message は深度5ボス撃破時に設定され、そこから先へ進む経路が無かった。
   // 帰還した時点で装備・商店・編成の案内へ繋ぐ（無料ガチャ2回もこの枝にある）。
@@ -3301,8 +3324,8 @@ function renderTown(){
           html:`<div style="color:${ch.col};font-size:58px">●</div><div class="nm" style="color:${tier.col}">${tier.n}</div><div class="nm">${ch.n}</div><div class="st">${result.kind==="core"?`核 +${result.cores}`:`${CLASSES[k].name} / ${ch.trait}`}</div>`};});
       gacha("装備ガチャ",200,"equip","最大到達深度相当の装備を1つ。最低でも上質が出る。10連は希少以上が1つ以上確定。",(free,n,i)=>{
         /* 10連の最後の1回だけ希少を保証する。単発を10回引くのとの差はここだけ。 */
-        const floorRar=free?2:(n===10&&i===9?2:Math.max(1,ri(1,4)));
-        const it=makeItem(Math.max(1,S.deepest),.6,S.p.d.luk,floorRar);S.stash.push(it);if(free)S.tutorial.phase="char_gacha";SFX.chest();return{title:"装備獲得",html:`<div class="${RC[it.rar]}">${icon(iconKey(it),54)}</div><div class="nm ${RC[it.rar]}">${it.name}</div><div class="st">${CFG.RARITY[it.rar][0]} / ${SLOTN(it.slot)}</div>`};});}
+        const rar=free?2:gachaRarity(n===10&&i===9);
+        const it=makeItem(Math.max(1,S.deepest),.6,S.p.d.luk,rar);S.stash.push(it);if(free)S.tutorial.phase="char_gacha";SFX.chest();return{title:"装備獲得",html:`<div class="${RC[it.rar]}">${icon(iconKey(it),54)}</div><div class="nm ${RC[it.rar]}">${it.name}</div><div class="st">${CFG.RARITY[it.rar][0]} / ${SLOTN(it.slot)}</div>`};});}
     else {add(`<div class="card"><div class="nm">ジェムショップ</div><div class="st">週次上限付きの核と時短・保険・枠（決済はダミー）。</div></div>`);
       /* テスト用のジェム入手口。管理者・デバッグのどちらでも制限なく積める。
          リリース時は管理者/デバッグモードごと削除するので、この口も一緒に消える。 */
@@ -3322,6 +3345,21 @@ function renderTown(){
 function allRoster(){const a=[];for(const k of CKEYS)for(const ch of CHARACTERS[k])a.push({k,ch});return a;}
 /* ガチャの排出。N（配布枠）は絶対に出さない。等級を先に引いてから、その等級の中で
    未所持を優先する。未所持が無ければ同じ等級の所持済みへ回して限界突破に変える。 */
+/* 装備ガチャのレア度。フィールドのドロップ表とは別に持つ。
+   以前は ri(1,4) を最低レア度に使っており、4回に1回が伝説になっていた。
+   伝説はキャラクターのSSR（約4%）と同じくらいの重みに揃える。 */
+const GACHA_RARITY=[
+  [1,360],   // 上質
+  [2,400],   // 希少
+  [3,200],   // 秀逸
+  [4,40],    // 伝説  … 4.0%
+];
+function gachaRarity(guaranteeRare){
+  const box=guaranteeRare?GACHA_RARITY.filter(([r])=>r>=2):GACHA_RARITY;
+  const total=box.reduce((a,[,w])=>a+w,0);
+  let roll=rnd()*total;
+  for(const [r,w] of box){if(roll<w)return r;roll-=w;}
+  return box[0][0];}
 function rollCharacter(guaranteeSR){
   const pool=allRoster().filter(x=>charTier(x.ch).weight>0);
   const tiers=guaranteeSR?["SR","SSR"]:TIER_ORDER;
@@ -3505,7 +3543,12 @@ function renderSettings(b,after,inDungeon){
   const number=(label,initial,fn,min=-999999999,max=999999999)=>{const v=prompt(label,String(initial));if(v===null||!Number.isFinite(+v))return;fn(clamp(+v,min,max));S.p.d=derive();recalcHP(S.p);save();after();};
   const grid=document.createElement("div");grid.className="adminGrid";b.appendChild(grid);const action=(label,fn)=>{const d=document.createElement("div");d.className="btn gh";d.textContent=label;tapEl(d,fn);grid.appendChild(d);};
   // デバッグモードは検証に必要な3項目だけ。管理者モードでは全項目を開放する。
-  action("レベル",()=>number("レベル",S.base.lv,v=>forceLevel(v),1));action("ゴールド",()=>number("所持ゴールド",S.gold,v=>S.gold=Math.floor(v),0));action("最深階層",()=>number("最深階層",S.deepest,v=>S.deepest=Math.floor(v),1));
+  action("レベル",()=>number("いま操作中のキャラクターのレベル",S.base.lv,v=>forceLevel(v),1));
+  /* レベル・能力値はキャラクターごとに別で持つ。操作中の1人だけ上げても、
+     交代した2人目以降はLv1のままで検証にならない。全員へ一括で入れる口を用意する。 */
+  action("全員のレベル",()=>{const v=prompt("編成・所持している全キャラクターのレベル",String(S.base.lv));
+    if(v===null||!Number.isFinite(+v))return;setLevelForAll(clamp(Math.floor(+v),1,999999));after();});
+  action("ゴールド",()=>number("所持ゴールド",S.gold,v=>S.gold=Math.floor(v),0));action("最深階層",()=>number("最深階層",S.deepest,v=>S.deepest=Math.floor(v),1));
   if(!S.admin)return;
   action("課金通貨",()=>number("課金通貨",S.premium,v=>S.premium=Math.floor(v),0));action("スタミナ",()=>number("スタミナ",S.stamina,v=>S.stamina=v,0,100));action("経験値",()=>number("経験値",S.base.xp,v=>S.base.xp=v,0));action("能力pt",()=>number("未割当ポイント",S.base.pts,v=>S.base.pts=Math.floor(v),0));action("回復薬",()=>number("回復薬",S.consumables.heal||0,v=>S.consumables.heal=Math.floor(v),0,999));
   for(const [k,n] of STATDEF)action(n,()=>number(n,S.base[k],v=>S.base[k]=v));
@@ -3594,10 +3637,10 @@ function openGachaRates(kind){
   invMenu("提供割合",c=>{
     if(kind==="equip"){
       const note=document.createElement("div");note.className="sub";
-      note.textContent="装備ガチャ（最低保証：上質以上）。レア度は最大到達深度によって変わります。";c.appendChild(note);
-      const total=CFG.RARITY.slice(1).reduce((a,r)=>a+r[1],0);
-      for(let r=1;r<CFG.RARITY.length;r++){const row=document.createElement("div");row.className="rateRow";
-        row.innerHTML=`<span class="${RC[r]}">${CFG.RARITY[r][0]}</span><b>${(CFG.RARITY[r][1]/total*100).toFixed(2)}%</b>`;c.appendChild(row);}
+      note.textContent="装備ガチャ（最低保証：上質以上）。装備の強さは最大到達深度に連動します。";c.appendChild(note);
+      const total=GACHA_RARITY.reduce((a,[,w])=>a+w,0);
+      for(const [r,w] of [...GACHA_RARITY].reverse()){const row=document.createElement("div");row.className="rateRow";
+        row.innerHTML=`<span class="${RC[r]}">${CFG.RARITY[r][0]}</span><b>${(w/total*100).toFixed(2)}%</b>`;c.appendChild(row);}
       const g=document.createElement("div");g.className="sub";g.style.marginTop="10px";
       g.textContent="10連は10回目に希少以上が1つ確定します。単発10回との違いはこの保証だけで、消費ジェムは同額です。";c.appendChild(g);
     }else{
@@ -3700,7 +3743,8 @@ function openCraft(){invMenu("調合",c=>{
     d.appendChild(row);c.appendChild(d);}
   },openTown);}
 function openLoadoutSlot(slot){invMenu(`持ち込み枠 ${slot+1}`,c=>{const empty=document.createElement("div");empty.className="btn gh";empty.textContent="空にする";tapEl(empty,()=>{S.loadout[slot]=null;save();$("itPop").classList.remove("on");openTown();});c.appendChild(empty);for(const k of CONSUMABLE_KEYS){const x=CONSUMABLES[k],d=document.createElement("div");d.className="card tap";d.innerHTML=`<div class="nm">${conIcon(k,20)} ${x.n} ×${Math.min(x.max,S.consumables[k]||0)}</div><div class="st">${x.d} / 持ち込み上限${x.max}${k==="heal"?` / 道中は${CFG.HEAL_RUN_CAP}個まで拾える`:""}</div>`;tapEl(d,()=>{S.loadout[slot]=k;save();$("itPop").classList.remove("on");openTown();});c.appendChild(d);}},openTown);}
-function renderLoadout(b){const h=document.createElement("h3");h.textContent=`持ち込み（${loadoutCapacity()}枠）`;b.appendChild(h);const g=document.createElement("div");g.className="loadout";for(let i=0;i<loadoutCapacity();i++){const k=S.loadout[i],d=document.createElement("div");d.className="loadSlot";d.innerHTML=k?`${conIcon(k,22)}<b>${CONSUMABLES[k].n}</b><span class="cnt">×${Math.min(CONSUMABLES[k].max,S.consumables[k]||0)} / ${CONSUMABLES[k].max}</span>`:`<b style="font-size:17px">＋</b><span class="cnt">空き</span>`;tapEl(d,()=>openLoadoutSlot(i));g.appendChild(d);}b.appendChild(g);const n=document.createElement("div");n.className="st";n.textContent="未使用品は死亡・断念時にも倉庫へ残ります。潜行中の補充はできません。";b.appendChild(n);}
+function renderLoadout(b){const h=document.createElement("h3");h.textContent=`持ち込み（${loadoutCapacity()}枠）`;b.appendChild(h);const g=document.createElement("div");g.className="loadout";for(let i=0;i<loadoutCapacity();i++){const k=S.loadout[i],d=document.createElement("div");d.className="loadSlot";if(k)d.style.borderColor=hexA(CONSUMABLES[k].col||"#cfc6dd",.45);
+    d.innerHTML=k?`${conIcon(k,22)}<b>${CONSUMABLES[k].n}</b><span class="cnt">×${Math.min(CONSUMABLES[k].max,S.consumables[k]||0)} / ${CONSUMABLES[k].max}</span>`:`<b style="font-size:17px">＋</b><span class="cnt">空き</span>`;tapEl(d,()=>openLoadoutSlot(i));g.appendChild(d);}b.appendChild(g);const n=document.createElement("div");n.className="st";n.textContent="未使用品は死亡・断念時にも倉庫へ残ります。潜行中の補充はできません。";b.appendChild(n);}
 /* 倉庫は「装備」「結晶」「分解」「調合」の4区画。
    ひとつの棚に絞込・並替・売却・分解・調合を横一列で置くと、
    いま何をする画面なのかが読めない。区画ごとに要るものだけ出す。 */
@@ -4046,6 +4090,15 @@ function startDive(){
     tapEl(d,()=>{$("itPop").classList.remove("on");confirmDive(fl);});c.appendChild(d);}
   const x=document.createElement("div");x.className="btn popClose";x.textContent="やめる";
   tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);$("itPop").classList.add("on");}
+/* 戦闘画面の技ボタンの表示を今の中身に合わせる。
+   キャラクターが替われば技も替わるので、交代のたびに呼ぶ。
+   呼び忘れると、前のキャラクターの技名が出たまま押すと別の技が出る。 */
+function refreshSkillButtons(list){
+  const skills=list||activeSkills();
+  const atk=$("s0").querySelector("span");if(atk)atk.textContent="攻撃";
+  for(let i=1;i<=3;i++){const sk=skills[i-1];if(!sk)continue;
+    const n=$("w"+i).querySelector(".skName"),c=$("s"+i).querySelector(".cost");
+    if(n)n.textContent=sk.n;if(c)c.textContent=sk.c;}}
 function beginRun(fl){
   const first=S.formation&&S.formation[0];if(first){const [k,id]=first.split(":");if(activeCharacterKey()!==first){selectCharacter(k,id,()=>beginRun(fl));return;}}
   $("scTown").classList.remove("on");$("scPause").classList.remove("on");
@@ -4057,10 +4110,7 @@ function beginRun(fl){
   {const left=Object.assign({},S.consumables);S.runItems=S.loadout.map(k=>{if(!k)return 0;const n=Math.min(CONSUMABLES[k].max,left[k]||0);left[k]=(left[k]||0)-n;return n;});}
   S.dmgLog.length=0;S.dps=0;
   S.p=newPlayer();S.bag.length=0;
-  $("s0").querySelector("span").textContent="攻撃";
-  for(let i=1;i<=3;i++){const sk=activeSkills()[i-1];
-    $("w"+i).querySelector(".skName").textContent=sk.n;
-    $("s"+i).querySelector(".cost").textContent=sk.c;}
+  refreshSkillButtons();
   renderRail();
   $("pauseB").classList.add("show");
   enterFloor(fl);updBuffs();updHUD();}
@@ -4189,6 +4239,11 @@ function renderRail(){
     const d=document.createElement("div");d.className="railBtn"+(def?"":" empty");
     if(i===0)d.id="pot";                      // 練習部屋の案内が指す先
     d.dataset.slot=i;d.style.width=d.style.height=sz+"px";
+    if(def){/* 枠・地・数字をそのアイテムの色でそろえる。中身と枠の色が食い違わないように。 */
+      const col=def.col||"#cfc6dd";
+      d.style.borderColor=hexA(col,.45);
+      d.style.background=`radial-gradient(circle at 34% 28%,${hexA(col,.20)},rgba(14,11,20,.86) 72%)`;
+      d.style.color=col;}
     d.innerHTML=def?`${conIcon(key,15)}<b>${S.runItems[i]||0}</b>`:'<small>空き</small>';
     if(def)hook(d,()=>{if(S.scene==="dungeon"&&!S.paused)useItem(i);});
     rail.appendChild(d);}

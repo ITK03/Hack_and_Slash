@@ -124,6 +124,46 @@ await page.goto(base); await page.waitForTimeout(500);
   notes.push(`敵の種類: ${ladder.counts.map(c => `${c.f}F=${c.n}種`).join(' → ')}`);
 }
 
+/* 2d. 倒れて次の番手へ交代したとき、技ボタンの表示と中身が一致すること */
+{
+  const swap = await page.evaluate(() => {
+    S.deepest = 60; S.base.lv = 40;
+    S.unlockedCharacters = allRoster().map(x => x.k + ':' + x.ch.id);
+    S.formation = ['warrior:leon', 'warrior:gai'];
+    selectCharacter('warrior', 'leon', () => { });
+    setSkillSlot('warrior', 0, 'u_leon');       // 1人目に固有技を差す
+    S.loadout = ['heal', null, null, null]; S.consumables.heal = 3;
+    beginRun(20); S.paused = false;
+    const before = { 表示: [1, 2, 3].map(i => $('s' + i).querySelector('.skName').textContent), 中身: activeSkills().map(x => x.n) };
+    S.partyIndex = 0; S.p.hp = 0; endRun(false, 'テスト');
+    const after = { 誰: currentCharacter().n, 表示: [1, 2, 3].map(i => $('s' + i).querySelector('.skName').textContent), 中身: activeSkills().map(x => x.n) };
+    return { before, after };
+  });
+  if (swap.before.表示.join() !== swap.before.中身.join())
+    problems.push(`交代前から技ボタンの表示と中身が食い違う（表示 ${swap.before.表示.join('/')} / 中身 ${swap.before.中身.join('/')}）`);
+  if (swap.after.表示.join() !== swap.after.中身.join())
+    problems.push(`交代後に技ボタンの表示と中身が食い違う（表示 ${swap.after.表示.join('/')} / 中身 ${swap.after.中身.join('/')}）`);
+  notes.push(`交代: ${swap.before.表示.join('/')} → ${swap.after.誰} ${swap.after.表示.join('/')}`);
+}
+
+/* 2e. 持ち込みアイテムは枠の色と中身の色が一致すること */
+{
+  const colors = await page.evaluate(() => {
+    S.loadout = ['heal', 'gale', 'sonic', 'focus'];
+    for (const k of CONSUMABLE_KEYS) S.consumables[k] = 3;
+    beginRun(20); S.paused = false;
+    const bad = [];
+    for (const el of document.querySelectorAll('#railR .railBtn')) {
+      const key = S.loadout[+el.dataset.slot]; if (!key) continue;
+      const want = CONSUMABLES[key].col;
+      const rgb = [1, 3, 5].map(i => parseInt(want.slice(i, i + 2), 16)).join(', ');
+      if (!el.style.borderColor.includes(rgb)) bad.push(`${CONSUMABLES[key].n}(枠 ${el.style.borderColor})`);
+    }
+    return bad;
+  });
+  if (colors.length) problems.push(`アイテムの枠の色が中身と合っていない: ${colors.join(', ')}`);
+}
+
 /* 3. 帰還して拠点へ戻れること */
 {
   const back = await page.evaluate(() => { endRun(true); return { scene: S.scene }; });
