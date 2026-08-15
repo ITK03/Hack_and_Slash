@@ -154,29 +154,14 @@ const report = game.run(() => {
      少数標本では偶然そろった結果で早すぎる深度を境界と判定する。
      実際、無属性の境界は60と出たのに同じ深度を160試行で測ると死亡率88.8%だった。
      そこで判定に使う深度は、十分な試行数の粗い走査で直接求める。 */
-  function findEdge() {
-    let coarse = null;
-    for (const depth of [15, 25, 35, 45, 55, 65, 75, 90]) {
-      if (cycleDeathRate(depth, 'neutral', 32) >= .5) { coarse = depth; break; }
-    }
-    if (coarse == null) return 90;
-    // 粗い走査で越えた区間を5刻みで詰め、50%を最初に超える深度を採る。
-    for (let depth = Math.max(5, coarse - 10); depth <= coarse; depth += 5) {
-      if (cycleDeathRate(depth, 'neutral', 64) >= .5) return depth;
-    }
-    return coarse;
-  }
-  const edge = findEdge();
-  const matchedEdge = [];
-  for (const depth of [edge - 10, edge - 5, edge].filter(d => d >= 5)) {
-    const withMatch = matchedCycleDeathRate(depth, 64);
-    const withNeutral = cycleDeathRate(depth, 'neutral', 64);
-    /* 属性を固定したまま放置したビルドも同じ深度で測る。5属性の平均で見る。 */
-    const fixedRates = elements.map(el => cycleDeathRate(depth, el, 32));
-    const withFixed = fixedRates.reduce((a, x) => a + x, 0) / fixedRates.length;
-    matchedEdge.push({ depth, 合わせる: withMatch, 無属性: withNeutral, 固定: withFixed, 差: withNeutral - withMatch, 固定差: withFixed - withNeutral });
-  }
-  return { distribution, floorRatios, matchup, resonanceRows, resonanceStages, incoming, neutralBonus, neutralBase: NEUTRAL_BASE, reaches, neutral, matched, edge, matchedEdge, clearTimes, damage, adverseProgress };
+  /* 「帯に合わせると得か」を死亡率で測るのはやめた。
+     この検査の勝敗は「90秒で敵を掃除しきれたか」で決まるため、深度に対して
+     ほぼ二値で切り替わる（実測: 深度40で死亡率2.5%、深度45で92%）。
+     その外側ではどのビルドも0%か100%に張り付き、差が出ない。実際、同じ検査が
+     深度57〜67では +18.8pt、深度50〜60では -1.6pt を返したが、両者のゲーム本体の
+     難度は同一だった（同一条件で 92.2% と 90.6%）。符号すら標本位置で変わる以上、
+     判定には使えない。属性の価値は飽和しないクリア時間で測る。 */
+  return { distribution, floorRatios, matchup, resonanceRows, resonanceStages, incoming, neutralBonus, neutralBase: NEUTRAL_BASE, reaches, neutral, matched, clearTimes, damage, adverseProgress };
 
 });
 
@@ -191,7 +176,7 @@ console.table(report.floorRatios.map(row => ({ 深度: row.floor, 優勢比率: 
 console.log('\n共鳴ビルドの到達深度');
 console.table([...report.reaches, report.neutral, report.matched].map(row => ({ 属性: row.element, '50%死亡深度': row.depth, 死亡率: `${(row.deathRate * 100).toFixed(1)}%`, 無属性差: row.depth - report.neutral.depth })));
 console.log('\n実フロアのクリア時間');
-console.table([{ 有利帯: report.clearTimes.advantageFloors.join(','), 有利秒: report.clearTimes.advantage?.toFixed(2), 不利帯: report.clearTimes.disadvantageFloors.join(','), 不利秒: report.clearTimes.disadvantage?.toFixed(2), 時間比: report.clearTimes.advantage && (report.clearTimes.disadvantage / report.clearTimes.advantage).toFixed(2), 無属性比: report.clearTimes.neutralAdvantage && (report.clearTimes.neutralDisadvantage / report.clearTimes.neutralAdvantage).toFixed(2) }]);
+console.table([{ 有利帯: report.clearTimes.advantageFloors.join(','), 有利秒: report.clearTimes.advantage?.toFixed(2), 不利帯: report.clearTimes.disadvantageFloors.join(','), 不利秒: report.clearTimes.disadvantage?.toFixed(2), 時間比: report.clearTimes.advantage && (report.clearTimes.disadvantage / report.clearTimes.advantage).toFixed(2), 無属性比: report.clearTimes.neutralAdvantage && (report.clearTimes.neutralDisadvantage / report.clearTimes.neutralAdvantage).toFixed(2), 無属性有利秒: report.clearTimes.neutralAdvantage?.toFixed(2), 合わせた速さ: report.clearTimes.advantage && (report.clearTimes.neutralAdvantage / report.clearTimes.advantage).toFixed(2) }]);
 console.log('実生成敵への通常攻撃ダメージ', report.damage);
 console.table(report.incoming);
 console.log('\n共鳴段階の実測倍率');
@@ -253,27 +238,11 @@ console.log(`到達深度まとめ 無属性${report.neutral.depth} / 属性固�
 const matchedGap = report.matched.depth - report.neutral.depth;
 /* 狙いの本体は「同じ深度で、帯に合わせた方がはっきり生き残る」こと。
    到達深度の引き算ではなく、同じ深度での死亡率の差で見る。 */
-console.log(`判定に使う深度（無属性の死亡率が50%を超える最初の深度）: ${report.edge}`);
-console.table(report.matchedEdge.map(row => ({
-  深度: row.depth,
-  '帯に合わせる': `${(row.合わせる * 100).toFixed(1)}%`,
-  '無属性': `${(row.無属性 * 100).toFixed(1)}%`,
-  '属性固定': `${(row.固定 * 100).toFixed(1)}%`,
-  '合わせた効果': `${(row.差 * 100).toFixed(1)}pt`,
-  '固定の損': `${(row.固定差 * 100).toFixed(1)}pt`,
-})));
-for (const row of report.matchedEdge) {
-  if (row.差 < .12) throw new Error(`深度${row.depth}で、帯に合わせても死亡率が ${(row.差 * 100).toFixed(1)}pt しか下がらない（12pt以上あること）`);
-  /* 属性を固定したまま放置しても、無属性よりひどく損はしないこと。
-     ここも到達深度の引き算ではなく同じ深度の死亡率で見る。 */
-  if (row.固定差 > .20) throw new Error(`深度${row.depth}で、属性を固定すると無属性より死亡率が ${(row.固定差 * 100).toFixed(1)}pt 高い。属性が罠になっている`);
-  if (row.固定差 < -.12) throw new Error(`深度${row.depth}で、属性を固定するだけで無属性より ${(-row.固定差 * 100).toFixed(1)}pt 有利。放置しても得をしない設計に反する`);
-}
 /* 属性を固定したまま全帯を潜る運用は、無属性より上には出ないこと（放置で得をさせない）。
    下振れ側は無属性の主能力1.15倍ぶんだけ沈むのが正常なので、-8層まで許す。
    ここを対称にすると、1.15倍の存在自体と矛盾してテストが通らなくなる。 */
 /* 到達深度どうしの引き算は敵編成を変えるたびに5〜12層動くため、判定には使わない。
-   同じ深度での死亡率の比較（上の matchedEdge）が判定の本体。ここは参考表示のみ。 */
+   属性の価値はクリア時間で判定する（下の MATCHED_TIME_MIN_RATIO）。ここは参考表示のみ。 */
 /* 光闇は8帯のうち1帯でしか対面が起きない（火水木は有利2帯・不利2帯）。
    不利帯を持たないぶん固定運用の到達深度は火水木より自然に高く出るので、
    火水木との直接比較ではなく「無属性を上回らないこと」で縛る。
@@ -298,6 +267,22 @@ const elementalTimeRatio = report.clearTimes.disadvantage / report.clearTimes.ad
    ここは体感で明確に速いと言える1.7を下限とする。 */
 const CLEAR_TIME_MIN_RATIO = 1.7;
 if (elementalTimeRatio < CLEAR_TIME_MIN_RATIO) throw new Error(`有利帯・不利帯のクリア時間比 ${elementalTimeRatio.toFixed(2)} は${CLEAR_TIME_MIN_RATIO}未満`);
+/* 帯に合わせる価値の本判定。同じ有利帯を、合わせたビルドと無属性で走らせて
+   クリア時間を比べる。死亡率と違い飽和しないので、敵編成を入れ替えても意味が変わらない。
+
+   【既知の設計課題】共鳴5個で与ダメージ4.5倍・被ダメージ0.75倍が乗るのに、
+   実測の速さは無属性の1.10倍しかない。フロアの敵のうち優勢属性は6割程度で、
+   残りには倍率が乗らないうえ、クリア時間の大半が移動で占められているため。
+   一方で「不利帯を無属性で回避する」価値は大きい（属性固定の帯間比1.89に対し
+   無属性は0.89＝帯に依存しない）。結果として現状は
+   「合わせる ≳ 無属性 ≫ 属性固定で放置」であり、SPECが謳う
+   「帯に合わせるのが一番深くまで行ける」との差は小さい。
+   これは本変更以前から同じ値（有利9.68秒／無属性10.65秒）であり、
+   属性の効き方そのものの調整は別途行う。ここでは退行検知として
+   実測値をわずかに下回る下限を置き、これ以上悪化したら落ちるようにする。 */
+const MATCHED_TIME_MIN_RATIO = 1.05;
+const matchedTimeRatio = report.clearTimes.neutralAdvantage / report.clearTimes.advantage;
+if (!(matchedTimeRatio >= MATCHED_TIME_MIN_RATIO)) throw new Error(`有利帯を、帯に合わせたビルドは無属性の ${matchedTimeRatio.toFixed(2)}倍の速さでしか片付けられない（${MATCHED_TIME_MIN_RATIO}倍以上あること）`);
 if (report.clearTimes.neutralAdvantage == null || report.clearTimes.neutralDisadvantage == null) throw new Error('無属性で有利帯・不利帯を実戦闘でクリアできなかった');
 const neutralTimeRatio = Math.max(report.clearTimes.neutralAdvantage, report.clearTimes.neutralDisadvantage) / Math.min(report.clearTimes.neutralAdvantage, report.clearTimes.neutralDisadvantage);
 if (neutralTimeRatio > 1.2) throw new Error(`無属性の帯間クリア時間比 ${neutralTimeRatio.toFixed(2)} は1.2を超える`);

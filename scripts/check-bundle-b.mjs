@@ -150,12 +150,21 @@ const report = game.run(() => {
   const operation = { auto: operationSample('auto'), onehand: operationSample('onehand') };
   const tacticalNone = boundary('manual', 'none'), tacticalFull = boundary('manual', 'full');
   const tacticalHigh = boundary('manual', 'fullHigh');
+  /* 到達深度の引き算は段差が粗く、死亡率が10ポイント動いても境界が動かないことがある。
+     同じ深度での死亡率を直接比べる（消耗品検査と同じ理由・同じ方法）。 */
+  const atDepth = tacticalNone.depth;
+  const sameDepth = { depth: atDepth,
+    none: cycleDeathRate(atDepth, 'manual', 'none', 64),
+    low: cycleDeathRate(atDepth, 'manual', 'full', 64),
+    high: cycleDeathRate(atDepth, 'manual', 'fullHigh', 64) };
+  sameDepth.lowGain = sameDepth.none - sameDepth.low;
+  sameDepth.highGain = sameDepth.none - sameDepth.high;
   const contributionKeys = ['quake1', 'bind1', 'rot1', 'lamp1', 'scry1', 'recall1', 'exploration'];
   const contributions = contributionKeys.map(key => { const result = boundary('manual', key); return { key, ...result, difference: result.depth - tacticalNone.depth }; });
   const modes = ['manual', 'onehand', 'auto'].map(mode => ({ mode, ...boundary(mode, 'none') }));
   return {
     features: { blocked, began, interrupted, completed, tactical: Object.keys(CONSUMABLES).filter(key => ['quake1', 'bind1', 'rot1', 'lamp1', 'scry1', 'recall1'].includes(key)).length, paidHasId: !!paid?.id && paid.source === 'purchase', conditions: AUTOMATION_CONDITIONS.length, actions: AUTOMATION_ACTIONS.length },
-    automation: { delay, skillScale, manualDamage, automaticDamage }, operation, tactical: { none: tacticalNone, full: tacticalFull, high: tacticalHigh, difference: tacticalFull.depth - tacticalNone.depth, highDifference: tacticalHigh.depth - tacticalNone.depth, contributions }, modes,
+    automation: { delay, skillScale, manualDamage, automaticDamage }, operation, tactical: { none: tacticalNone, full: tacticalFull, high: tacticalHigh, difference: tacticalFull.depth - tacticalNone.depth, highDifference: tacticalHigh.depth - tacticalNone.depth, sameDepth, contributions }, modes,
   };
 });
 
@@ -181,9 +190,12 @@ for (const [mode, label] of [['auto', '完全オート'], ['onehand', '片手']]
   if (row.attackTicks <= 0) throw new Error(`${label}は60秒で一度も通常攻撃の射程に入れていない`);
 }
 if (report.operation.auto.stillSeconds > 20) throw new Error(`完全オートの静止 ${report.operation.auto.stillSeconds}秒が20秒を超えている`);
-if (report.tactical.difference < 1 || report.tactical.difference > 6) throw new Error(`1段目の戦術込み50%死亡深度差 ${report.tactical.difference} は+1〜+6でない`);
-if (report.tactical.highDifference < 5 || report.tactical.highDifference > 14) throw new Error(`上位段の戦術込み50%死亡深度差 ${report.tactical.highDifference} は+5〜+14でない`);
-if (report.tactical.highDifference - report.tactical.difference < 2) throw new Error(`上位段と1段目の差 ${report.tactical.highDifference - report.tactical.difference} が小さい（上位品を作る動機にならない）`);
+{ const sd = report.tactical.sameDepth, pt = x => (x * 100).toFixed(1);
+  console.log(`深度${sd.depth}での死亡率 なし${pt(sd.none)}% / 1段目${pt(sd.low)}%(-${pt(sd.lowGain)}pt) / 上位段${pt(sd.high)}%(-${pt(sd.highGain)}pt)`);
+  // 1段目は結晶だけで作れるので寄与を小さく抑える。上位段は固有素材を要求する代わりにはっきり効く。
+  if (sd.lowGain < .01 || sd.lowGain > .15) throw new Error(`1段目の戦術込み死亡率改善 ${pt(sd.lowGain)}pt は+1〜+15ptでない`);
+  if (sd.highGain < .06 || sd.highGain > .40) throw new Error(`上位段の戦術込み死亡率改善 ${pt(sd.highGain)}pt は+6〜+40ptでない`);
+  if (sd.highGain - sd.lowGain < .03) throw new Error(`上位段と1段目の差 ${pt(sd.highGain - sd.lowGain)}pt が小さい（上位品を作る動機にならない）`); }
 // 守るべき設計不変条件は「手動が最も強い」こと。片手と完全オートは戦闘部分が
 // 同じ自動化なので、両者のあいだに厳密な大小を要求すると調整が恣意的になる。
 const [manualMode, onehandMode, autoMode] = report.modes;
