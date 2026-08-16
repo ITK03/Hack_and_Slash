@@ -141,6 +141,16 @@ const regressionSnippets = [
   'pwN[it.pw]=(pwN[it.pw]||0)+1',
   'add("強化","gold"',             // 「評価」では中身が伝わらない
   'const slotOf=ch=>',             // 編成中のキャラを先頭に並べる
+  'const INHERIT_NEED=',           // 階層引き上げ（継承）
+  'function applyInherit',
+  'function openInherit',
+  'const inheritCandidates=',
+  '"sigils","継承の印"',
+  'function renderCharacterBar',   // 誰を編集中かを常に出す
+  '.charBar{',
+  'function renderHoldings',       // 何を何個持っているか
+  '["item","道具"]',
+  'const runPick=',
   'function openProfileIconPick',
   'function openFormationChoices',
   'function confirmSelectedSell',

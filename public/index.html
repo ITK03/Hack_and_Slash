@@ -334,6 +334,23 @@ body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
 .foldBody{padding-top:8px}
 #btnBack small{display:block;font-size:9px;font-weight:700;opacity:.75;margin-top:2px}
 .member{position:relative}
+/* 装備・技・能力の上に常駐するキャラ切替。編成の面々を横に並べて1タップで移る。 */
+.charBar{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+.charBar .charChip{position:relative;flex:0 0 auto;min-width:72px;padding:5px 7px 4px;text-align:center;
+  border:1px solid var(--line);background:var(--panel);border-radius:3px;opacity:.5}
+.charBar .charChip.on{opacity:1;box-shadow:0 0 0 1px rgba(255,255,255,.25) inset}
+/* 職業印は角に逃がす。行として積むと1枠あたりの高さが倍になる。 */
+.charBar .charChip .clsMark{position:absolute;right:2px;top:2px;width:14px;height:14px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:9px;font-style:normal;font-weight:800;
+  background:rgba(10,8,14,.85);border:1px solid var(--line)}
+.charBar .charChip .face{font-size:13px;line-height:1.05}
+.charBar .charChip .nm{font-size:11px;font-weight:800;color:var(--ink);white-space:nowrap}
+.charBar .charChip .mlv{font-size:9px;color:var(--ink2);white-space:nowrap}
+/* 「編集中の名前」と「編成外を選ぶ」は同じ行に置く。案内で縦を使わない。 */
+.charBarRow{display:flex;align-items:center;gap:8px;margin:6px 0 8px}
+.charBarNote{flex:1;font-size:11px;color:var(--ink2)}
+.charBarNote b{font-weight:800}
+.charBarRow .btn{margin:0;flex:0 0 auto;width:auto;padding:6px 10px;font-size:11px}
 .member .clsMark{position:absolute;right:4px;top:4px;width:17px;height:17px;border-radius:50%;
   border:1px solid var(--line2);background:#0d0b14;display:grid;place-items:center;
   font-size:9px;font-style:normal;font-weight:900;line-height:1}
@@ -1146,6 +1163,8 @@ for(const [key,def] of Object.entries(PARTS))for(const k of def.from)PART_BY_ENE
 const PART_DROP=[.075,.055,.035,.020,.010];
 /* 固有素材の袋。S.parts は演出の粒子配列に使われているので別名にする。 */
 const partsBag=()=>S.stock||(S.stock={});
+/* 潜行中に拾った素材の数。ダンジョン内で「今回何を拾ったか」を見せるために持つ。 */
+const runPick=()=>S.runPick||(S.runPick={crystal:0,core:0,parts:{},pots:0});
 const partCount=key=>partsBag()[key]||0;
 const addPart=(key,n=1)=>{const b=partsBag();b[key]=(b[key]||0)+n;return n;};
 function spendPart(key,n){const b=partsBag();if((b[key]||0)<n)return false;b[key]-=n;return true;}
@@ -1461,7 +1480,8 @@ const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   combo:0,comboT:0,dmgLog:[],dps:0,startFloor:1,runGold:0,
   inv:{filters:[],sort:"score",sellSel:[],sellRar:1},mats:{crystal:{},core:{}},stock:{},consumables:{},loadout:["mend1",null,null,null],runItems:[0,0,0,0],itemSlot:0,
   playerName:"",invSub:"gear",formation:[],partyIndex:0,diveFloor:1,stamina:3,premium:0,profileAvatar:null,shopSub:"gacha",alloc:null,breakthroughs:{},weeklyCore:{week:"",bought:0},beginnerClaimed:false,prepMissionsOpen:false,invLegendOpen:false,skillLoadout:{},
-  paidInventory:{catalysts:[],feathers:[],slots:[]},tactical:{trap:null,reveal:false},
+  paidInventory:{catalysts:[],feathers:[],slots:[],sigils:[]},tactical:{trap:null,reveal:false},
+  runPick:{crystal:0,core:0,parts:{},pots:0},
   daily:null,dailyMatMul:1,
   unlockedCharacters:["warrior:gai"],tutorial:{phase:"training_intro",gearIndex:0},training:false,returnInvulnerable:false,
   base:newBase()};
@@ -2450,13 +2470,13 @@ function update(dt){
       const pull=Math.min(dist,CFG.MAGNET_SPEED*dt);d.x+=(p.x-d.x)/dist*pull;d.y+=(p.y-d.y)/dist*pull;}
     const pr=CFG.PICKUP_RADIUS;
     if(d.t>=CFG.PICKUP_DELAY&&d2(d.x,d.y,p.x,p.y)<pr*pr){
-      if(d.part){const def=PARTS[d.part];addPart(d.part,d.n||1);SFX.chest();toast(`${def.n} +${d.n||1}`,"ok");}
-      else if(d.mat){const n=(d.n||1)*(S.dailyMatMul||1),added=d.mat==="core"?earnCore(d.tier,n):addMat(d.mat,d.tier,n);SFX.gold();if(added)toast(`${d.mat==="core"?"核":"結晶"} 階梯${d.tier} +${added}`);}
+      if(d.part){const def=PARTS[d.part];addPart(d.part,d.n||1);runPick().parts[d.part]=(runPick().parts[d.part]||0)+(d.n||1);SFX.chest();toast(`${def.n} +${d.n||1}`,"ok");}
+      else if(d.mat){const n=(d.n||1)*(S.dailyMatMul||1),added=d.mat==="core"?earnCore(d.tier,n):addMat(d.mat,d.tier,n);runPick()[d.mat]+=added||0;SFX.gold();if(added)toast(`${d.mat==="core"?"核":"結晶"} 階梯${d.tier} +${added}`);}
       else if(d.shard){
         p.hp=Math.min(p.max,p.hp+p.max*CFG.SHARD_HEAL);
         burst(p.x,p.y,"#6ae0a0",6,1);tone(760,.07,"sine",.08,1040);}
       else if(d.gold){S.gold+=d.gold;S.runGold+=d.gold;SFX.gold();}
-      else if(d.pot){const j=S.loadout.findIndex((k,j)=>k&&CONSUMABLES[k].heal&&S.runItems[j]<runCap(k));if(j<0)continue;const key=S.loadout[j];S.runItems[j]++;S.consumables[key]=(S.consumables[key]||0)+1;SFX.pot();}
+      else if(d.pot){const j=S.loadout.findIndex((k,j)=>k&&CONSUMABLES[k].heal&&S.runItems[j]<runCap(k));if(j<0)continue;const key=S.loadout[j];S.runItems[j]++;S.consumables[key]=(S.consumables[key]||0)+1;runPick().pots++;SFX.pot();}
       else{S.bag.push(d.it);SFX.gold();}
       S.drops.splice(i,1);}}
   for(const q of S.props)if(q.t==="shrine")q.tm+=dt;
@@ -3173,10 +3193,16 @@ function updHUD(){
   $("loot").innerHTML=lootHTML;
   $("s0").querySelector(".cd").style.transform=
     "scaleY("+clamp(p.cd/(CFG.ATK_CD/(p.d.as*p.mAs*p.sAs)),0,1)+")";
-  for(let i=1;i<=3;i++){const sk=activeSkills()[i-1],el=$("s"+i);
+  {const skills=activeSkills();
+   for(let i=1;i<=3;i++){const sk=skills[i-1],el=$("s"+i);if(!sk)continue;
     const full=sk.cd*p.mCd*(1-p.d.cdr);
     el.querySelector(".cd").style.transform="scaleY("+(full>0?p.cds[i-1]/full:0)+")";
-    el.classList.toggle("no",p.mp<sk.c);}
+    el.classList.toggle("no",p.mp<sk.c);
+    /* 名前と消費MPもここで書く。別経路で書いていたころは、交代時に
+       「名前は前のキャラ・中身は次のキャラ」という食い違いが起きていた。 */
+    const n=$("w"+i).querySelector(".skName"),c=el.querySelector(".cost");
+    if(n&&n.textContent!==sk.n)n.textContent=sk.n;
+    if(c&&c.textContent!==String(sk.c))c.textContent=sk.c;}}
   // 右端のアイテムは1個ずつ独立したボタン。残数と使用可否をそれぞれ更新する。
   for(const el of document.querySelectorAll("#railR .railBtn")){
     const i=+el.dataset.slot,key=S.loadout[i];
@@ -3372,7 +3398,41 @@ function renderGearTab(host,inDungeon){const panel=document.createElement("div")
   const left=document.createElement("div"),right=document.createElement("div");
   left.innerHTML="<h3>装備</h3>";right.innerHTML="<h3>能力値</h3>";
   gearGrid(left,inDungeon);statBlock(right);panel.append(left,right);host.appendChild(panel);}
+/* 装備・技・能力のどれを開いていても、いま誰をいじっているのかが分かるようにする。
+   以前は「装備」タブの枠にしか出ておらず、技や能力の画面では手掛かりが無かった。
+   編成の面々を横並びにして、タップだけで切り替えられるようにもする
+   （旧来は 職業を選ぶ → キャラを選ぶ の2段階だった）。 */
+function renderCharacterBar(host,inDungeon,after){
+  const bar=document.createElement("div");bar.className="charBar";
+  const cur=activeCharacterKey(),roster=unlockedRoster();
+  const keys=(S.formation||[]).filter(Boolean).slice(0,formationCapacity());
+  if(!keys.includes(cur))keys.unshift(cur);          // 編成外を編集中でも自分は出す
+  for(const key of keys){
+    const entry=roster.find(x=>x.k+":"+x.ch.id===key);if(!entry)continue;
+    const on=key===cur,slot=(S.formation||[]).indexOf(key);
+    const lv=((S.characterStates[key]||{}).base||{lv:on?S.base.lv:1}).lv;
+    const d=document.createElement("div");d.className="charChip"+(on?" on":"");
+    d.style.borderColor=charTier(entry.ch).col;
+    d.innerHTML=`<i class="clsMark" style="color:${CLASSES[entry.k].col}">${CLASS_MARK[entry.k]||"?"}</i>`
+      +`<div class="face" style="color:${entry.ch.col}">●</div>`
+      +`<div class="nm">${entry.ch.n}</div>`
+      +`<div class="mlv">Lv${lv}${slot>=0?` / ${slot+1}番手`:""}</div>`;
+    if(!on&&!inDungeon)tapEl(d,()=>{const [k,id]=key.split(":");
+      selectCharacter(k,id,()=>{save();after();});});
+    bar.appendChild(d);}
+  host.appendChild(bar);
+  const now=roster.find(x=>x.k+":"+x.ch.id===cur);
+  const row=document.createElement("div");row.className="charBarRow";
+  const label=document.createElement("div");label.className="charBarNote";
+  label.innerHTML=`編集中: <b style="color:${now?now.ch.col:"#fff"}">${now?now.ch.n:"?"}</b>`
+    +`（${CLASSES[S.cls].name} / Lv${S.base.lv}）`
+    +(inDungeon?" — 潜行中は切り替えできません":"");
+  row.appendChild(label);
+  if(!inDungeon){const more=document.createElement("div");more.className="btn gh";
+    more.textContent="他のキャラ";tapEl(more,openCharacterPick);row.appendChild(more);}
+  host.appendChild(row);}
 function renderCombinedGear(host,inDungeon,after){
+  renderCharacterBar(host,inDungeon,after);
   const tabs=document.createElement("div");tabs.className="innerTabs";
   for(const [k,n] of [["equip","装備"],["skill","技"],["ability","能力"]]){const d=document.createElement("div");d.className="btn "+(S.gearSub===k?"gold":"gh");d.textContent=n;
     tapEl(d,()=>{if(advanceTour("gear",k))return;S.gearSub=k;after();});tabs.appendChild(d);}
@@ -3559,7 +3619,7 @@ function renderTown(){
         const free=document.createElement("div");free.className="btn gh";free.textContent="数を指定して追加";
         tapEl(free,()=>{const v=prompt("追加するジェム数","1000");if(v===null||!Number.isFinite(+v))return;
           S.premium=Math.max(0,(S.premium||0)+Math.floor(+v));SFX.gold();toast(`所持 ${S.premium} ◆`,"ok");save();openTown();});
-        d.append(g,free);b.appendChild(d);}{const left=CFG.CORE_WEEKLY_PURCHASE_CAP-(S.weeklyCore.week===weekKey()?S.weeklyCore.bought:0),d=document.createElement("div");d.className="card recipe";d.innerHTML=`<div><div class="nm">核 1個（今週残り ${left}）</div><div class="st">保有上限 ${CFG.CORE_HOLD_CAP}</div></div>`;const x=document.createElement("div");x.className="btn "+(left>0&&S.premium>=100?"gold":"no");x.textContent="100 ◆";tapEl(x,()=>{if(buyWeeklyCore(1)){save();openTown();}});d.appendChild(x);b.appendChild(d);}for(const [kind,name,cost,desc] of [["catalysts","純化触媒",120,"下位結晶4個を上位1個へ即時変換"],["feathers","復活の羽",180,"1潜行1回、その場で復活し戦利品保持"],["slots","持ち込み枠+1",500,"恒久。最大6枠（2回まで）"]]){const n=(S.paidInventory[kind]||[]).length,d=document.createElement("div");d.className="card recipe";d.innerHTML=`<div><div class="nm">${name}（所有 ${n}）</div><div class="st">${desc}</div></div>`;const x=document.createElement("div");x.className="btn "+(S.premium>=cost&&(kind!=="slots"||n<2)?"gold":"no");x.textContent=cost+" ◆";tapEl(x,()=>{if(buyPaid(kind,cost)){toast(name+"を購入","ok");openTown();}});d.appendChild(x);b.appendChild(d);}}}
+        d.append(g,free);b.appendChild(d);}{const left=CFG.CORE_WEEKLY_PURCHASE_CAP-(S.weeklyCore.week===weekKey()?S.weeklyCore.bought:0),d=document.createElement("div");d.className="card recipe";d.innerHTML=`<div><div class="nm">核 1個（今週残り ${left}）</div><div class="st">保有上限 ${CFG.CORE_HOLD_CAP}</div></div>`;const x=document.createElement("div");x.className="btn "+(left>0&&S.premium>=100?"gold":"no");x.textContent="100 ◆";tapEl(x,()=>{if(buyWeeklyCore(1)){save();openTown();}});d.appendChild(x);b.appendChild(d);}for(const [kind,name,cost,desc] of [["catalysts","純化触媒",120,"下位結晶4個を上位1個へ即時変換"],["feathers","復活の羽",180,"1潜行1回、その場で復活し戦利品保持"],["sigils","継承の印",300,`同レア装備${INHERIT_NEED}個を素材に、お気に入りの1本を深い階層へ引き上げる`],["slots","持ち込み枠+1",500,"恒久。最大6枠（2回まで）"]]){const n=(S.paidInventory[kind]||[]).length,d=document.createElement("div");d.className="card recipe";d.innerHTML=`<div><div class="nm">${name}（所有 ${n}）</div><div class="st">${desc}</div></div>`;const x=document.createElement("div");x.className="btn "+(S.premium>=cost&&(kind!=="slots"||n<2)?"gold":"no");x.textContent=cost+" ◆";tapEl(x,()=>{if(buyPaid(kind,cost)){toast(name+"を購入","ok");openTown();}});d.appendChild(x);b.appendChild(d);}}}
   if(S.tab==="conf")renderSettings(b,openTown,false);
 }
 
@@ -3927,6 +3987,44 @@ const matSellValue=tier=>5*Math.pow(4,Math.max(0,tier-1));
 function materialCount(kind){return Object.values(matBucket(kind)).reduce((a,n)=>a+(+n||0),0);}
 function spendAny(kind,n){const b=matBucket(kind);for(const t of Object.keys(b).sort((a,z)=>+a-+z)){const take=Math.min(n,b[t]||0);b[t]-=take;n-=take;if(!n)break;}return n===0;}
 const paidId=()=>"paid_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2);
+/* ---------- 継承（装備の階層引き上げ） ----------
+   深く潜るたび、良いオプションが付いた装備が階層差だけで置き去りになる。
+   拾い直しを強いると「気に入った1本を育てる」楽しみが消えるので、
+   同じレア度の装備を素材にして、お気に入りの1本を今の階層へ引き上げられるようにする。
+
+   引き上げ先は「投入した素材のうち最も浅い階層」。素材より上には行けないので、
+   深層の装備を配らないかぎりインフレしない。素材はレア度が同じものだけ受け付ける。
+   伝説を伸ばすには伝説を差し出すことになるので、価値の交換として釣り合う。 */
+const INHERIT_NEED=3;                       // 素材に要る同レア装備の数
+const inheritStock=()=>(S.paidInventory.sigils||[]).length;
+/* 引き上げ候補。同じレア度で、装備中でなく、対象より深い階層のもの。 */
+const inheritCandidates=it=>S.stash.filter(x=>x!==it&&x.rar===it.rar&&x.ilvl>it.ilvl
+  &&!SLOTK.some(k=>S.gear[k]===x));
+/* 素材から決まる引き上げ先。最も浅い素材の階層まで。 */
+const inheritTarget=(it,picked)=>picked.length<INHERIT_NEED?null
+  :Math.min(...picked.map(x=>x.ilvl));
+/* 引き上げ後の姿を作る。オプションの構成と品質はそのままに、値だけ新しい階層で引き直す。
+   「同じ装備が今の階層の強さになる」ことが目的なので、名前も固有効果も変えない。
+   予測表示と実行の両方がここを通るので、画面の数字と結果が食い違わない。 */
+function inheritedCopy(it,ilvl){
+  const out=Object.assign({},it,{ilvl,
+    main:it.main?Object.assign({},it.main):null,
+    affs:it.affs.map(a=>Object.assign({},a))});
+  if(out.main){const sd=SLOTS.find(x=>x.k===out.slot);
+    if(sd){const m=Math.pow(ilvl,.62);
+      /* 主能力は生成時と同じ式で引き直す。振れ幅は残さず中央値にする
+         （引き上げのたびに引き直せる「振り直し」にしないため）。 */
+      out.main.v=Math.max(1,Math.round((sd.lo+sd.hi)/2*m));}}
+  for(const a of out.affs){const rule=AFF.find(c=>c.id===a.id);
+    if(rule)a.v=Math.max(1,Math.round(rule.f(ilvl)*(a.q||1)));}
+  out.lv=Math.min(out.lv,itemMaxLv(out));
+  out.score=iScore(out);
+  return out;}
+function applyInherit(it,ilvl){
+  const before=iScore(it),next=inheritedCopy(it,ilvl);
+  it.ilvl=next.ilvl;it.main=next.main;it.affs=next.affs;it.lv=next.lv;it.score=next.score;
+  return {before,after:it.score};}
+
 function buyPaid(kind,cost){if(S.premium<cost)return false;if(kind==="slots"&&(S.paidInventory.slots||[]).length>=2)return false;S.premium-=cost;const rec={id:paidId(),kind,source:"purchase",createdAt:Date.now()};S.paidInventory[kind].push(rec);save();return true;}
 function adminGrantPaid(kind){if(!S.admin||!S.paidInventory[kind])return false;S.paidInventory[kind].push({id:paidId(),kind,source:"admin",admin:true,createdAt:Date.now()});save();return true;}
 function useCatalyst(fromTier){const a=S.paidInventory.catalysts;if(!a.length||(S.mats.crystal[fromTier]||0)<4)return false;S.mats.crystal[fromTier]-=4;S.mats.crystal[+fromTier+1]=(S.mats.crystal[+fromTier+1]||0)+1;a.shift();save();return true;}
@@ -3989,7 +4087,7 @@ function renderLoadout(b){const h=document.createElement("h3");h.textContent=`�
 /* 倉庫は「装備」「結晶」「分解」「調合」の4区画。
    ひとつの棚に絞込・並替・売却・分解・調合を横一列で置くと、
    いま何をする画面なのかが読めない。区画ごとに要るものだけ出す。 */
-const INV_TABS=[["gear","装備"],["mat","結晶"],["dis","分解"],["craft","調合"]];
+const INV_TABS=[["gear","装備"],["item","道具"],["mat","結晶"],["dis","分解"],["craft","調合"]];
 /* 結晶と核。何をいくつ持っているか、上位へどう変換できるかをここへ集める。 */
 function renderMaterialPanel(b){
   for(const [kind,label,note] of [["crystal","結晶","装備の強化と調合に使う"],["core","核","限界突破と上位品の調合に使う"]]){
@@ -4036,6 +4134,39 @@ function renderMaterialPanel(b){
     rows.appendChild(x);}
   conv.appendChild(rows);b.appendChild(conv);
   renderPartPanel(b);}
+/* 所持している道具と素材の一覧。倉庫の「道具」タブと、潜行中の戦利品画面で共用する。
+   何を何個持っているのかが、拠点でもダンジョン内でも同じ形で分かるようにする。 */
+function renderHoldings(b,opt){
+  const o=opt||{},run=o.run?runPick():null;
+  {const card=document.createElement("div");card.className="card";
+   card.innerHTML=`<div class="row"><div class="nm">汎用素材</div>`
+     +(run?`<span class="tag">今回 結晶+${run.crystal} / 核+${run.core}</span>`:"")+`</div>`
+     +`<div class="matLine"><span>${icon("m_crystal",14)} 結晶 <b>${materialCount("crystal")}</b></span>`
+     +`<span>${icon("m_core",14)} 核 <b>${materialCount("core")}</b></span></div>`;
+   b.appendChild(card);}
+  {const h=document.createElement("div");h.className="craftFam";h.textContent="固有素材";b.appendChild(h);
+   const owned=PART_KEYS.filter(k=>partCount(k)>0||(run&&run.parts[k]));
+   if(!owned.length){const e=document.createElement("div");e.className="card";
+     e.innerHTML='<div class="st">まだ持っていない。決まった敵からしか落ちません。</div>';b.appendChild(e);}
+   for(const k of owned){const d=PARTS[k],card=document.createElement("div");card.className="card";
+     card.style.borderColor=hexA(rareFrame(d.rar),.75);
+     card.innerHTML=`<div class="row"><div class="nm">${partIcon(k,16)} ${d.n}`
+       +` <b class="${RC[rarIdx(d.rar)]}" style="font-size:10px">${rareName(d.rar)}</b></div>`
+       +`<span class="tag">${partCount(k)}${run&&run.parts[k]?` <b style="color:#7ad04e">(+${run.parts[k]})</b>`:""}</span></div>`;
+     b.appendChild(card);}}
+  {const h=document.createElement("div");h.className="craftFam";h.textContent="道具";b.appendChild(h);
+   const owned=CONSUMABLE_KEYS.filter(k=>(S.consumables[k]||0)>0);
+   if(!owned.length){const e=document.createElement("div");e.className="card";
+     e.innerHTML='<div class="st">まだ持っていない。倉庫の「調合」で作れます。</div>';b.appendChild(e);}
+   for(const k of owned){const x=CONSUMABLES[k],card=document.createElement("div");card.className="card";
+     card.style.borderColor=hexA(rareFrame(x.rar),.75);
+     const slot=S.loadout.indexOf(k);
+     card.innerHTML=`<div class="row"><div class="nm">${conIcon(k,16)} ${x.n}`
+       +` <b class="${RC[rarIdx(x.rar)]}" style="font-size:10px">${rareName(x.rar)}</b>`
+       +(slot>=0?` <span class="tag">持ち込み${slot+1}枠</span>`:"")+`</div>`
+       +`<span class="tag">${S.consumables[k]||0}</span></div>`
+       +`<div class="ty">${x.d}</div>`;
+     b.appendChild(card);}}}
 /* 固有素材。どの敵から落ちるかを常に併記する。
    「作れない → 何を狩ればいいのか」がここで分かる必要がある。
    売却は置かない。金に換えられると、上位品の壁が金で崩れてしまう。 */
@@ -4097,6 +4228,7 @@ function renderInv(b){
   for(const [k,n] of INV_TABS){const d=document.createElement("div");d.className="btn "+(sub===k?"gold":"gh");d.textContent=n;
     tapEl(d,()=>{S.invSub=k;F.sellMode=false;F.dismantleMode=false;F.sellSel=[];save();openTown();});tabs.appendChild(d);}
   b.appendChild(tabs);
+  if(sub==="item"){renderHoldings(b);return;}
   if(sub==="craft"){renderCraftPanel(b);return;}
   if(sub==="mat"){renderMaterialPanel(b);return;}
   /* 装備と分解は同じ一覧を使う。分解のときだけ選択モードで開く。 */
@@ -4160,6 +4292,14 @@ function showItem(it,inDungeon){
   if(!inDungeon&&it.lv<itemMaxLv(it)){
     const need=fuseNeed(it),gold=fuseGold(it);
     mk(`強化する（Lv${it.lv} / ${it.xp}exp）`,"gold",()=>{$("itPop").classList.remove("on");openFuse(it);});}
+  /* 階層引き上げ。深く潜ると階層差だけで置き去りになる装備を、今の階層へ連れて行く。 */
+  if(!inDungeon){
+    const cand=inheritCandidates(it);
+    const can=inheritStock()>0&&cand.length>=INHERIT_NEED;
+    mk(`階層を引き上げる（深度${it.ilvl}）`,can?"pri":"no",()=>{
+      if(!inheritStock())return toast("継承の印がありません（商店）","ng");
+      if(cand.length<INHERIT_NEED)return toast(`${CFG.RARITY[it.rar][0]}の素材が${INHERIT_NEED}個要ります`,"ng");
+      openInherit(it);});}
   if(equippedHere)mk("外す","gh",()=>{if(!S.stash.includes(it))S.stash.push(it);S.gear[it.slot]=null;S.p.d=derive();recalcHP(S.p);
     $("itPop").classList.remove("on");save();inDungeon?openPause():openTown();});
   else{
@@ -4228,6 +4368,53 @@ function equip(it){
   if(old)S.stash.push(old);
   S.p.d=derive();recalcHP(S.p);
   SFX.chest();save();}
+/* 素材を選んで階層を引き上げる。引き上げ先は「選んだ素材のうち最も浅い階層」なので、
+   何を選ぶかがそのまま結果になる。選ぶそばから到達階層が変わるのを見せる。 */
+function openInherit(it){
+  const picked=[];
+  const draw=()=>{
+    const c=$("itC");c.classList.remove("gearCompare");
+    const cand=inheritCandidates(it).slice().sort((a,z)=>a.ilvl-z.ilvl);
+    const target=inheritTarget(it,picked);
+    c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:2px">階層を引き上げる</div>`
+      +`<div class="sub" style="margin-bottom:8px">${CFG.RARITY[it.rar][0]}の装備を${INHERIT_NEED}個まで選びます。`
+      +`引き上げ先は<b>選んだ中でいちばん浅い階層</b>です。</div>`
+      +`<div class="card"><div class="nm ${RC[it.rar]}">${it.name}</div>`
+      +`<div class="st">深度 ${it.ilvl} → <b style="color:${target?"#7ad04e":"#cfc6dd"}">${target||"？"}</b>`
+      +`${target?`（強さ ${Math.round(iScore(it))} → <b style="color:#7ad04e">${Math.round(inheritedCopy(it,target).score)}</b>）`:""}</div>`
+      +`<div class="ty">オプションの構成と固有効果はそのまま、値だけ新しい階層で引き直します。</div></div>`
+      +`<div class="ty" style="margin:8px 0 4px">素材（選択 ${picked.length}/${INHERIT_NEED}） — 継承の印 所有 ${inheritStock()}</div>`;
+    for(const x of cand){
+      const on=picked.includes(x),d=document.createElement("div");
+      d.className="card tap"+(on?"":" no");d.style.borderColor=on?"#7ad04e":hexA(rarCol(x.rar),.4);
+      d.innerHTML=`<div class="row"><div class="nm ${RC[x.rar]}">${on?"✓ ":""}${x.name}</div>`
+        +`<span class="tag">深度${x.ilvl}</span></div><div class="ty">${SLOTN(x.slot)} / 強さ ${Math.round(iScore(x))}</div>`;
+      tapEl(d,()=>{const i=picked.indexOf(x);
+        if(i>=0)picked.splice(i,1);else if(picked.length<INHERIT_NEED)picked.push(x);
+        draw();});
+      c.appendChild(d);}
+    const go=document.createElement("div");
+    go.className="btn "+(target&&inheritStock()?"gold":"no");
+    go.textContent=target?`深度${target}へ引き上げる（継承の印1個と素材${INHERIT_NEED}個を消費）`:`素材を${INHERIT_NEED}個選ぶ`;
+    tapEl(go,()=>{
+      if(!target||!inheritStock())return;
+      ask("階層を引き上げる",
+        `${it.name} を 深度${it.ilvl} → 深度${target} へ引き上げます。\n`
+        +`使う素材:\n・`+picked.map(x=>`${x.name}（深度${x.ilvl}）`).join("\n・")
+        +`\n\n継承の印 ${inheritStock()} → ${inheritStock()-1}\n素材は失われます。`,
+        ()=>{
+          /* 消費は成立が確定してから。途中で欠けても片方だけ減らさない。 */
+          if(!inheritStock())return;
+          for(const x of picked){const i=S.stash.indexOf(x);if(i>=0)S.stash.splice(i,1);}
+          S.paidInventory.sigils.shift();
+          const r=applyInherit(it,target);
+          SFX.chest();toast(`${it.name} 深度${target}（強さ ${Math.round(r.before)} → ${Math.round(r.after)}）`,"ok");
+          save();$("itPop").classList.remove("on");openTown();});});
+    c.appendChild(go);
+    const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";
+    tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);
+    $("itPop").classList.add("on");};
+  draw();}
 function openGearDetail(slotK,inDungeon){
   const it=S.gear[slotK],c=$("itC");c.classList.remove("gearCompare");
   c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:10px">${SLOTN(slotK)}</div>`;
@@ -4312,6 +4499,10 @@ function openPause(){
     const note=document.createElement("div");note.className="st";note.style.marginTop="10px";
     note.textContent="未帰還の装備は種類・レア度・深度だけ確認できる。オプションは帰還後に鑑定される。";
     b.appendChild(note);
+    /* 素材と道具は拾った時点で確定しているので、潜行中でも中身をそのまま見せる。
+       「今回いくつ拾ったか」も併記して、潜り続けるか帰るかの判断材料にする。 */
+    const mh=document.createElement("h3");mh.textContent="素材と道具（今回の取得ぶんを含む）";b.appendChild(mh);
+    renderHoldings(b,{run:true});
   }else if(S.ptab==="gear"){
     renderCombinedGear(b,true,openPause);}
   else{
@@ -4382,6 +4573,7 @@ function beginRun(fl){
   S.training=false;
   beginDailyDive();save();
   S.scene="dungeon";S.paused=false;S.partyIndex=0;S.featherUsed=false;S.runT=0;S.runGold=0;S.startFloor=fl;
+  S.runPick={crystal:0,core:0,parts:{},pots:0};
   {const left=Object.assign({},S.consumables);S.runItems=S.loadout.map(k=>{if(!k)return 0;const n=Math.min(CONSUMABLES[k].max,left[k]||0);left[k]=(left[k]||0)-n;return n;});}
   S.dmgLog.length=0;S.dps=0;
   S.p=newPlayer();S.bag.length=0;
@@ -4450,7 +4642,7 @@ function load(){try{
   S.formation=(Array.isArray(d.formation)?d.formation:[]).filter(k=>S.unlockedCharacters.includes(k)).slice(0,formationCapacity());S.diveFloor=numAt(d.diveFloor,1,1);
   /* 1Fのまま保存された古いセーブは、毎回1Fから潜り直す羽目になるので最深へ寄せる */
   if(S.diveFloor<=1&&S.deepest>CFG.SKIP_STEP)S.diveFloor=maxStartFloor();
-  S.daily=d.daily||null;S.stamina=d.daily?clamp(d.stamina==null?3:d.stamina,0,3):3;ensureDaily();S.premium=numAt(d.premium,0,0);S.paidInventory=Object.assign({catalysts:[],feathers:[],slots:[]},d.paidInventory||{});S.profileAvatar=d.profileAvatar||null;S.shopSub=d.shopSub||"gacha";S.gearSub=d.gearSub||"equip";
+  S.daily=d.daily||null;S.stamina=d.daily?clamp(d.stamina==null?3:d.stamina,0,3):3;ensureDaily();S.premium=numAt(d.premium,0,0);S.paidInventory=Object.assign({catalysts:[],feathers:[],slots:[],sigils:[]},d.paidInventory||{});S.profileAvatar=d.profileAvatar||null;S.shopSub=d.shopSub||"gacha";S.gearSub=d.gearSub||"equip";
   if(!S.avatars[S.cls])S.avatars[S.cls]=CHARACTERS[S.cls][0].id;
   const normalizeBase=raw=>{const b=Object.assign({lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0},raw||{});
     if(!b.xpCurveV2){

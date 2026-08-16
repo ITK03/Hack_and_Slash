@@ -355,6 +355,91 @@ await page.goto(base); await page.waitForTimeout(500);
   notes.push(`キャラ一覧の先頭: ${order.first}`);
 }
 
+/* 2l. 階層引き上げ（継承）。素材のうち最も浅い階層までしか上がらないこと。 */
+{
+  const inh = await page.evaluate(() => {
+    S.cls = 'warrior'; S.formation = ['warrior:gai']; S.gear = {}; S.stash = [];
+    S.base = { lv: 60, xp: 0, pts: 0, str: 180, mag: 0, def: 60, agi: 60, spi: 0, luk: 0 };
+    S.paidInventory = { catalysts: [], feathers: [], slots: [], sigils: [{ id: 'x' }] };
+    let fav; do fav = makeItem(30, 0, 0, 4); while (fav.rar !== 4 || fav.slot !== 'weapon');
+    fav.ilvl = 30;
+    const before = { score: Math.round(iScore(fav)), name: fav.name, pw: fav.pw, affs: fav.affs.map(a => a.id).join() };
+    const mats = [];
+    for (const d of [150, 180, 120]) { let x; do x = makeItem(d, 0, 0, 4); while (x.rar !== 4); x.ilvl = d; mats.push(x); S.stash.push(x); }
+    // レア度が違う装備は素材にならないこと
+    let wrong; do wrong = makeItem(200, 0, 0, 2); while (wrong.rar !== 2); wrong.ilvl = 200; S.stash.push(wrong);
+    const cand = inheritCandidates(fav);
+    const target = inheritTarget(fav, mats);
+    const short = inheritTarget(fav, mats.slice(0, 2));
+    const r = applyInherit(fav, target);
+    return { candRar: [...new Set(cand.map(x => x.rar))], target, short,
+      lowest: Math.min(...mats.map(m => m.ilvl)),
+      before, after: { score: Math.round(iScore(fav)), name: fav.name, pw: fav.pw, affs: fav.affs.map(a => a.id).join(), ilvl: fav.ilvl } };
+  });
+  if (inh.candRar.length !== 1 || inh.candRar[0] !== 4) problems.push(`継承の素材候補に別レア度が混じる（${inh.candRar.join()}）`);
+  if (inh.target !== inh.lowest) problems.push(`引き上げ先が最も浅い素材と違う（${inh.target} / 最浅 ${inh.lowest}）`);
+  if (inh.short !== null) problems.push('素材が足りなくても引き上げ先が決まってしまう');
+  if (inh.after.ilvl !== inh.target) problems.push('引き上げ後の深度が反映されていない');
+  if (!(inh.after.score > inh.before.score)) problems.push('引き上げても強くならない');
+  if (inh.after.name !== inh.before.name) problems.push('引き上げで名前が変わる');
+  if (inh.after.pw !== inh.before.pw) problems.push('引き上げで固有効果が変わる');
+  if (inh.after.affs !== inh.before.affs) problems.push('引き上げでオプション構成が変わる');
+  notes.push(`継承: 深度${inh.before.score ? 30 : 30} → ${inh.target}（素材の最浅）/ 強さ ${inh.before.score} → ${inh.after.score} / 名前と固有効果は維持`);
+}
+
+/* 2m. 誰を編集中かが装備・技・能力のどれでも分かり、1タップで切り替わること。 */
+{
+  const bar = await page.evaluate(() => {
+    S.unlockedCharacters = CHARACTERS.warrior.map(c => 'warrior:' + c.id).concat(CHARACTERS.mage.map(c => 'mage:' + c.id));
+    S.formation = ['warrior:leon', 'mage:noa'];
+    S.cls = 'warrior'; S.avatars.warrior = 'leon';
+    const out = {};
+    for (const sub of ['equip', 'skill', 'ability']) {
+      S.tab = 'gear'; S.gearSub = sub; openTown();
+      out[sub] = {
+        chips: [...document.querySelectorAll('.charBar .charChip .nm')].map(x => x.textContent),
+        note: (document.querySelector('.charBarNote') || {}).textContent || '',
+      };
+    }
+    // チップを押すだけで切り替わること
+    S.gearSub = 'skill'; openTown();
+    const chips = [...document.querySelectorAll('.charBar .charChip')];
+    const other = chips.find(c => !c.classList.contains('on'));
+    if (other) other.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    return { ...out, switched: currentCharacter().n };
+  });
+  for (const sub of ['equip', 'skill', 'ability']) {
+    if (!bar[sub].chips.length) problems.push(`${sub}タブにキャラ切替が出ていない`);
+    if (!bar[sub].note.includes('編集中')) problems.push(`${sub}タブに編集中のキャラが出ていない`);
+  }
+  if (bar.switched !== 'ノア') problems.push(`チップのタップで切り替わらない（${bar.switched}）`);
+  notes.push(`キャラ切替: ${bar.skill.chips.join('/')} — ${bar.skill.note.replace(/\s+/g, '')} → タップで ${bar.switched}`);
+}
+
+/* 2n. 所持品が拠点の倉庫とダンジョン内の両方で見えること。 */
+{
+  const hold = await page.evaluate(() => {
+    S.consumables = { mend1: 5, edge2: 2 }; S.stock = { ashfang: 12, riftcore: 1 };
+    S.mats = { crystal: { 3: 240 }, core: { 3: 5 } };
+    S.tab = 'inv'; S.invSub = 'item'; openTown();
+    const town = document.getElementById('townBody').textContent;
+    S.scene = 'dungeon'; S.ptab = 'drops'; S.p = S.p || newPlayer(); S.bag = [];
+    S.runPick = { crystal: 7, core: 1, parts: { ashfang: 3 }, pots: 0 };
+    openPause();
+    const dungeon = document.getElementById('pauseBody').textContent;
+    document.getElementById('scPause').classList.remove('on'); S.paused = false;
+    return { tabs: INV_TABS.map(t => t[1]), town, dungeon };
+  });
+  if (!hold.tabs.includes('道具')) problems.push('倉庫に道具タブが無い');
+  for (const [where, text] of [['倉庫', hold.town], ['ダンジョン内', hold.dungeon]]) {
+    for (const want of ['癒血の雫', '灰の牙', '結晶']) {
+      if (!text.includes(want)) problems.push(`${where}の所持品に「${want}」が出ていない`);
+    }
+  }
+  if (!hold.dungeon.includes('+3')) problems.push('ダンジョン内で今回拾った素材の数が出ていない');
+  notes.push(`所持品: 倉庫タブ ${hold.tabs.join('/')} / ダンジョン内でも素材と道具を表示`);
+}
+
 /* 3. 帰還して拠点へ戻れること */
 {
   const back = await page.evaluate(() => { endRun(true); return { scene: S.scene }; });
