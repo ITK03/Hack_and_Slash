@@ -129,6 +129,13 @@ const regressionSnippets = [
   'const GACHA_RARITY=',           // 装備ガチャは専用の抽選表を持つ
   'function gachaRarity',
   'const hexA=',                   // 枠の色をアイテムの色から作る
+  'const EFROM_BRANDER=',          // 烙印は深部でだけ出る
+  'brander:{n:"烙印"',
+  'seek:1',                        // 移動では避けられない弾
+  'b.seek?.13',
+  'e.sight||11',                   // 索敵距離は敵ごと
+  'aim:1.15',                      // 遠距離職の照準扇
+  'pierce:2,kb:.55',
   'function openProfileIconPick',
   'function openFormationChoices',
   'function confirmSelectedSell',

@@ -796,11 +796,12 @@ function holdBtn(el,i){
 /* ---------- クラス（盗賊は一旦削除） ---------- */
 const CLASSES={
   warrior:{name:"戦士",desc:"高耐久の近接。MPを技に注ぎ込んで戦う。",
-    hp:119,mp:80,defMul:1,atk:[14,20],range:2.4,arc:1.6,proj:null,
+    hp:119,mp:80,defMul:1,atk:[14,20],range:2.4,arc:1.6,proj:null,aim:1.6,
     atkStat:"str",atkName:"物理攻撃力",mpRegMul:1.2,dodgeMul:.3,msMul:1,
     str:16,mag:2,def:14,agi:8,spi:6,luk:6,col:"#e07038",},
   mage:{name:"魔術師",desc:"範囲殲滅。打たれ弱く、MP管理と位置取りが要る。",
-    hp:88,mp:150,defMul:.62,atk:[12,17],range:6.2,arc:.5,proj:{sp:12,col:"#9ac8ff",r:.2},
+    hp:88,mp:150,defMul:.62,atk:[12,17],range:6.2,arc:.5,
+    proj:{sp:12,col:"#9ac8ff",r:.2,pierce:2,kb:.55},aim:1.15,
     atkStat:"mag",atkName:"特殊攻撃力",mpRegMul:1.05,dodgeMul:1,msMul:.8,
     str:4,mag:18,def:6,agi:10,spi:16,luk:8,col:"#5b9bf0",},
 };
@@ -1083,6 +1084,8 @@ const POWERS=[
 ];
 const POWER=id=>POWERS.find(p=>p.id===id);
 
+/* 烙印が出はじめる深度。説明画面からも引くので外に出しておく。 */
+const EFROM_BRANDER=64;
 /* ---------- 敵 ---------- */
 const ET={
   grunt :{n:"下僕",  hp:38, sp:3.1,dmg:14,r:.34,aR:.95,cd:1.4, xp:11,col:"#b8483c",sz:1,   ai:"chase",
@@ -1110,6 +1113,11 @@ const ET={
           touch:.5,res:{brn:1,frz:1,par:.8,psn:1}},
   leech :{n:"吸い蛭",hp:42, sp:3.0,dmg:20,r:.32,aR:.9, cd:1.6, xp:34,col:"#a0407a",sz:1,   ai:"chase",
           drain:1,touch:.5,res:{brn:1,frz:1,par:1,psn:.5}},
+  /* 烙印: 溜めたあと「振り切れない弾」を撃つ。走って距離を取るだけの戦法を通さない。
+     素早さ（回避率）では避けられるので、逃げ足ではなく装備で受ける相手。
+     単体では脆く手数も少ないが、深部で数がそろうと居座るほど削られる。 */
+  brander:{n:"烙印",hp:46, sp:1.4,dmg:30,r:.34,aR:15, cd:3.6, xp:46,col:"#ff5aa0",sz:1.05,ai:"kite",
+          rng:1,keep:11,seek:1,sight:19,res:{brn:1,frz:1.2,par:.9,psn:1}},
   splitter:{n:"分かれ身",hp:44,sp:2.6,dmg:24,r:.36,aR:1.0,cd:1.8,xp:38,col:"#7ac850",sz:1.1,ai:"chase",
           splits:1,touch:.55,res:{brn:1.2,frz:1,par:1,psn:.6}},
 };
@@ -1123,7 +1131,7 @@ const PARTS={
   ashfang:  {n:"灰の牙",   rar:0,col:"#c8c4bc",ic:"p_fang",from:["grunt","swarm"],       d:"浅い層の徒党が落とす。もっとも手に入りやすい。"},
   gloomsilk:{n:"薄闇の糸", rar:1,col:"#5ad06a",ic:"p_silk",from:["stalker","weaver"],    d:"影に潜む相手から。揺らぐ動きの元になっている繊維。"},
   hexbead:  {n:"呪縛の珠", rar:1,col:"#5ad06a",ic:"p_bead",from:["archer","caster"],     d:"術を使う相手の核。状態異常を扱う品に要る。"},
-  voidlens: {n:"虚ろの眼", rar:2,col:"#5a8fe0",ic:"p_lens",from:["seeker","orbiter"],    d:"追う眼と回り手から。見通しを広げる品に要る。"},
+  voidlens: {n:"虚ろの眼", rar:2,col:"#5a8fe0",ic:"p_lens",from:["seeker","orbiter","brander"],d:"追う眼・回り手・烙印から。見通しを広げる品に要る。"},
   burstsac: {n:"膨れ胞",   rar:2,col:"#5a8fe0",ic:"p_sac",from:["ticker","bomber"],     d:"破裂する相手から。衝撃を扱う品に要る。"},
   ironhusk: {n:"鉄錆の殻", rar:3,col:"#e0c040",ic:"p_husk",from:["brute","warden"],      d:"重装の相手から。硬さを移す品に要る。"},
   sapvein:  {n:"吸脈",     rar:3,col:"#e0c040",ic:"p_vein",from:["leech","phaser"],      d:"喰らい付く相手から。生命に触れる品に要る。"},
@@ -1716,7 +1724,7 @@ function spawnE(k,x,y,fl,elite){
     hp:t.hp*hs,max:t.hp*hs,dmg:t.dmg*ds,hopT:rr(0,1),st:{},touch:t.touch||0,touchT:0,
     homing:!!t.homing,fuse:t.fuse||0,stKind:t.st||null,
     /* 挙動を決める印。ここで写し忘れると ET に書いても効かない。 */
-    front:!!t.front,drain:!!t.drain,splits:t.splits||0,faceA:null,
+    front:!!t.front,drain:!!t.drain,splits:t.splits||0,seek:!!t.seek,sight:t.sight||0,faceA:null,
     element:(rnd()<.65?dominantElement(fl):pick(ELEMENT_KEYS.filter(x=>x!==dominantElement(fl)))),
     eleRes:{fire:1,water:1,wood:1,light:1,dark:1},
     flash:0,kbx:0,kby:0,agro:false,frz:0,stun:0,elite:null,shield:0,regen:0,dot:0,dotT:0,wind:0};
@@ -1790,6 +1798,7 @@ function enterFloor(fl){S.tactical.trap=null;S.tactical.reveal=false;
     warden:46,    // 盾番      60hp  正面を通さない
     phaser:52,    // 瞬き      32hp  横へ跳ぶ
     splitter:60,  // 分かれ身  44hp  倒すと割れる
+    brander:EFROM_BRANDER, // 烙印  46hp  振り切れない弾
   };
   const avail=EKEYS.filter(k=>fl>=(EFROM[k]||1));
   /* 深部では素直に突っ込む型を薄める。抽選箱へ手強い型を余分に入れて偏らせる。 */
@@ -1797,7 +1806,7 @@ function enterFloor(fl){S.tactical.trap=null;S.tactical.reveal=false;
      深部の潜行が「倒しきれるか」ではなく「時間内に掃除しきれるか」で決まる。
      そうなると生存用の道具も装備の火力も結果を変えられなくなる（実測で消耗品の
      到達深度差が +8 から 0 へ潰れた）。従来型を2枚ずつ入れて新型は2割前後にする。 */
-  const NEWK=["weaver","orbiter","leech","warden","phaser","splitter"];
+  const NEWK=["weaver","orbiter","leech","warden","phaser","splitter","brander"];
   const bag=avail.concat(avail.filter(k=>!NEWK.includes(k)));
   for(let i=0;i<n&&S.enemies.length<CFG.SPAWN_MAX;i++){
     const rm=rooms[ri(1,rooms.length-1)];
@@ -1813,6 +1822,20 @@ function enterFloor(fl){S.tactical.trap=null;S.tactical.reveal=false;
         if(walk(px2,py2,.4))spawnE(pick(bag),px2,py2,fl,false);}}
   }
   if(isBoss)spawnBoss(fl);
+  /* 烙印は深度に応じて必ず一定数出す。抽選任せだと深部でも0〜1体しか出ず、
+     「離れて時間をかければ削られない」という戦法の抑止にならなかった。
+     数で押すのではなく、居座るほど確実に削られる圧力として置く。 */
+  if(fl>=EFROM_BRANDER){
+    const want=Math.min(5,1+Math.floor((fl-EFROM_BRANDER)/18));
+    let have=S.enemies.filter(e=>e.k==="brander").length;
+    /* 湧き上限に達したフロアでは足せないので、並の敵と入れ替える。
+       総数を増やさずに圧力だけを足すので、掃除にかかる時間は変わらない。 */
+    for(let guard=0;have<want&&guard<60;guard++){
+      const pool=S.enemies.filter(e=>!e.boss&&!e.elite&&e.k!=="brander");
+      if(!pool.length)break;
+      const victim=pool[ri(0,pool.length-1)],x=victim.x,y=victim.y;
+      S.enemies.splice(S.enemies.indexOf(victim),1);
+      if(spawnE("brander",x,y,fl,false))have++;}}
   // 母数が少ない序盤でも優勢比率がぶれないよう、生成後に通常敵の65%を必ず優勢属性へ揃える。
   {const normal=S.enemies.filter(e=>!e.boss),major=Math.round(normal.length*.65),dominant=dominantElement(fl),others=ELEMENT_KEYS.filter(k=>k!==dominant);normal.forEach((e,i)=>e.element=i<major?dominant:others[(i-major)%others.length]);}
   for(let i=1;i<rooms.length;i++){
@@ -2003,7 +2026,10 @@ function hurtP(dm,cause,force,attackerElement="neutral"){const p=S.p;if(S.traini
 function basicAttack(){
   const p=S.p;if(p.itemLock>0)return;const C=p.d.C,range=C.range*p.mRange*p.d.rng;
   // 向いた方向の扇に敵がいればそいつを狙う。いなければその方向へ撃つ(引き撃ち防止)。
-  const CONE=C.proj?.55:C.arc;
+  /* 扇の広さは職ごと。遠距離職を .55 固定にしていたため、射程6.2まで届くのに
+     ほんの少し横へずれただけで素通りしていた。近接の 1.6 とまでは言わないが、
+     狙った相手にはきちんと当たる広さを持たせる。 */
+  const CONE=C.aim||(C.proj?.55:C.arc);
   let best=null,bd=1e9;
   for(const e of S.enemies){const d=d2(p.x,p.y,e.x,e.y);
     if(d>=(range+e.r)*(range+e.r))continue;
@@ -2020,6 +2046,7 @@ function basicAttack(){
   if(C.proj){
     S.bullets.push({x:p.x,y:p.y,vx:Math.cos(p.face)*C.proj.sp,vy:Math.sin(p.face)*C.proj.sp,
       dmg:mk(),crit,mine:1,col:C.proj.col,r:C.proj.r,t:0,
+      pierce:C.proj.pierce||0,hit:C.proj.pierce?new Set():null,kb:C.proj.kb||0,
       boom:(hasPw("burst")&&p.atkN%4===0)?1.6:0});
     SFX.cast(S.cls==="mage"?420:640);
   }else{
@@ -2265,7 +2292,10 @@ function update(dt){
     if(!walk(e.x,e.y,e.r)){e.x-=e.kbx;e.y-=e.kby;e.kbx=e.kby=0;}
     const d=Math.hypot(p.x-e.x,p.y-e.y);
     if(e.weaken>0)e.weaken=Math.max(0,e.weaken-dt);if(S.tactical.trap&&d2(e.x,e.y,S.tactical.trap.x,S.tactical.trap.y)<.5){applyST(e,"par",S.tactical.trap.dur||4,false);S.tactical.trap=null;}
-    if(!e.agro&&d<11)e.agro=true;
+    /* 索敵。既定は11だが、遠くから撃つ型はもっと早く気づく。
+       ここが一律11だと、走って離れ続けるだけでどの敵も起きず、
+       深部でも「時間をかければ無傷で勝てる」状態になっていた。 */
+    if(!e.agro&&d<(e.sight||11))e.agro=true;
     if(!e.agro)continue;
     /* 盾番の向きはゆっくりしか変わらない。速く回り込めば背中を取れる。 */
     if(e.front){const want=Math.atan2(p.y-e.y,p.x-e.x);
@@ -2281,9 +2311,17 @@ function update(dt){
       e.wind-=dt;
       if(e.wind<=0){
         if(e.boom){S.fx.push({t:"boom",x:e.x,y:e.y,tm:0,R:2.4,col:"#ffd040",dmg:e.dmg,en:1,element:e.element});killE(e);}
-        else if(e.rng){S.bullets.push({x:e.x,y:e.y,vx:ux*(e.homing?5.5:8),vy:uy*(e.homing?5.5:8),
-          dmg:e.dmg,t:0,col:e.homing?"#e07aa0":e.slow?"#3fa08a":"#c89aff",r:.2,
-          slow:e.slow?1:0,homing:e.homing?1:0,st:e.stKind,element:e.element});tone(340,.08,"square",.06,180);}
+        else if(e.rng){
+          /* 烙印の弾は「振り切れない」。速度はプレイヤー(3.5)より速い5.0で、
+             6秒のあいだ曲がり続ける。走って距離を取る戦法だけを潰す狙い。 */
+          S.bullets.push({x:e.x,y:e.y,
+            vx:ux*(e.seek?5:e.homing?5.5:8),vy:uy*(e.seek?5:e.homing?5.5:8),
+            dmg:e.dmg,t:0,r:e.seek?.26:.2,
+            col:e.seek?"#ff5aa0":e.homing?"#e07aa0":e.slow?"#3fa08a":"#c89aff",
+            slow:e.slow?1:0,homing:e.homing?1:0,seek:e.seek?1:0,
+            seekT:e.seek?6:0,life:e.seek?6.5:0,
+            st:e.stKind,element:e.element});
+          tone(e.seek?250:340,.08,"square",.06,180);}
         else if(d<e.aR+p.r+.4)hurtP(e.dmg,e.n+"の攻撃",false,e.element);}
       continue;}
     let mx=0,my=0;
@@ -2339,9 +2377,15 @@ function update(dt){
   /* 弾: 細かく刻んで壁抜けを防ぐ */
   for(let i=S.bullets.length-1;i>=0;i--){
     const b=S.bullets[i];b.t+=dt;
-    if(b.homing&&b.t<1.8){const dx=p.x-b.x,dy=p.y-b.y,l=Math.hypot(dx,dy)||1,s0=Math.hypot(b.vx,b.vy);
-      b.vx=lerp(b.vx,dx/l*s0,.045);b.vy=lerp(b.vy,dy/l*s0,.045);}
-    let dead=b.t>2.8;
+    /* 追尾。homing は緩く short（走れば振り切れる）、seek は強く long。
+       seek はプレイヤーより速く、寿命の限り曲がり続けるので「移動では避けられない」。
+       ただし当たれば hurtP を通るので、素早さ（回避率）では避けられる。
+       壁は遮る — 走って逃げるのは通らないが、地形を使う立ち回りは残す。 */
+    const turn=b.seek?.13:(b.t<1.8?.045:0);
+    if((b.homing||b.seek)&&turn>0&&b.t<(b.seekT||1.8)){
+      const dx=p.x-b.x,dy=p.y-b.y,l=Math.hypot(dx,dy)||1,s0=Math.hypot(b.vx,b.vy);
+      b.vx=lerp(b.vx,dx/l*s0,turn);b.vy=lerp(b.vy,dy/l*s0,turn);}
+    let dead=b.t>(b.life||2.8);
     const steps=Math.max(1,Math.ceil(Math.hypot(b.vx,b.vy)*dt/.35));
     for(let st=0;st<steps&&!dead;st++){
       b.x+=b.vx*dt/steps;b.y+=b.vy*dt/steps;
@@ -2352,11 +2396,12 @@ function update(dt){
         if(dead)break;
         for(const e of S.enemies)if(d2(b.x,b.y,e.x,e.y)<Math.pow(.28+e.r,2)){
           /* 貫通弾は同じ敵を二度殴らないよう、当てた相手を覚えて素通りする */
+          const bl=Math.hypot(b.vx,b.vy)||1,kbx=b.vx/bl*(b.kb||.24),kby=b.vy/bl*(b.kb||.24);
           if(b.pierce){if(b.hit.has(e))continue;b.hit.add(e);
-            hurtE(e,b.dmg,b.crit,b.vx*.02,b.vy*.02,b.hit.size>1);
+            hurtE(e,b.dmg,b.crit,kbx,kby,b.hit.size>1);
             if(b.hit.size>=b.pierce)dead=true;break;}
           if(b.boom)S.fx.push({t:"boom",x:b.x,y:b.y,tm:0,R:b.boom,col:b.col,dmg:b.dmg*.7,hit:new Set()});
-          hurtE(e,b.dmg,b.crit,b.vx*.02,b.vy*.02);dead=true;break;}
+          hurtE(e,b.dmg,b.crit,kbx,kby);dead=true;break;}
       }else if(d2(b.x,b.y,p.x,p.y)<.16){
         hurtP(b.dmg,b.homing?"追尾弾":"敵の投射攻撃",false,b.element);
         /* 減速は祭壇とは別の時計で持つ。以前は p.sMs と p.shrineT を流用しており、
@@ -2931,7 +2976,23 @@ function dEnemy(e){
     ctx.globalCompositeOperation="source-over";}
   if(ghost)ctx.restore();}
 function dBullet(b){const s=iso(b.x,b.y);
-  ctx.globalCompositeOperation="lighter";ctx.fillStyle=b.col||"#c89aff";
+  ctx.globalCompositeOperation="lighter";
+  if(b.seek){
+    /* 避けられない弾は、来ているとひと目で分かることが前提。
+       進行方向の尾と脈打つ輪を足して、加算合成でも白飛びしない濃さで描く。 */
+    const l=Math.hypot(b.vx,b.vy)||1,tx=-b.vx/l,ty=-b.vy/l;
+    const tail=iso(b.x+tx*.9,b.y+ty*.9);
+    const grad=ctx.createLinearGradient(tail.sx,tail.sy-12,s.sx,s.sy-12);
+    grad.addColorStop(0,hexA(b.col,0));grad.addColorStop(1,hexA(b.col,.85));
+    ctx.strokeStyle=grad;ctx.lineWidth=5;ctx.lineCap="round";
+    ctx.beginPath();ctx.moveTo(tail.sx,tail.sy-12);ctx.lineTo(s.sx,s.sy-12);ctx.stroke();
+    const pulse=.5+.5*Math.sin(b.t*14);
+    ctx.strokeStyle=hexA(b.col,.5+pulse*.45);ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(s.sx,s.sy-12,7+pulse*4,0,TAU);ctx.stroke();
+    ctx.fillStyle=b.col;
+    ctx.beginPath();ctx.arc(s.sx,s.sy-12,4.5,0,TAU);ctx.fill();
+    ctx.globalCompositeOperation="source-over";return;}
+  ctx.fillStyle=b.col||"#c89aff";
   ctx.beginPath();ctx.arc(s.sx,s.sy-12,(b.r||.18)*22,0,TAU);ctx.fill();
   ctx.globalCompositeOperation="source-over";}
 function dDrop(d){
@@ -3738,6 +3799,9 @@ const HELP_SECTIONS=[
     "控えに置いたキャラクターは、対応する属性の共鳴をわずかに後押しする。"]],
   ["敵とボス",()=>[
     "深いほど、まっすぐ追ってこない敵が増える。蛇行・周回・横跳び・正面防御・吸収・分裂。",
+    `<b>烙印</b>（${EFROM_BRANDER}深度から）の弾は<b>走っても振り切れない</b>。曲がり続けてどこまでも追ってくる。`,
+    "振り切れないだけで当たらないわけではない。<b>回避（素早さ）では避けられる</b>し、壁は弾を止める。",
+    "深いほど烙印の数が増える（最大5体）。離れて時間をかけるほど確実に削られるので、深部は装備で受けて短時間で片付ける。",
     "<b>盾番</b>は正面からの攻撃が通りにくい。向き直りが遅いので回り込む。",
     `ボスは属性ごとに2体で全${Object.values(BOSSES).flat().length}体。${CFG.BOSS_EVERY*5}深度で属性が一巡し、二巡目に別の個体が出る。`,
     "ボスはHP半分で激昂して手数が増える。出現時に攻略の要点が一度出る。"]],

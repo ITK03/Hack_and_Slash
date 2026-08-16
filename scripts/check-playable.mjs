@@ -241,6 +241,72 @@ await page.goto(base); await page.waitForTimeout(500);
   notes.push(`調合: 結晶のみ ${g1.length}種 / 固有素材要求 ${craft.needParts}種`);
 }
 
+/* 2h. 深部の圧力。烙印が深度で増え、その弾は走っても振り切れないこと。 */
+{
+  const seek = await page.evaluate(() => {
+    const out = { counts: [], escaped: null, dodged: null };
+    S.cls = 'warrior'; S.training = false; S.scene = 'dungeon'; S.paused = false;
+    S.returnInvulnerable = false; S.p = newPlayer();
+    for (const f of [40, 64, 100, 150]) {
+      let t = 0; for (let r = 0; r < 3; r++) { _s = (f * 2654435761 + r * 7919) >>> 0; enterFloor(f); t += S.enemies.filter(e => e.k === 'brander').length; }
+      out.counts.push({ f, n: +(t / 3).toFixed(1) });
+    }
+    /* 全力で逃げても距離を詰められること。命中そのもので判定すると、
+       弾が壁に当たって消えた回で結果が揺れる。詰められるかどうかは地形に依らない。 */
+    _s = 777; enterFloor(70); S.enemies.length = 0;
+    S.p.hp = S.p.max; S.p.hurtT = 0; S.p.invulT = 0; S.p.d.agiD = 0;
+    let closed = null;
+    for (let attempt = 0; attempt < 24 && closed === null; attempt++) {
+      const ang = attempt / 24 * Math.PI * 2;
+      S.bullets.length = 0;
+      const bx = S.p.x + Math.cos(ang) * 4, by = S.p.y + Math.sin(ang) * 4;
+      if (!walk(bx, by, .3)) continue;
+      const sx = S.p.x, sy = S.p.y;
+      S.bullets.push({ x: bx, y: by, vx: (sx - bx) / 4 * 5, vy: (sy - by) / 4 * 5,
+        dmg: 1, t: 0, r: .26, col: '#f0f', seek: 1, seekT: 6, life: 6.5 });
+      const first = Math.hypot(bx - sx, by - sy);
+      let last = first, moved = 0;
+      for (let t = 0; t < 2 && S.bullets.length; t += .05) {
+        const b = S.bullets[0], a = Math.atan2(S.p.y - b.y, S.p.x - b.x);
+        const nx = S.p.x + Math.cos(a) * 3.5 * .05, ny = S.p.y + Math.sin(a) * 3.5 * .05;
+        if (walk(nx, ny, S.p.r)) { S.p.x = nx; S.p.y = ny; moved++; }
+        update(.05);
+        if (S.bullets.length) last = Math.hypot(S.bullets[0].x - S.p.x, S.bullets[0].y - S.p.y);
+      }
+      // 逃げ切れた区間が十分あり、弾が生きていた回だけを採用する
+      if (moved > 30 && S.bullets.length) closed = first - last;
+      S.p.x = sx; S.p.y = sy;
+    }
+    out.closed = closed;
+    out.escaped = !(closed > 0);
+    // ただし素早さ（回避率）では避けられること
+    S.p.d.agiD = 4000; S.floor = 1;
+    let d = 0; for (let i = 0; i < 200; i++) { _s = i * 99991; S.p.hp = S.p.max; S.p.hurtT = 0; S.p.invulT = 0; const h = S.p.hp; hurtP(50, 't', true); if (S.p.hp === h) d++; }
+    out.dodged = d / 200;
+    return out;
+  });
+  const at = f => seek.counts.find(x => x.f === f).n;
+  if (at(40) !== 0) problems.push(`烙印が深度40で出ている（${at(40)}体）`);
+  if (at(64) < 1) problems.push('烙印が解放深度で出ていない');
+  if (!(at(150) > at(64))) problems.push(`烙印が深度で増えていない（64F:${at(64)} → 150F:${at(150)}）`);
+  if (seek.closed === null) problems.push('烙印の弾の追尾を測れる開けた場所が見つからない');
+  else if (seek.escaped) problems.push(`烙印の弾を全力で逃げて振り切れてしまう（2秒で ${seek.closed.toFixed(2)} しか詰められない）`);
+  if (seek.dodged < .2) problems.push(`素早さを上げても烙印の弾を回避できない（${(seek.dodged * 100).toFixed(0)}%）`);
+  notes.push(`烙印: 64F ${at(64)}体 → 150F ${at(150)}体 / 全力逃走2秒でも ${seek.closed?.toFixed(2)} 距離を詰められる / 素早さでの回避 ${(seek.dodged * 100).toFixed(0)}%`);
+}
+
+/* 2i. 遠距離職の通常攻撃は狙いがずれても当たり、貫通する。 */
+{
+  const mage = await page.evaluate(() => ({
+    aim: CLASSES.mage.aim, warriorAim: CLASSES.warrior.aim,
+    pierce: CLASSES.mage.proj.pierce, kb: CLASSES.mage.proj.kb,
+  }));
+  if (!(mage.aim >= 1.0)) problems.push(`遠距離職の照準扇 ${mage.aim} が狭い`);
+  if (!(mage.pierce >= 2)) problems.push('遠距離職の通常攻撃が貫通しない');
+  if (!(mage.kb > .24)) problems.push('遠距離職の通常攻撃にノックバックが無い');
+  notes.push(`魔術師: 照準扇 ${mage.aim}（戦士 ${mage.warriorAim}）/ 貫通 ${mage.pierce} / ノックバック ${mage.kb}`);
+}
+
 /* 3. 帰還して拠点へ戻れること */
 {
   const back = await page.evaluate(() => { endRun(true); return { scene: S.scene }; });
