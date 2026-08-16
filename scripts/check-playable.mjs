@@ -307,6 +307,54 @@ await page.goto(base); await page.waitForTimeout(500);
   notes.push(`魔術師: 照準扇 ${mage.aim}（戦士 ${mage.warriorAim}）/ 貫通 ${mage.pierce} / ノックバック ${mage.kb}`);
 }
 
+/* 2j. 伝説専用効果の重ねがけ。効果は伸びるが2.00倍を超えないこと。 */
+{
+  const pw = await page.evaluate(() => {
+    const slots = ['weapon','helm','armor','glove','boot','ring','amulet'];
+    S.cls = 'warrior'; S.formation = ['warrior:gai']; S.scene = 'dungeon'; S.paused = false; S.training = false;
+    S.base = { lv: 60, xp: 0, pts: 0, str: 180, mag: 0, def: 60, agi: 60, spi: 0, luk: 0 };
+    const curve = [0,1,2,3,4,7].map(n => +pwStack(n).toFixed(3));
+    const build = (n, id) => { S.gear = Object.fromEntries(slots.map(s => [s, null]));
+      slots.forEach((slot, i) => { let it; do it = makeItem(60,0,0,2); while (it.slot !== slot || (it.ac && it.ac !== 'warrior'));
+        it.rar = i < n ? 4 : 2; it.pw = i < n ? id : null; it.lv = 1; it.element = 'neutral'; S.gear[slot] = it; });
+      S.p = newPlayer(); return S.p.d; };
+    build(3, 'berserk');
+    const stacked = { n: pwCount(S.p.d, 'berserk'), mul: +pwMul('berserk').toFixed(3) };
+    // 別々の効果は従来どおりそれぞれ等倍で全部乗る
+    S.gear = Object.fromEntries(slots.map(s => [s, null]));
+    const ids = ['burst','echo','vamp','haste','greed','berserk','chainL'];
+    slots.forEach((slot, i) => { let it; do it = makeItem(60,0,0,2); while (it.slot !== slot || (it.ac && it.ac !== 'warrior'));
+      it.rar = 4; it.pw = ids[i]; it.lv = 1; it.element = 'neutral'; S.gear[slot] = it; });
+    S.p = newPlayer();
+    const distinct = { count: S.p.d.pw.length, muls: S.p.d.pw.map(id => pwMul(id)) };
+    return { curve, stacked, distinct };
+  });
+  if (pw.curve[1] !== 1) problems.push(`固有効果1個の倍率が1.00でない（${pw.curve[1]}）`);
+  if (!(pw.curve[2] > pw.curve[1])) problems.push('固有効果を重ねても効果が上がらない');
+  if (pw.curve[2] >= 2) problems.push(`固有効果2個で ${pw.curve[2]}倍。単純な2倍以上になっている`);
+  if (pw.curve.some(v => v > 2)) problems.push(`固有効果の重ねがけが2.00倍を超える（${pw.curve.join('/')}）`);
+  if (!(pw.curve[3] - pw.curve[2] < pw.curve[2] - pw.curve[1])) problems.push('重ねるほど伸びが小さくなっていない');
+  if (pw.stacked.n !== 3) problems.push(`同じ効果3個が数えられていない（${pw.stacked.n}）`);
+  if (pw.distinct.count !== 7) problems.push(`別々の固有効果7種が乗らない（${pw.distinct.count}）`);
+  if (pw.distinct.muls.some(m => m !== 1)) problems.push('別々の固有効果に重ねがけ倍率がかかっている');
+  notes.push(`固有効果の重ねがけ: ${pw.curve.slice(1).map((v,i)=>`${i+1}個${v.toFixed(2)}倍`).join(' / ')}`);
+}
+
+/* 2k. 編成中のキャラが一覧の先頭に来ること。 */
+{
+  const order = await page.evaluate(() => {
+    S.unlockedCharacters = CHARACTERS.warrior.map(c => 'warrior:' + c.id);
+    const last = CHARACTERS.warrior[CHARACTERS.warrior.length - 1];
+    S.formation = ['warrior:' + last.id];
+    S.cls = 'warrior'; openCharacterChoices('warrior');
+    const names = [...document.querySelectorAll('#itC .card .nm')].map(x => x.textContent.trim());
+    document.getElementById('itPop').classList.remove('on');
+    return { first: names[0] || '', want: last.n };
+  });
+  if (!order.first.includes(order.want)) problems.push(`編成中のキャラが先頭に出ない（先頭 ${order.first} / 期待 ${order.want}）`);
+  notes.push(`キャラ一覧の先頭: ${order.first}`);
+}
+
 /* 3. 帰還して拠点へ戻れること */
 {
   const back = await page.evaluate(() => { endRun(true); return { scene: S.scene }; });

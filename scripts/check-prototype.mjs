@@ -136,6 +136,11 @@ const regressionSnippets = [
   'e.sight||11',                   // 索敵距離は敵ごと
   'aim:1.15',                      // 遠距離職の照準扇
   'pierce:2,kb:.55',
+  'const pwStack=',                // 伝説専用効果の重ねがけ
+  'const pwMul=',
+  'pwN[it.pw]=(pwN[it.pw]||0)+1',
+  'add("強化","gold"',             // 「評価」では中身が伝わらない
+  'const slotOf=ch=>',             // 編成中のキャラを先頭に並べる
   'function openProfileIconPick',
   'function openFormationChoices',
   'function confirmSelectedSell',

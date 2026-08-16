@@ -1440,7 +1440,9 @@ function statsHTML(it,cmp){
     const qc=a.q==null?"":a.q>=1.3?' <span style="color:#7ad04e">◆</span>'
       :a.q<=.72?' <span style="color:#7a7488">▽</span>':"";
     return `${AFN(a.id)} +${a.v}${AFP(a.id)?"%":""}${qc}`;}).join("<br>");
-  if(it.pw){const p=POWER(it.pw);if(p)h+=`<div class="leg">◆ ${p.n} — ${p.d}</div>`;}
+  if(it.pw){const p=POWER(it.pw);if(p){h+=`<div class="leg">◆ ${p.n} — ${p.d}</div>`;
+    const worn=SLOTK.reduce((n,k)=>n+((S.gear[k]&&S.gear[k]!==it&&S.gear[k].pw===it.pw)?1:0),0);
+    if(worn)h+=`<div class="ty">装備中に同じ効果が${worn}個。これを足すと効果 ${pwStack(worn+1).toFixed(2)}倍（重ねるほど伸びは小さくなります）。</div>`;}}
   return h;}
 const sellV=it=>Math.max(1,Math.round((8+it.ilvl*4)*[1,2,5,14,60][it.rar]/CFG.SELL_DIV));
 
@@ -1594,23 +1596,25 @@ function derive(){
   const C=CLASSES[S.cls],b=S.base,ch=currentCharacter();
   const t={atk:0,matk:0,atkP:0,hp:0,armor:0,crit:0,cdmg:0,as:0,ms:0,ls:0,cdr:0,dr:0,
     mf:0,mreg:0,luk:0,rng:0,agiF:0,mpF:0,lukF:0};
-  const pw=[];
+  const pw=[],pwN={};
   for(const k of SLOTK){const it=S.gear[k];if(!it)continue;
     if(it.main)t[it.main.id]=(t[it.main.id]||0)+mainV(it);
     for(const a of it.affs)t[a.id]=(t[a.id]||0)+a.v*itemBaseMultiplier(it);
-    if(it.pw&&!pw.includes(it.pw))pw.push(it.pw);}
+    /* 同じ固有効果を重ねたぶんは数える。以前は2個目以降を捨てていたので、
+       伝説を2個そろえても片方が完全に無駄になっていた。 */
+    if(it.pw){if(!pw.includes(it.pw))pw.push(it.pw);pwN[it.pw]=(pwN[it.pw]||0)+1;}}
   if(S.admin)for(const k in S.adminOpts)t[k]=(t[k]||0)+(Number(S.adminOpts[k])||0);
   const bt=breakthroughLevel(activeCharacterKey()),baseMul=breakthroughStatMul(bt);
   const str=(C.str+b.str)*baseMul,mag=(C.mag+b.mag)*baseMul,def=(C.def+b.def)*baseMul,
         agi=(C.agi+b.agi)*baseMul+t.agiF,spi=(C.spi+b.spi)*baseMul,luk=(C.luk+b.luk)*baseMul+t.luk+t.lukF+(ch.luk||0),lv=b.lv;
   // 旧「ダメージ軽減」と旧「攻撃力」は、同程度の固定能力値へ統合する。
   const armor=t.armor+t.dr*1.5+def*1.1;
-  const manaPw=pw.includes("mana")?1.5:1;
+  const manaPw=1+.5*pwStack(pwN.mana||0);
   const support=formationElementSupport(resonance().element),traitAtk=(bt>=2?1.025:1)*(1+support),traitHP=(bt>=4?1.025:1)*(1+support),traitOne=bt>=5?1.02:1;
   const chAtk=ch.atk||1;
   const physAtk=(t.atk+t.atkP+str*.92+lv*2.1)*traitAtk*chAtk,specAtk=(t.matk+t.atkP+mag*.92+lv*2.1)*traitAtk*chAtk;
   const bonusAgi=b.agi+t.agiF;
-  return {C,pw,opt:t,str,mag,def,agi,spi,luk,physAtk,specAtk,
+  return {C,pw,pwN,opt:t,str,mag,def,agi,spi,luk,physAtk,specAtk,
     max:Math.round((C.hp+lv*17+t.hp)*(ch.hp||1)*traitHP*traitOne),
     atkFlat:(C.atkStat==="mag"?specAtk:physAtk), armor,
     /* %系には必ず天井を置く。AFF の抽選上限は深度に比例して伸びるため、
@@ -1869,10 +1873,17 @@ function burst(x,y,col,n,pw){if(S.parts.length>PART_MAX)return;
     S.parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,t:0,life:rr(.22,.5),col,sz:rr(1.6,3.4)});}}
 const shk=v=>{S.shake=Math.max(S.shake,v);S.shakeT=.2;};
 const hasPw=id=>S.p&&S.p.d.pw.includes(id);
+/* 伝説専用効果の重ねがけ。1個目を1.00として、2個目は+0.50、3個目は+0.25…と
+   増分を半分ずつ落とす。何個重ねても2.00を超えないので、同じ効果を集めるだけで
+   青天井にはならない。「単純に2倍」ではなく「効果上昇」に留めるための形。 */
+const pwStack=n=>n<=0?0:2-Math.pow(.5,n-1);
+const pwMul=id=>{const n=(S.p&&S.p.d.pwN&&S.p.d.pwN[id])||0;return pwStack(n);};
+/* 表示用。derive() の結果から直接引く（装備画面はプレイヤー未生成でも開く）。 */
+const pwCount=(d,id)=>(d&&d.pwN&&d.pwN[id])||0;
 function pDmg(base,mul){const p=S.p;
   if(S.training)return 200*(mul||1);
   let m=(mul||1)*p.mAtk*p.sAtk*p.buffAtk*buffVal("edge","atk",1);
-  if(hasPw("berserk"))m*=1+(1-p.hp/p.max)*.8;
+  if(hasPw("berserk"))m*=1+(1-p.hp/p.max)*.8*pwMul("berserk");
   return (rr(base[0],base[1])+p.d.atkFlat)*m;}
 function hurtE(e,dmg,crit,kx,ky,quiet){
   if(e.hp<=0)return;
@@ -1907,7 +1918,7 @@ function hurtE(e,dmg,crit,kx,ky,quiet){
     else{S.hitstop=Math.max(S.hitstop,CFG.HITSTOP);shk(CFG.SHAKE_HIT);SFX.hit();buzz(5);}}
   const p=S.p,heal=dmg*(p.d.ls+p.mLs);
   if(heal>0)p.hp=Math.min(p.max,p.hp+heal);
-  if(crit&&hasPw("vamp"))p.hp=Math.min(p.max,p.hp+p.max*.006);
+  if(crit&&hasPw("vamp"))p.hp=Math.min(p.max,p.hp+p.max*.006*pwMul("vamp"));
   if(e.hp<=0)killE(e);}
 /* 固有素材のドロップ。出どころの敵からしか落ちない。
    運やドロップ率補正は乗せない（結晶と違い、狩る相手を選ぶことが条件になる）。 */
@@ -1935,9 +1946,9 @@ function killE(e){
   if(S.training)return;
   dailyProgress("kills");
   gainXP(e.xp+S.floor*2);
-  if(hasPw("haste"))for(let k=0;k<3;k++)p.cds[k]=Math.max(0,p.cds[k]-.4);
+  if(hasPw("haste")){const cut=.4*pwMul("haste");for(let k=0;k<3;k++)p.cds[k]=Math.max(0,p.cds[k]-cut);}
   if(hasPw("echo"))S.fx.push({t:"boom",x:e.x,y:e.y,tm:0,R:2.6,col:"#c0a0ff",
-    dmg:pDmg([10,16])*.5,hit:new Set()});
+    dmg:pDmg([10,16])*.5*pwMul("echo"),hit:new Set()});
   if(e.elite){
     if(e.elite.id==="split"&&!e.isSplit)for(let k=0;k<2;k++){
       const c=spawnE(e.k,e.x+rr(-1,1),e.y+rr(-1,1),S.floor,false);c.isSplit=1;}
@@ -1956,7 +1967,7 @@ function killE(e){
     dropPart(e);
     dropGold(e.x,e.y,300+S.floor*50);if(S.floor!==5||!["boss_message","return"].includes((S.tutorial||{}).phase))toast("ボス撃破 — 深度 "+(S.floor+1)+" 開始を解放");}
   else if(e.elite){if(rnd()<.5)dropItem(e.x,e.y,1);dropGold(e.x,e.y,50+S.floor*10);}
-  else{const dm=p.mDrop*p.sDrop*(hasPw("greed")?1.8:1)*(1+p.d.mf);
+  else{const dm=p.mDrop*p.sDrop*(hasPw("greed")?1+.8*pwMul("greed"):1)*(1+p.d.mf);
     if(rnd()<CFG.CRYSTAL_ENEMY_DROP)S.drops.push({x:e.x,y:e.y,mat:"crystal",tier:materialTier(S.floor),n:materialScale(S.floor),t:0});
     dropPart(e);
     if(rnd()<CFG.DROP_CHANCE*dm)dropItem(e.x,e.y);
@@ -1966,7 +1977,7 @@ function killE(e){
   if(!S.enemies.length)dailyProgress("clear",S.floor);}
 function dropItem(x,y,forceRar){
   const p=S.p;
-  const it=makeItem(S.floor,p.d.mf+(hasPw("greed")?.5:0),p.d.luk,forceRar);
+  const it=makeItem(S.floor,p.d.mf+(hasPw("greed")?.5*pwMul("greed"):0),p.d.luk,forceRar);
   S.drops.push({x,y,it,t:0,rar:it.rar});SFX.drop(it.rar);
   if(it.rar>=4){shk(7);buzz([0,50,60,140]);toast("★★ 伝説");}
   else if(it.rar===3){shk(3);buzz(30);toast("★ 秀逸");}}
@@ -2017,7 +2028,7 @@ function hurtP(dm,cause,force,attackerElement="neutral"){const p=S.p;if(S.traini
     S.nums.push({x:p.x,y:p.y,v:0,txt:"回避",t:0,c:"#8ad8ff"});
     tone(900,.06,"sine",.06,1300);return;}
   const incoming=attackerElement,r=resonance(),elementGuard=resonanceIncomingMultiplier(r,incoming);
-  const d=dm*elementGuard*(1-Math.min(.8,p.d.dr+p.mDr+p.sDr+p.buffDr+buffVal("ward","dr",0)+p.guardS*.2));
+  const d=dm*elementGuard*(1-Math.min(.8,p.d.dr+p.mDr+p.sDr+p.buffDr+buffVal("ward","dr",0)+p.guardS*.2*pwMul("guard")));
   p.hp-=d;p.lastHit=0;if(p.returnCast>0){p.returnCast=0;p.returnSlot=-1;toast("帰還詠唱が中断された","ng");}p.hurtT=.42;S.flash=.18;shk(CFG.SHAKE_HURT);SFX.hurt();buzz(38);
   dnum(p.x,p.y,d,"#ff6060");
   if(hasPw("guard")){p.guardS=Math.min(3,p.guardS+1);p.guardT=2;}
@@ -2047,7 +2058,7 @@ function basicAttack(){
     S.bullets.push({x:p.x,y:p.y,vx:Math.cos(p.face)*C.proj.sp,vy:Math.sin(p.face)*C.proj.sp,
       dmg:mk(),crit,mine:1,col:C.proj.col,r:C.proj.r,t:0,
       pierce:C.proj.pierce||0,hit:C.proj.pierce?new Set():null,kb:C.proj.kb||0,
-      boom:(hasPw("burst")&&p.atkN%4===0)?1.6:0});
+      boom:(hasPw("burst")&&p.atkN%4===0)?1.6:0,boomMul:pwMul("burst")});
     SFX.cast(S.cls==="mage"?420:640);
   }else{
     const slashCol=["#fff0c8","#ffd06a","#ff8a3a"][nextStep-1]||"#fff0c8";let landed=false;
@@ -2070,7 +2081,7 @@ function basicAttack(){
     for(const e of S.enemies){if(e===best)continue;const d=d2(best.x,best.y,e.x,e.y);
       if(d<nd&&d<9){nd=d;n2=e;}}
     if(n2){S.fx.push({t:"line",x:best.x,y:best.y,x2:n2.x,y2:n2.y,tm:0,col:"#a0d0ff"});
-      hurtE(n2,pDmg(C.atk,CFG.ATK_MUL)*.4,false,0,0,true);}}
+      hurtE(n2,pDmg(C.atk,CFG.ATK_MUL)*.4*pwMul("chainL"),false,0,0,true);}}
   return true;}
 
 const ISO_K=2*Math.sqrt((CFG.TILE_W/2)*(CFG.TILE_H/2));
@@ -2091,7 +2102,7 @@ function useSkill(i){
   const p=S.p,C=p.d.C,sk=activeSkills()[i];
   if(!sk||p.cds[i]>0||p.mp<sk.c)return;
   p.mp-=sk.c;p.cds[i]=sk.cd*p.mCd*(1-p.d.cdr);
-  const mul=hasPw("multi")?1.3:1;
+  const mul=hasPw("multi")?1+.3*pwMul("multi"):1;
   let a=p.face;
   if(IN.dx||IN.dy){const w=s2w(IN.dx,IN.dy);a=Math.atan2(w.y,w.x);}
   else{let b=null,bd=1e9;for(const e of S.enemies){const d=d2(p.x,p.y,e.x,e.y);if(d<bd){bd=d;b=e;}}
@@ -2392,7 +2403,7 @@ function update(dt){
       if(solid(b.x|0,b.y|0)){dead=true;break;}
       if(b.mine){
         for(const q of S.props)if(q.t==="barrel"&&q.hp>0&&d2(b.x,b.y,q.x,q.y)<.36){
-          breakPot(q);if(b.boom)S.fx.push({t:"boom",x:b.x,y:b.y,tm:0,R:b.boom,col:b.col,dmg:b.dmg*.7,hit:new Set()});dead=true;break;}
+          breakPot(q);if(b.boom)S.fx.push({t:"boom",x:b.x,y:b.y,tm:0,R:b.boom,col:b.col,dmg:b.dmg*.7*(b.boomMul||1),hit:new Set()});dead=true;break;}
         if(dead)break;
         for(const e of S.enemies)if(d2(b.x,b.y,e.x,e.y)<Math.pow(.28+e.r,2)){
           /* 貫通弾は同じ敵を二度殴らないよう、当てた相手を覚えて素通りする */
@@ -2400,7 +2411,7 @@ function update(dt){
           if(b.pierce){if(b.hit.has(e))continue;b.hit.add(e);
             hurtE(e,b.dmg,b.crit,kbx,kby,b.hit.size>1);
             if(b.hit.size>=b.pierce)dead=true;break;}
-          if(b.boom)S.fx.push({t:"boom",x:b.x,y:b.y,tm:0,R:b.boom,col:b.col,dmg:b.dmg*.7,hit:new Set()});
+          if(b.boom)S.fx.push({t:"boom",x:b.x,y:b.y,tm:0,R:b.boom,col:b.col,dmg:b.dmg*.7*(b.boomMul||1),hit:new Set()});
           hurtE(e,b.dmg,b.crit,kbx,kby);dead=true;break;}
       }else if(d2(b.x,b.y,p.x,p.y)<.16){
         hurtP(b.dmg,b.homing?"追尾弾":"敵の投射攻撃",false,b.element);
@@ -3310,14 +3321,26 @@ function gearGrid(host,inDungeon){
   host.appendChild(gg);}
 function openCharacterPick(){const c=$("itC");c.classList.remove("gearCompare");
   c.innerHTML='<div style="font-size:15px;font-weight:800;margin-bottom:10px">職業を選択</div>';
-  for(const k of [...new Set(unlockedRoster().map(x=>x.k))]){const d=document.createElement("div"),sv=S.chars[k];d.className="card tap";
-    d.innerHTML=`<div class="nm" style="color:${CLASSES[k].col}">${CLASSES[k].name}</div><div class="ty">${k===S.cls?"使用中":sv&&sv.base?`Lv${sv.base.lv}`:"新規"}</div><div class="st">${CLASSES[k].desc}</div>`;
+  const classSlot=k=>{let best=99;(S.formation||[]).forEach((key,i)=>{if(key&&key.split(":")[0]===k)best=Math.min(best,i);});return best;};
+  const classes=[...new Set(unlockedRoster().map(x=>x.k))].sort((a,z)=>classSlot(a)-classSlot(z));
+  for(const k of classes){const d=document.createElement("div"),sv=S.chars[k],slot=classSlot(k);d.className="card tap";
+    d.innerHTML=`<div class="row"><div class="nm" style="color:${CLASSES[k].col}">${CLASSES[k].name}</div>`
+      +(slot<99?`<span class="tag">編成${slot+1}番手</span>`:"")+`</div>`
+      +`<div class="ty">${k===S.cls?"使用中":sv&&sv.base?`Lv${sv.base.lv}`:"新規"}</div><div class="st">${CLASSES[k].desc}</div>`;
     tapEl(d,()=>k===S.cls?openCharacterChoices(k):switchClass(k,()=>openCharacterChoices(k)));c.appendChild(d);}
   const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);$("itPop").classList.add("on");}
-function openCharacterChoices(k){const c=$("itC"),list=CHARACTERS[k].filter(ch=>S.unlockedCharacters.includes(k+":"+ch.id));
+function openCharacterChoices(k){const c=$("itC");
+  const owned=CHARACTERS[k].filter(ch=>S.unlockedCharacters.includes(k+":"+ch.id));
+  /* 編成中のキャラを上に、枠の順で並べる。装備を触るのはたいてい編成中の面々なので、
+     未編成のキャラに埋もれた状態で毎回探させない。 */
+  const slotOf=ch=>{const i=(S.formation||[]).indexOf(k+":"+ch.id);return i<0?99:i;};
+  const list=owned.slice().sort((a,z)=>slotOf(a)-slotOf(z));
   c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:10px">${CLASSES[k].name}のキャラクター</div>`;
-  for(const ch of list){const d=document.createElement("div"),on=currentCharacter().id===ch.id;
-    d.className="card tap";d.innerHTML=`<div class="row"><div><div class="nm" style="color:${ch.col}">● ${ch.n}</div><div class="ty">${ch.trait}</div></div>${on?'<span class="tag">選択中</span>':""}</div><div class="st">${ch.d}</div>`;
+  for(const ch of list){const d=document.createElement("div"),on=currentCharacter().id===ch.id,slot=slotOf(ch);
+    d.className="card tap";d.style.borderColor=charTier(ch).col;
+    d.innerHTML=`<div class="row"><div><div class="nm" style="color:${ch.col}">● ${ch.n}`
+      +(slot<99?` <b class="tag">編成${slot+1}番手</b>`:"")+`</div><div class="ty">${ch.trait}</div></div>`
+      +`${on?'<span class="tag">選択中</span>':""}</div><div class="st">${ch.d}</div>`;
     tapEl(d,()=>{selectCharacter(k,ch.id,()=>{$("itPop").classList.remove("on");openTown();});});c.appendChild(d);}
   const back=document.createElement("div");back.className="btn gh";back.textContent="職業選択へ戻る";tapEl(back,openCharacterPick);c.appendChild(back);
   const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);$("itPop").classList.add("on");}
@@ -3333,9 +3356,18 @@ function statBlock(host){
       return `<div class="stat"><span>${nm}</span><b>${pre}${shown.toFixed(dec)}${suf}</b></div>`;}).join("");
   host.appendChild(c);
   if(d.pw.length){const h=document.createElement("h3");h.textContent="装備中の固有効果";host.appendChild(h);
+    if(d.pw.some(id=>pwCount(d,id)>1)){const note=document.createElement("div");note.className="st";
+      note.style.margin="0 0 6px";
+      note.textContent="同じ効果を重ねた分は、2個目 +50%、3個目 +25%…と伸びが半減します（上限2.00倍）。";
+      host.appendChild(note);}
     for(const id of d.pw){const P=POWER(id);if(!P)continue;
+      const n=pwCount(d,id),mul=pwStack(n);
       const e=document.createElement("div");e.className="card";
-      e.innerHTML=`<div class="nm c4">◆ ${P.n}</div><div class="st">${P.d}</div>`;host.appendChild(e);}}}
+      /* 重ねた数と実効倍率を出す。2個目以降の伸びが小さいことを数字で見せる。 */
+      e.innerHTML=`<div class="row"><div class="nm c4">◆ ${P.n}</div>`
+        +(n>1?`<span class="tag">×${n} → 効果 ${mul.toFixed(2)}倍</span>`:"")+`</div>`
+        +`<div class="st">${P.d}</div>`;
+      host.appendChild(e);}}}
 function renderGearTab(host,inDungeon){const panel=document.createElement("div");panel.className="gearPanel";
   const left=document.createElement("div"),right=document.createElement("div");
   left.innerHTML="<h3>装備</h3>";right.innerHTML="<h3>能力値</h3>";
@@ -4204,7 +4236,7 @@ function openGearDetail(slotK,inDungeon){
     <div class="st optBox" style="text-align:center">${statsHTML(it)}</div>`;}
   else c.innerHTML+='<div class="card"><div class="st">装備されていません。</div></div>';
   const add=(text,cls,fn)=>{const d=document.createElement("div");d.className="btn "+cls;d.textContent=text;tapEl(d,fn);c.appendChild(d);};
-  if(it)add("評価","gold",()=>showItem(it,inDungeon));
+  if(it)add("強化","gold",()=>showItem(it,inDungeon));
   add("装備変更","pri",()=>openPick(slotK,inDungeon));
   if(it)add("外す","gh",()=>{S.stash.push(it);S.gear[slotK]=null;S.p.d=derive();recalcHP(S.p);save();
     $("itPop").classList.remove("on");inDungeon?openPause():openTown();});
@@ -4216,7 +4248,9 @@ function compareItemStats(it,other,isAfter){if(!it)return "効果なし";
   const own=itemStatTotals(it),base=itemStatTotals(other);
   let h=Object.keys(own).map(k=>{const d=(own[k]||0)-(base[k]||0),cls=isAfter?(d>0?"up":d<0?"dn":""):"";
     return `<span class="${cls}">${AFN(k)} +${own[k]}${AFP(k)?"%":""}</span>`;}).join("<br>");
-  if(it.pw){const p=POWER(it.pw);if(p)h+=`<div class="leg">◆ ${p.n} — ${p.d}</div>`;}return h;}
+  if(it.pw){const p=POWER(it.pw);if(p){h+=`<div class="leg">◆ ${p.n} — ${p.d}</div>`;
+    const worn=SLOTK.reduce((n,k)=>n+((S.gear[k]&&S.gear[k]!==it&&S.gear[k].pw===it.pw)?1:0),0);
+    if(worn)h+=`<div class="ty">装備中に同じ効果が${worn}個。これを足すと効果 ${pwStack(worn+1).toFixed(2)}倍（重ねるほど伸びは小さくなります）。</div>`;}}return h;}
 function openGearCompare(slotK,it,inDungeon){
   const old=S.gear[slotK],a=itemStatTotals(old),b=itemStatTotals(it),keys=[...new Set([...Object.keys(a),...Object.keys(b)])],
     before=optTotals(null,null),after=optTotals(it,slotK),c=$("itC");c.classList.add("gearCompare");
