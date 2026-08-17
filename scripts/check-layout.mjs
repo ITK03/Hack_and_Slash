@@ -155,9 +155,14 @@ for (const [width, height, name] of sizes) {
     const bad = [];
     for (const el of document.querySelectorAll('.gearPanel .slot .si, #townBody .slot .si')) {
       if (!el.textContent || el.textContent === '—') continue;
-      if (el.scrollWidth > el.clientWidth + 1) bad.push(`${el.textContent}(${el.scrollWidth}>${el.clientWidth})`);
+      /* 1行に収めようとすると「ウォーハン…」と切れて読めない。
+         2行までは許し、枠からはみ出していないことだけを見る。 */
       const lines = Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight));
-      if (lines > 1) bad.push(`${el.textContent}が${lines}行に折り返している`);
+      if (lines > 2) bad.push(`${el.textContent}が${lines}行になっている`);
+      if (el.scrollHeight > el.clientHeight + 1) bad.push(`${el.textContent}が枠に入りきらず切れている`);
+      const tile = el.closest('.slot');
+      if (tile) { const a = el.getBoundingClientRect(), t = tile.getBoundingClientRect();
+        if (a.bottom > t.bottom + 1) bad.push(`${el.textContent}が枠の下へはみ出している`); }
     }
     return bad;
   });

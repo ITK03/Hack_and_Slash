@@ -59,7 +59,8 @@ for (const [name, open] of SCREENS) {
   const r = await page.evaluate(() => {
     const seen = el => { const b = el.getBoundingClientRect(); return b.width > 0 && b.height > 0; };
     const body = document.getElementById('townBody');
-    const out = { uneven: [], overflowX: [], clipped: [], badFont: [], lowContrast: [], scroll: null };
+    const out = { uneven: [], overflowX: [], clipped: [], badFont: [], lowContrast: [], scroll: null,
+      tinyFont: [], collide: [], outside: [] };
 
     /* 1. 同じ並びの枠は同じ大きさであること。
           横に並ぶ兄弟（グリッド／フレックス）の高さを比べる。 */
@@ -153,9 +154,45 @@ for (const [name, open] of SCREENS) {
         if (ratio < 2.2) out.lowContrast.push(`${el.className || el.tagName}「${(el.textContent || '').trim().slice(0, 12)}」比${ratio.toFixed(1)}`);
       }
     }
+    /* 6. 文字の大きさの下限。7px や 8px は実機で潰れて読めない。 */
+    for (const el of document.querySelectorAll('#scTown *')) {
+      if (!seen(el)) continue;
+      if (![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) continue;
+      const px = parseFloat(getComputedStyle(el).fontSize);
+      if (px < 11) out.tinyFont.push(`${el.className || el.tagName}「${(el.textContent || '').trim().slice(0, 10)}」${px}px`);
+    }
+
+    /* 7. 印どうしの重なり。角に絶対配置した印が増えると必ずぶつかる。
+          同じ親の中で重なっている small な要素を探す。 */
+    for (const box of document.querySelectorAll('#scTown .slot,#scTown .cell,#scTown .member,#scTown .charChip,#scTown .loadSlot')) {
+      const marks = [...box.querySelectorAll('*')].filter(e => {
+        const cs = getComputedStyle(e);
+        return seen(e) && cs.position === 'absolute' && (e.textContent || '').trim();
+      });
+      for (let i = 0; i < marks.length; i++) for (let j = i + 1; j < marks.length; j++) {
+        const a = marks[i].getBoundingClientRect(), b2 = marks[j].getBoundingClientRect();
+        const ox = Math.min(a.right, b2.right) - Math.max(a.left, b2.left);
+        const oy = Math.min(a.bottom, b2.bottom) - Math.max(a.top, b2.top);
+        if (ox > 2 && oy > 2) out.collide.push(`${box.className.split(' ')[0]}: 「${marks[i].textContent.trim()}」と「${marks[j].textContent.trim()}」`);
+      }
+      /* 子が親の枠から外へ出ていないか（角の丸バッジがはみ出す事故） */
+      const pb = box.getBoundingClientRect();
+      for (const e of box.querySelectorAll('*')) {
+        if (!seen(e)) continue;
+        const cs = getComputedStyle(e);
+        if (cs.position !== 'absolute') continue;
+        const r2 = e.getBoundingClientRect();
+        if (r2.left < pb.left - 1 || r2.right > pb.right + 1 || r2.top < pb.top - 1 || r2.bottom > pb.bottom + 1) {
+          out.outside.push(`${box.className.split(' ')[0]} の「${(e.textContent || '').trim().slice(0, 6)}」が枠の外`);
+        }
+      }
+    }
     return out;
   });
 
+  if (r.tinyFont.length) add(`[${name}] 文字が小さすぎる（11px未満）: ${[...new Set(r.tinyFont)].slice(0, 4).join(' / ')}`);
+  if (r.collide.length) add(`[${name}] 印どうしが重なっている: ${[...new Set(r.collide)].slice(0, 3).join(' / ')}`);
+  if (r.outside.length) add(`[${name}] 印が枠からはみ出している: ${[...new Set(r.outside)].slice(0, 3).join(' / ')}`);
   if (r.uneven.length) add(`[${name}] 同じ並びの枠の大きさが違う: ${[...new Set(r.uneven)].slice(0, 3).join(' / ')}`);
   if (r.scroll?.stuck) add(`[${name}] 内容が ${r.scroll.over}px あふれているのにスクロールできない`);
   if (r.overflowX.length) add(`[${name}] 文字が枠から横にはみ出す: ${[...new Set(r.overflowX)].slice(0, 3).join(' / ')}`);
@@ -163,7 +200,7 @@ for (const [name, open] of SCREENS) {
   if (r.badFont.length) add(`[${name}] フォント指定漏れ: ${[...new Set(r.badFont)].slice(0, 2).join(' / ')}`);
   if (r.lowContrast.length) add(`[${name}] 地に埋もれて読めない文字: ${[...new Set(r.lowContrast)].slice(0, 3).join(' / ')}`);
 }
-notes.push(`画面 ${SCREENS.length}面: 枠の大きさ・スクロール・文字のはみ出し・フォント・コントラストを検査`);
+notes.push(`画面 ${SCREENS.length}面: 枠の大きさ・スクロール・文字のはみ出し・フォント・コントラスト・文字の下限・印の重なりを検査`);
 
 /* ---------- 強調ボタンが地の色に埋もれていないこと ----------
    一括の面指定で .gold や .pri を上書きすると、「潜る」が普通のボタンと

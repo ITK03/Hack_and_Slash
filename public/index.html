@@ -15,6 +15,8 @@
      暗さはこのゲームの個性なので全体を明るくはしない。押せる物だけを浮かせる。 */
   --press:#231d33;--press2:#2b2440;--pressLine:#4a3f68;
   --line:#2a2338;--line2:#3a3050;--ink:#ded7ec;--ink2:#8e86a2;--ink3:#5b5470;
+  /* 下のタブ帯の高さ。固定する物の位置合わせに使う。 */
+  --tabH:calc(48px + env(safe-area-inset-bottom) + 12px);
   --gold:#e0a53c;--blood:#d64550;
   --c0:#c8c4bc;--c1:#5ad06a;--c2:#5a8fe0;--c3:#e0c040;--c4:#ff8adf;
   --fs:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
@@ -37,12 +39,12 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
 #xpF{background:linear-gradient(180deg,#9ae05a,#3d6a24);color:#7cd44c}
 .hrow{display:flex;align-items:center;gap:8px;margin-bottom:4px}
 .hrow .bar{flex:1}
-.hval{font-size:10px;font-weight:700;min-width:48px;text-align:right;color:var(--ink2)}
-#meta{margin-top:5px;display:flex;justify-content:space-between;font-size:10px;
+.hval{font-size:11px;font-weight:700;min-width:48px;text-align:right;color:var(--ink2)}
+#meta{margin-top:5px;display:flex;justify-content:space-between;font-size:11px;
   color:var(--ink3);font-weight:600;letter-spacing:.03em;align-items:center}
 #meta b{color:var(--ink);font-weight:800}
 #goldT{color:var(--gold)}
-#loot{margin-top:4px;font-size:10px;font-weight:800;display:flex;gap:7px}
+#loot{margin-top:4px;font-size:11px;font-weight:800;display:flex;gap:7px}
 #pauseB{position:absolute;right:9px;top:calc(env(safe-area-inset-top) + 6px);z-index:14;
   width:34px;height:34px;border-radius:3px;border:1px solid var(--line2);background:rgba(14,11,22,.88);
   display:none;align-items:center;justify-content:center;pointer-events:auto;color:var(--ink2)}
@@ -53,20 +55,20 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
   background:rgba(8,7,14,.72);pointer-events:none}
 #mm{width:88px;height:88px;display:block}
 #mmGuide{display:grid;grid-template-columns:44px 44px;border-top:1px solid rgba(80,70,105,.7)}
-.mmDist{height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:9px;font-weight:900;background:rgba(10,8,16,.82)}
+.mmDist{height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:900;background:rgba(10,8,16,.82)}
 .mmDist i{display:block;width:22px;height:22px;transform:rotate(var(--dir,0rad));transform-origin:center}
 .mmDist i::before{content:"";display:block;width:22px;height:22px;background:currentColor;
   clip-path:polygon(100% 50%,0 18%,0 38%,64% 50%,0 62%,0 82%)}
 #mmStair{color:#e08830}#mmPortal{color:#5aa0ff}
 #buffs{position:absolute;left:11px;top:calc(env(safe-area-inset-top) + 108px);z-index:11;
   display:flex;flex-direction:column;gap:4px;pointer-events:none}
-.buff{font-size:10px;font-weight:700;padding:4px 9px;border-radius:2px;background:rgba(10,8,16,.85);
+.buff{font-size:11px;font-weight:700;padding:4px 9px;border-radius:2px;background:rgba(10,8,16,.85);
   border-left:2px solid var(--gold);color:#d8cbe8;white-space:nowrap}
 #combo{position:absolute;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 128px);
   z-index:13;pointer-events:none;font-size:26px;font-weight:900;opacity:0;color:var(--gold);
   text-shadow:0 2px 12px rgba(224,165,60,.6),0 1px 3px #000;transition:opacity .18s}
 #combo.on{opacity:1}
-#combo small{display:block;font-size:9px;font-weight:700;letter-spacing:.22em;
+#combo small{display:block;font-size:11px;font-weight:700;letter-spacing:.22em;
   color:var(--ink2);text-align:center;margin-top:-2px;text-shadow:none}
 /* ボスバーは自分のHPバーと同じ「上端の赤い横棒」になっていて取り違える。
    囲いを付けて画面中央に置き、自分のバー（左端に並ぶ細い3本）と別物に見せる。 */
@@ -98,9 +100,9 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
   background:radial-gradient(circle at 34% 28%,#3b3450,#151222 72%);
   box-shadow:0 3px 10px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  font-size:10px;font-weight:800;color:#efe6d6;text-align:center;line-height:1.15;padding:3px}
+  font-size:11px;font-weight:800;color:#efe6d6;text-align:center;line-height:1.15;padding:3px}
 .sk .cd{position:absolute;inset:0;background:rgba(5,4,9,.76);transform-origin:bottom;pointer-events:none}
-.sk .cost{font-size:8px;color:#7fb4f0;font-weight:700;margin-top:2px}
+.sk .cost{font-size:11px;color:#7fb4f0;font-weight:700;margin-top:2px}
 .sk.no{opacity:.34;filter:grayscale(.6)}
 .sk:active{transform:scale(.92)}
 #s0{width:80px;height:80px;right:6px;bottom:6px;font-size:13px;border-color:rgba(224,165,60,.45);
@@ -109,16 +111,17 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
    技名は円の内側。以前は名前とコストを縦に積んで中央寄せしていたため名前が
    円の上寄りに来て、その高さの弦（52px）と文字幅（4文字52px）が一致し、
    丸い切り抜きで左右が削れていた。名前を垂直中央へ絶対配置すると弦は直径いっぱいになる。 */
-.skWrap{position:absolute;width:62px;height:62px;pointer-events:none}
+.skWrap{position:absolute;width:68px;height:68px;pointer-events:none}
 #w1{right:94px;bottom:8px}#w2{right:78px;bottom:90px}#w3{right:6px;bottom:100px}
 .skWrap .sk{position:absolute;inset:0;width:auto;height:auto}
 /* 技名と消費MPは「ひとかたまり」で円の中心に置く。
    名前だけを中心へ絶対配置し、消費をその下にぶら下げると、
    2つ合わせた見た目の重心が中心より下がって傾いて見える。
    .sk 自身が flex 中央寄せなので、絶対配置をやめれば組で中央に来る。 */
-.skName{text-align:center;font-size:10px;font-weight:800;line-height:1.1;color:#efe6d6;
-  letter-spacing:-.02em;white-space:nowrap;pointer-events:none;max-width:100%;padding:0 2px}
-.sk .cost{font-size:8px;color:#7fb4f0;font-weight:700;margin:1px 0 0;text-align:center;font-style:normal}
+.skName{text-align:center;font-size:11px;font-weight:800;line-height:1.1;color:#efe6d6;
+  letter-spacing:-.04em;white-space:nowrap;pointer-events:none;max-width:100%;padding:0 1px;
+  transform-origin:center;}
+.sk .cost{font-size:11px;color:#7fb4f0;font-weight:700;margin:1px 0 0;text-align:center;font-style:normal}
 /* アイテムと自動切替は右端の縦一列。技の弧より上に置いて重ならないようにする。
    よく押すアイテムほど下（親指に近い側）へ、切替はいちばん上。
    長押しで扇を開く方式は、押しっぱなしが要る上に何が選ばれるか見えないのでやめた。 */
@@ -133,26 +136,26 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
   background:radial-gradient(circle at 34% 28%,rgba(58,30,38,.82),rgba(16,12,20,.82) 72%);
   box-shadow:0 2px 7px rgba(0,0,0,.45)}
 .railBtn b{font-size:14px;line-height:1;font-weight:900}
-.railBtn small{font-size:7px;font-weight:700;opacity:.8;white-space:nowrap}
+.railBtn small{font-size:11px;font-weight:700;opacity:.8;white-space:nowrap}
 .railBtn.empty{border-color:var(--line2);color:var(--ink3);background:rgba(18,15,26,.7)}
 .railBtn.no{opacity:.34;filter:grayscale(.6)}
 .railBtn:active{transform:scale(.92)}
 #autoBtn{pointer-events:auto;border:1px solid #5aa0ff;color:#cfe4ff;border-radius:50%;
   background:radial-gradient(circle at 34% 28%,#1d3050,#0c1421 72%);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  font-size:9px;font-weight:900;line-height:1.15;text-align:center;
+  font-size:11px;font-weight:900;line-height:1.15;text-align:center;
   box-shadow:0 3px 9px rgba(0,0,0,.5)}
-#autoBtn small{font-size:7px;font-weight:700;opacity:.8}
+#autoBtn small{font-size:11px;font-weight:700;opacity:.8}
 #autoBtn.on{border-color:var(--gold);color:#ffe6ac;background:radial-gradient(circle at 34% 28%,#4a3a12,#1a1408 72%)}
 
 .loadout{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 /* 中身は縦横とも中央。min-height だと絵と文字が上に寄って枠と中心がずれる。 */
 .loadSlot{height:80px;padding:6px 3px;border:1px solid var(--line);background:var(--panel);
-  border-radius:3px;font-size:9px;display:flex;flex-direction:column;
+  border-radius:3px;font-size:11px;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:2px;overflow:hidden}
-.loadSlot b{font-size:10px;font-weight:800;line-height:1.15;
+.loadSlot b{font-size:11px;font-weight:800;line-height:1.15;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.loadSlot .cnt{font-size:9px;color:var(--ink3);font-weight:700}
+.loadSlot .cnt{font-size:11px;color:var(--ink3);font-weight:700}
 .loadSlot svg{display:block}.recipe{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center}
 #act{position:absolute;left:50%;transform:translateX(-50%);
   bottom:calc(env(safe-area-inset-bottom) + 112px);z-index:22;padding:12px 20px;border-radius:3px;
@@ -178,7 +181,7 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
 /* 再開が主。撤退は取り返しがつかないので、隣に同じ大きさで並べず端へ小さく寄せる。 */
 .pauseActions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center}
 .pauseActions .btn{margin:0}
-.pauseActions .giveup{font-size:10px;padding:9px 10px;color:#8e8698;background:none;
+.pauseActions .giveup{font-size:11px;padding:9px 10px;color:#8e8698;background:none;
   border:1px solid transparent;border-bottom:1px solid #4a4356;border-radius:0}
 h2{font-size:17px;font-weight:900;letter-spacing:.06em;color:#f0e9dc}
 .sub{font-size:11px;color:var(--ink3);margin-top:3px;font-weight:600}
@@ -186,7 +189,7 @@ h2{font-size:17px;font-weight:900;letter-spacing:.06em;color:#f0e9dc}
 .tab{flex:1;padding:9px 2px;text-align:center;font-size:11px;font-weight:800;border-radius:2px;
   background:#100e18;border:1px solid var(--line);color:var(--ink3)}
 .tab.on{background:linear-gradient(180deg,#2a2238,#1c1728);border-color:var(--line2);color:#f0e6d4}
-h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spacing:.18em}
+h3{font-size:11px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spacing:.18em}
 .sbody>h3:first-child{margin-top:0}
 .card{background:linear-gradient(135deg,rgba(255,255,255,.025),transparent 38%),
   repeating-linear-gradient(118deg,transparent 0 9px,rgba(255,255,255,.012) 10px 11px),
@@ -195,7 +198,7 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 .card.tap:active{background:#1c1728}
 .row{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .nm{font-size:13px;font-weight:800}
-.ty{font-size:10px;color:var(--ink3);margin-top:3px;font-weight:600}
+.ty{font-size:11px;color:var(--ink3);margin-top:3px;font-weight:600}
 .st{font-size:11px;color:#a49cb8;margin-top:7px;line-height:1.7}
 .st .up{color:#7ad04e;font-weight:700}.st .dn{color:#d05a54;font-weight:700}
 .leg{color:#ff8adf;font-size:11px;margin-top:7px;line-height:1.55;font-weight:700;
@@ -206,7 +209,7 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 /* 伝説は文字を虹色にするため color:transparent。アイコンは stroke="currentColor" なので
    そのままだと透明になり、一番うれしいドロップだけ絵が消えていた。stroke を明示する。 */
 .c4 svg{stroke:var(--c4)}
-.tag{display:inline-block;font-size:8px;padding:2px 5px;border-radius:2px;border:1px solid currentColor;
+.tag{display:inline-block;font-size:11px;padding:2px 5px;border-radius:2px;border:1px solid currentColor;
   opacity:.75;margin-left:5px;vertical-align:1px;font-weight:800}
 .btn{padding:13px;border-radius:3px;text-align:center;font-size:13px;font-weight:800;
   border:1px solid var(--line2);background:linear-gradient(90deg,rgba(255,255,255,.025),transparent 35%),linear-gradient(180deg,#2a2238,#15111f);
@@ -221,13 +224,19 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .compactGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 .compactGrid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
-.compactGrid .btn{margin-top:0;padding:9px 5px;font-size:10px}
-.adminGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.adminGrid .btn{margin:0;padding:9px 3px;font-size:9px}
+.compactGrid .btn{margin-top:0;padding:9px 5px;font-size:11px}
+.adminGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.adminGrid .btn{margin:0;padding:9px 3px;font-size:11px}
 /* 高さは固定。min-height だと中身の量で段ごとに背が変わり、
    装備している段と空の段で枠の大きさが揃わなかった。 */
 .slot{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
-  border-radius:3px;padding:8px 4px;text-align:center;height:80px;display:flex;
-  flex-direction:column;justify-content:center;gap:2px;overflow:hidden}
+  border-radius:3px;padding:4px 3px 6px;text-align:center;height:116px;display:flex;
+  flex-direction:column;align-items:center;gap:1px;overflow:hidden}
+/* 印の帯。左＝更新できる、右＝強化値。帯にすることで重なりようがない。 */
+.slot .slotTop{width:100%;display:flex;justify-content:space-between;align-items:center;
+  height:14px;font-size:12px;font-weight:900;line-height:1}
+.slot .slotTop .up{color:#7ad04e}
+.slot .slotTop .enh{color:#7ad0ff}
+.slot .sd{font-size:11px;color:var(--ink3);font-weight:700;margin-top:1px}
 /* ON/OFF 切り替え。金は「択一で選ばれている」ものだけに使う。 */
 .btn.toggle{display:flex;align-items:center;justify-content:space-between;gap:6px;padding-left:11px;padding-right:9px}
 .btn.toggle em{font-style:normal;font-size:12px;font-weight:900;letter-spacing:.06em;
@@ -235,21 +244,20 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 .btn.toggle.on em{border-color:rgba(224,165,60,.65);color:var(--gold);background:rgba(224,165,60,.12)}
 .setNote{font-size:12px;color:var(--ink2);line-height:1.6;margin:-2px 0 7px}
 .invLegend{display:flex;flex-wrap:wrap;gap:4px 12px;padding:7px 10px;margin-bottom:8px;
-  border:1px solid var(--line);background:var(--panel2);font-size:9px;color:var(--ink2)}
+  border:1px solid var(--line);background:var(--panel2);font-size:12px;color:var(--ink2)}
 .invLegend b{font-weight:900}
 .invLegend i{font-style:normal;margin-right:5px;font-weight:800}
 .slot{position:relative}
-/* 倉庫にもっと強い装備がある部位の印。倉庫グリッドの▲と同じ意味・同じ色にそろえる。 */
-.upMark{position:absolute;top:2px;left:4px;font-size:12px;line-height:1;font-weight:900;
-  color:#7ad04e;text-shadow:0 0 6px rgba(122,208,78,.6)}
+
 .slot .ic{color:var(--ink3);margin-bottom:2px}
 .slot .ic.e{opacity:.28}
-.slot .sl{font-size:9px;color:var(--ink3);font-weight:700}
+.slot .sl{font-size:11px;color:var(--ink2);font-weight:700}
 /* 枠には品目名（バトルアックス等）だけを1行で出す。
    接頭辞まで入れると狭い枠で折り返して「バトルアック／ス」と語尾が落ち、
    7部位すべてが読めなくなる。接頭辞付きの正式名はタップ後の詳細で見る。 */
-.slot .si{font-size:10px;font-weight:800;line-height:1.3;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot .si{font-size:11px;font-weight:800;line-height:1.25;max-width:100%;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  word-break:break-all}
 .slot.empty{border-style:dashed;border-color:#221c30}
 .slot.empty .si{color:#3d3750}
 .slot:active{background:#1c1728}
@@ -260,13 +268,13 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 .alloc{display:flex;align-items:center;justify-content:space-between;padding:10px 0;
   border-bottom:1px solid var(--line)}
 .alloc .an{font-size:12px;color:#cfc7dd;font-weight:800}
-.alloc .ad{font-size:10px;color:var(--ink3);margin-top:3px;font-weight:600}
+.alloc .ad{font-size:11px;color:var(--ink3);margin-top:3px;font-weight:600}
 .alloc .av{font-size:17px;font-weight:900;min-width:34px;text-align:right;color:#f0e8d8}
 .plus{width:32px;height:32px;border-radius:3px;background:linear-gradient(180deg,#2e2648,#1e1830);
   border:1px solid #4a3e70;color:#c8bcf0;font-size:18px;font-weight:900;
   display:flex;align-items:center;justify-content:center}
 .plus.no{opacity:.2}
-#townBody .alloc,#pauseBody .alloc{padding:4px 0}#townBody .alloc .ad,#pauseBody .alloc .ad{display:block;font-size:8px;margin-top:1px}#townBody .alloc .plus,#pauseBody .alloc .plus{width:27px;height:27px}
+#townBody .alloc,#pauseBody .alloc{padding:4px 0}#townBody .alloc .ad,#pauseBody .alloc .ad{display:block;font-size:11px;margin-top:1px}#townBody .alloc .plus,#pauseBody .alloc .plus{width:27px;height:27px}
 #townBody>h3{margin:10px 0 6px}
 .profile{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:10px;align-items:center;margin-top:8px}
 .profileIcon{width:52px;height:52px;border:2px solid var(--line2);background:#171321;border-radius:50%;
@@ -274,15 +282,22 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 /* 枠の色はキャラクターの等級。倉庫の装備と同じ「枠の色＝レア度」の読み方を揃える */
 .profileIcon .clsMark{position:absolute;right:-3px;bottom:-3px;width:19px;height:19px;border-radius:50%;
   border:1px solid var(--line2);background:#0d0b14;display:grid;place-items:center;
-  font-size:10px;font-style:normal;font-weight:900;line-height:1}
+  font-size:11px;font-style:normal;font-weight:900;line-height:1}
 .whoami{min-width:0}
 .uname{font-size:13px;font-weight:900;color:var(--ink);line-height:1.2;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.uname::after{content:"✎";font-size:9px;color:var(--ink3);margin-left:5px}
-.depthBig{font-size:21px;font-weight:950;color:#fff;line-height:1.15;margin-top:1px}.depthBig small{display:block;font-size:8px;color:var(--ink3);letter-spacing:.12em}
-.wallet{font-size:10px;text-align:right;width:16ch;font-variant-numeric:tabular-nums}.currency{display:flex;align-items:center;justify-content:flex-end;gap:4px;height:20px;white-space:nowrap}.currency .coin{color:var(--gold);font-size:13px}.currency .gem{color:#79d9ff;font-size:12px}.currency span{display:inline-block;min-width:12ch;text-align:right;font-weight:900}.currency.gold span{color:var(--gold)}
+.uname::after{content:"✎";font-size:11px;color:var(--ink3);margin-left:5px}
+.depthBig{font-size:21px;font-weight:950;color:#fff;line-height:1.15;margin-top:1px}.depthBig small{display:block;font-size:11px;color:var(--ink3);letter-spacing:.12em}
+.wallet{font-size:12px;text-align:right;width:17ch;font-variant-numeric:tabular-nums}.currency{display:flex;align-items:center;justify-content:flex-end;gap:4px;height:20px;white-space:nowrap}.currency .coin{color:var(--gold);font-size:13px}.currency .gem{color:#79d9ff;font-size:13px}.currency span{display:inline-block;min-width:12ch;text-align:right;font-weight:900}.currency.gold span{color:var(--gold)}
 .stamina{margin-top:4px}.stamina .bar{height:7px}.stamina i{background:linear-gradient(90deg,#56b86d,#b4db65)}
-.innerTabs{display:flex;gap:6px;margin-top:7px}.innerTabs .btn{flex:1;margin:0;padding:8px;font-size:10px}
+/* 区画のタブは固定する。スクロールした先で切り替えたいのに、
+   毎回一番上まで戻らないと押せなかった。 */
+.innerTabs{display:flex;gap:6px;margin-top:0;position:sticky;top:0;z-index:6;
+  padding:7px 0 6px;background:var(--bg);
+  box-shadow:0 6px 10px -8px rgba(0,0,0,.9)}
+.innerTabs .btn{flex:1;margin:0;padding:8px 4px;font-size:12px}
+/* 絞込などの操作列も、タブのすぐ下に固定して同じ扱いにする。 */
+#invBar{position:sticky;top:57px;z-index:5;background:var(--bg);padding-bottom:6px}
 .gearPanel{margin-top:10px}
 .tutorialBanner{position:fixed;z-index:95;left:14px;right:14px;top:calc(env(safe-area-inset-top) + 72px);padding:13px 15px;background:#132038;border:1px solid #5aa0ff;border-radius:4px;color:#e4f1ff;font-size:12px;font-weight:800;line-height:1.65;text-align:center;box-shadow:0 8px 32px #000}
 .tutorialBanner.bottom{top:auto;bottom:calc(env(safe-area-inset-bottom) + 82px)}
@@ -290,18 +305,18 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 #tutorialBar{position:fixed;z-index:96;left:0;right:0;top:calc(env(safe-area-inset-top) + 4px);
   display:flex;justify-content:center;gap:6px;pointer-events:none}
 #tutorialBar .tb{pointer-events:auto;padding:5px 12px;border:1px solid #5aa0ff;border-radius:3px;
-  background:rgba(12,18,32,.92);color:#cfe4ff;font-size:10px;font-weight:800;box-shadow:0 2px 10px #000}
+  background:rgba(12,18,32,.92);color:#cfe4ff;font-size:11px;font-weight:800;box-shadow:0 2px 10px #000}
 /* バーの分だけ上部のHUDと拠点ヘッダを下げる。重ねるとHP/MPバーや所持金が隠れる。 */
 body.tutBar #hud{padding-top:calc(env(safe-area-inset-top) + 40px)}
 body.tutBar .shead{padding-top:calc(env(safe-area-inset-top) + 38px)}
 body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
-.tutorialBanner b{color:#82c4ff}.tutorialActions{display:flex;justify-content:center;gap:8px;margin-top:8px}.tutorialBanner .confirm,.tutorialBanner .skip{padding:6px 14px;border:1px solid #66809e;color:#b9cbe0;font-size:10px}.tutorialBanner .confirm{border-color:#82c4ff;background:#203c61;color:#fff}.tutorialMask{display:none!important}.tutorialTarget{outline:3px solid #72b8ff!important;outline-offset:3px;filter:drop-shadow(0 0 8px #54a8ff);pointer-events:auto!important}
+.tutorialBanner b{color:#82c4ff}.tutorialActions{display:flex;justify-content:center;gap:8px;margin-top:8px}.tutorialBanner .confirm,.tutorialBanner .skip{padding:6px 14px;border:1px solid #66809e;color:#b9cbe0;font-size:11px}.tutorialBanner .confirm{border-color:#82c4ff;background:#203c61;color:#fff}.tutorialMask{display:none!important}.tutorialTarget{outline:3px solid #72b8ff!important;outline-offset:3px;filter:drop-shadow(0 0 8px #54a8ff);pointer-events:auto!important}
 .formation{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 /* 番手は枠の外の細い帯。枠の中は「誰か」だけにして縦を詰める */
 .formationOrder{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0 3px}
-.formationOrder span{font-size:8px;color:var(--gold);text-align:center;letter-spacing:.04em}
+.formationOrder span{font-size:11px;color:var(--gold);text-align:center;letter-spacing:.04em}
 .member{min-height:0;padding:7px 3px 6px;text-align:center;border:1px solid var(--line);background:var(--panel);border-radius:3px}
-.member .mlv{font-size:9px;color:var(--ink3);font-weight:700;margin-top:1px}
+.member .mlv{font-size:11px;color:var(--ink3);font-weight:700;margin-top:1px}
 .member .nm.empty{color:var(--ink3);font-weight:700}
 .member.on{box-shadow:inset 0 0 0 1px var(--gold)}
 .member .face{display:flex;justify-content:center;margin:1px 0 2px;line-height:1}
@@ -326,20 +341,20 @@ body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
 #diveBar .btn.gh{min-width:44px}
 /* 数字自体が階層一覧への入口。押せると分かるよう枠と目印を出す */
 #diveBar .fl.tap{border:1px solid var(--line);border-radius:3px;background:#100d18;padding:5px 14px 5px 6px;position:relative}
-#diveBar .fl.tap::after{content:"▾";position:absolute;right:4px;top:50%;transform:translateY(-50%);font-size:9px;color:var(--ink3)}
+#diveBar .fl.tap::after{content:"▾";position:absolute;right:4px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--ink3)}
 #diveBar .fl b{display:block;font-size:20px;font-weight:900;font-variant-numeric:tabular-nums}
-#diveBar .fl small{display:block;font-size:8px;color:var(--ink2)}
+#diveBar .fl small{display:block;font-size:11px;color:var(--ink2)}
 #diveBar .go{flex:1 1 auto;margin:0;padding:13px 6px;font-size:15px;font-weight:900}
 /* 日替わり任務は1件ずつ大きなカード＋「未達成」の偽ボタンで画面1枚を占有していた。
    進捗バー付きの細い行にして、受け取れる時だけボタンを出す。 */
 /* 折りたたみ見出し。任務や説明のように「たまに見る」ものを畳んでおく */
 .fold{display:flex;align-items:center;justify-content:space-between;margin:12px 0 0;padding:11px 12px;
   border:1px solid var(--line);border-radius:3px;background:#100d18;font-size:12px;font-weight:800;color:var(--ink2)}
-.fold::after{content:"▾";margin-left:8px;font-size:10px;color:var(--ink3);transition:transform .15s}
+.fold::after{content:"▾";margin-left:8px;font-size:11px;color:var(--ink3);transition:transform .15s}
 .fold.on::after{transform:rotate(180deg)}
-.fold em{font-style:normal;font-size:10px;color:var(--ink3);margin-left:auto;padding-right:8px}
+.fold em{font-style:normal;font-size:11px;color:var(--ink3);margin-left:auto;padding-right:8px}
 .foldBody{padding-top:8px}
-#btnBack small{display:block;font-size:9px;font-weight:700;opacity:.75;margin-top:2px}
+#btnBack small{display:block;font-size:11px;font-weight:700;opacity:.75;margin-top:2px}
 .member{position:relative}
 /* HPを親指の近くへ。戦闘中は右下の技ボタンを見ているのに、HPは対角の左上にあった。
    技の塊のすぐ上に太いバーを置き、視線を動かさずに残量が読めるようにする。 */
@@ -363,17 +378,30 @@ body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
   color:var(--ink2);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;
   cursor:pointer;position:relative}
 .hintQ::after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px}
+/* 調合の系統見出し。畳んだ状態でも「作れるか」が分かるようにする。 */
+.craftFold{margin-top:8px}
+.craftFold span{display:flex;align-items:center;gap:7px;font-weight:800}
+/* 数値そのものを押せることが分かるようにする。 */
+.alloc .av.tapNum{border-bottom:1px dashed var(--line2);padding:0 4px;min-height:44px;
+  display:flex;align-items:center;justify-content:flex-end}
+/* 個数を決める行。自由入力を真ん中に置き、両側に −＋。 */
+.qtyRow{display:grid;grid-template-columns:64px 1fr 64px;gap:8px;align-items:center;margin-bottom:6px}
+.qtyRow .btn{margin:0;min-height:52px;font-size:22px;font-weight:900}
+.qtyVal{min-height:52px;width:100%;text-align:center;font-size:24px;font-weight:900;
+  color:var(--ink);background:var(--panel2);border:1px solid var(--line2);border-radius:3px;
+  font-variant-numeric:tabular-nums}
+.qtyVal:focus{outline:2px solid var(--gold);outline-offset:-2px}
 /* 拠点の先頭に置く「次にできること」。何から触ればいいのかの手掛かりを1つだけ出す。 */
 .nextCard{display:flex;align-items:center;gap:12px;padding:12px;margin-bottom:12px;
   border:1px solid #4f9fd8;border-radius:3px;background:linear-gradient(180deg,rgba(79,159,216,.14),transparent)}
 .nextCard .nx{flex:1;min-width:0}
-.nextCard small{display:block;font-size:10px;letter-spacing:.1em;color:#8ab8e0;margin-bottom:2px}
+.nextCard small{display:block;font-size:11px;letter-spacing:.1em;color:#8ab8e0;margin-bottom:2px}
 .nextCard b{font-size:14px;font-weight:800;color:var(--ink);line-height:1.4}
 .nextCard .btn{margin:0;width:auto;flex:0 0 auto;padding:0 16px;min-height:44px;display:flex;align-items:center}
 /* タブの未処理バッジ。数字付きの赤丸で、開かなくても残件が分かる。 */
 .tabs .tab{position:relative}
 .tabs .tab .badge{position:absolute;top:4px;right:8px;min-width:17px;height:17px;padding:0 4px;
-  border-radius:9px;background:#d0453f;color:#fff;font-size:10px;font-weight:900;font-style:normal;
+  border-radius:9px;background:#d0453f;color:#fff;font-size:11px;font-weight:900;font-style:normal;
   display:flex;align-items:center;justify-content:center;line-height:1}
 /* 装備の上に置く戦闘力と一括着用。 */
 .cpBar{display:flex;align-items:center;gap:12px;padding:10px 12px;margin-bottom:8px;
@@ -431,9 +459,9 @@ body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
 .xpBar{flex:1;max-width:118px;height:5px;border-radius:3px;background:rgba(255,255,255,.10);overflow:hidden}
 .xpBar i{display:block;height:100%;background:linear-gradient(90deg,#5ab4ff,#8ad8ff);width:0}
 .hdrCp{display:flex;align-items:baseline;gap:5px;margin-top:3px}
-.hdrCp small{font-size:9px;letter-spacing:.08em;color:var(--ink2)}
+.hdrCp small{font-size:11px;letter-spacing:.06em;color:var(--ink2)}
 .hdrCp span{font-size:17px;font-weight:900;color:var(--gold);letter-spacing:.01em}
-.currency.stam .stamI{color:#6ae0b0}
+.currency.stam .stamI{color:#6ae0b0;font-size:12px}
 .currency.stam{color:#9ff0d0}
 /* 装備・技・能力の上に常駐するキャラ切替。編成の面々を横に並べて1タップで移る。 */
 .charBar{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
@@ -441,24 +469,24 @@ body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
   border:1px solid var(--line);background:var(--panel);border-radius:3px;opacity:.5}
 .charBar .charChip.on{opacity:1;box-shadow:0 0 0 1px rgba(255,255,255,.25) inset}
 /* 職業印は角に逃がす。行として積むと1枠あたりの高さが倍になる。 */
-.charBar .charChip .clsMark{position:absolute;right:2px;top:2px;width:14px;height:14px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;font-size:9px;font-style:normal;font-weight:800;
+.charBar .charChip .clsMark{position:absolute;right:2px;top:2px;width:17px;height:17px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-style:normal;font-weight:800;
   background:rgba(10,8,14,.85);border:1px solid var(--line)}
 .charBar .charChip .face{display:flex;justify-content:center;line-height:1}
 .charBar .charChip .nm{font-size:11px;font-weight:800;color:var(--ink);white-space:nowrap}
-.charBar .charChip .mlv{font-size:9px;color:var(--ink2);white-space:nowrap}
+.charBar .charChip .mlv{font-size:11px;color:var(--ink2);white-space:nowrap}
 /* 「編集中の名前」と「編成外を選ぶ」は同じ行に置く。案内で縦を使わない。 */
 .charBarRow{display:flex;align-items:center;gap:8px;margin:6px 0 8px}
 .charBarNote{flex:1;font-size:11px;color:var(--ink2)}
 .charBarNote b{font-weight:800}
 .charBarRow .btn{margin:0;flex:0 0 auto;width:auto;padding:6px 10px;font-size:11px}
-.member .clsMark{position:absolute;right:4px;top:4px;width:17px;height:17px;border-radius:50%;
+.member .clsMark{position:absolute;right:3px;top:3px;width:19px;height:19px;border-radius:50%;
   border:1px solid var(--line2);background:#0d0b14;display:grid;place-items:center;
-  font-size:9px;font-style:normal;font-weight:900;line-height:1}
+  font-size:11px;font-style:normal;font-weight:900;line-height:1}
 .matGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:9px}
 .matCell{border:1px solid var(--line);border-radius:3px;background:#100d18;padding:8px 2px;text-align:center}
 .matCell b{display:block;font-size:15px;font-weight:900;color:var(--ink)}
-.matCell small{display:block;font-size:8px;color:var(--ink3);margin-top:2px}
+.matCell small{display:block;font-size:11px;color:var(--ink3);margin-top:2px}
 .matLine{display:flex;justify-content:space-between;gap:12px;margin:9px 0 2px;padding:8px 11px;
   border:1px solid var(--line);border-radius:3px;background:#100d18;font-size:11px;color:var(--ink3);font-weight:700}
 .matLine b{color:var(--ink2);font-weight:800}
@@ -469,7 +497,7 @@ body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
   padding:8px 11px;border:1px solid var(--line);background:var(--panel);margin-bottom:6px}
 .q.done{border-color:rgba(224,165,60,.45)}
 .q .qn{font-size:12px;font-weight:800;line-height:1.3}
-.q .qr{font-size:9px;color:var(--ink2);margin-top:3px}
+.q .qr{font-size:11px;color:var(--ink2);margin-top:3px}
 .q .qb{height:3px;background:#0a0810;border:1px solid var(--line2);margin-top:5px;position:relative;overflow:hidden}
 .q .qb i{position:absolute;left:0;top:0;bottom:0;background:var(--gold);display:block}
 .q .btn{margin:0;padding:8px 13px;font-size:11px;white-space:nowrap}
@@ -477,13 +505,21 @@ body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
   padding:8px 11px;border:1px solid var(--line);background:var(--panel2);margin-bottom:6px;font-size:11px}
 .qbonus b{color:var(--gold);font-weight:900}
 .pointBox{padding:5px 9px!important;margin-bottom:3px}.pointBox .st{margin:0;line-height:1.35}
-.characterIconGrid{display:grid;grid-template-columns:repeat(5,1fr);column-gap:8px;row-gap:24px;margin:12px 0 22px}.characterIconChoice{aspect-ratio:1;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;border-radius:50%;font-size:28px;position:relative}.characterIconChoice.on{border:2px solid var(--gold);box-shadow:0 0 10px rgba(224,192,64,.35)}.characterIconChoice small{position:absolute;bottom:-17px;font-size:8px;line-height:1.2;color:var(--ink2);white-space:nowrap}.shopTabs{display:flex;gap:5px;margin-bottom:9px}.shopTabs .btn{flex:1;margin:0;padding:8px 3px;font-size:10px}
-.sellDock{margin:10px -15px -20px;padding:9px 15px calc(env(safe-area-inset-bottom) + 9px);background:var(--bg2);border-top:1px solid var(--line);display:grid;grid-template-columns:auto 1fr auto;gap:7px;align-items:center}.sellDock .btn{margin:0;padding:9px}.sellDock .amount{text-align:center;color:var(--gold);font-size:11px;font-weight:900}
+.characterIconGrid{display:grid;grid-template-columns:repeat(5,1fr);column-gap:8px;row-gap:24px;margin:12px 0 22px}.characterIconChoice{aspect-ratio:1;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;border-radius:50%;font-size:28px;position:relative}.characterIconChoice.on{border:2px solid var(--gold);box-shadow:0 0 10px rgba(224,192,64,.35)}.characterIconChoice small{position:absolute;bottom:-17px;font-size:11px;line-height:1.2;color:var(--ink2);white-space:nowrap}.shopTabs{display:flex;gap:5px;margin-bottom:9px}.shopTabs .btn{flex:1;margin:0;padding:8px 3px;font-size:11px}
+/* 選択の合計と確定は、下のタブ帯の真上に固定する。
+   sticky にすると一覧の続きがバーの下から覗いて、隠れているのか
+   スクロールできるのか分からなくなる。 */
+.sellDock{position:fixed;left:0;right:0;bottom:var(--tabH);z-index:12;
+  padding:9px 15px;background:var(--bg2);border-top:1px solid var(--line2);
+  box-shadow:0 -10px 18px -6px rgba(0,0,0,.98);
+  display:grid;grid-template-columns:auto 1fr auto;gap:7px;align-items:center}
+.sellDock .btn{margin:0;padding:9px;min-height:44px}
+.sellDock .amount{text-align:center;color:var(--gold);font-size:13px;font-weight:900}
 .sellSheet .sellSummary{position:sticky;top:-20px;z-index:2;background:#191424;border-bottom:1px solid var(--line2);padding-bottom:10px}.sellChoices{display:grid;grid-template-columns:1fr 1fr;gap:7px}.sellChoices .btn{margin:0}
 
 /* 倉庫: アイコン格子 + 固定バー */
 #invBar{display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap}
-.chip{font-size:10px;font-weight:800;padding:6px 9px;border-radius:2px;background:#100e18;
+.chip{font-size:11px;font-weight:800;padding:6px 9px;border-radius:2px;background:#100e18;
   border:1px solid var(--line);color:var(--ink3)}
 .chip.on{border-color:var(--line2);color:#f0e6d4;background:#221c30}
 .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
@@ -491,15 +527,23 @@ body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
   display:flex;align-items:center;justify-content:center;
   background:linear-gradient(180deg,var(--panel),var(--panel2))}
 .cell:active{filter:brightness(1.5)}
-.cell.sel{outline:2px solid var(--gold);outline-offset:-2px}
-.cell .eq{position:absolute;top:2px;right:3px;font-size:16px;line-height:1;font-weight:900;color:var(--gold)}
-.cell .enh{position:absolute;bottom:1px;left:3px;font-size:12px;line-height:1;font-weight:900;color:#7ad0ff}
-.slot .enh{position:absolute;top:2px;right:4px;font-size:10px;font-weight:900;color:#7ad0ff}
-.cell .lvl{position:absolute;bottom:1px;right:3px;font-size:16px;line-height:1;color:var(--ink3);font-weight:700}
+/* 選択中。レア度の金と見分けが付かなかったので水色の縁にする。 */
+.cell.sel{outline:2px solid #6ad8ff;outline-offset:-2px;background:rgba(106,216,255,.10)}
+.cell{display:flex;flex-direction:column;justify-content:space-between;padding:2px 3px}
+.cell .cellTop,.cell .cellBtm{display:flex;justify-content:space-between;align-items:center;
+  width:100%;height:14px;line-height:1}
+.cell .cellIc{flex:1;display:flex;align-items:center;justify-content:center}
+.cell .mk{font-size:13px;font-weight:900;line-height:1}
+.cell .mk .e{color:var(--gold)}
+.cell .mk .u{color:#7ad04e}
+.cell .mk.sel{color:#6ad8ff}
+.cell .enh{font-size:12px;font-weight:900;color:#7ad0ff}
+
+.cell .lvl{font-size:12px;color:var(--ink2);font-weight:700}
 #sellBar{position:sticky;bottom:-20px;background:var(--bg2);border-top:1px solid var(--line);
   margin:10px -15px -20px;padding:10px 15px calc(env(safe-area-inset-bottom) + 12px);z-index:5;
   box-shadow:0 -10px 20px rgba(8,7,12,.9)}
-.grid{padding-bottom:74px}   /* 固定バーの裏に最終行が隠れないように */
+.grid{padding-bottom:86px}   /* 固定バーの裏に最終行が隠れないように */
 
 #toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 150px);
   z-index:70;padding:9px 17px;border-radius:2px;background:rgba(9,7,14,.95);
@@ -534,7 +578,7 @@ body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
 .pip{width:22px;height:5px;border-radius:2px;background:#241f33}
 .pip.ok{background:#6ae86a}.pip.ng{background:#d64550}
 textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);border-radius:3px;
-  color:var(--ink3);font-size:10px;padding:8px;font-family:ui-monospace,monospace;margin-top:8px}
+  color:var(--ink3);font-size:11px;padding:8px;font-family:ui-monospace,monospace;margin-top:8px}
 
 .filterGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin:7px 0 10px}
 .filterGrid.rarity{grid-template-columns:repeat(5,1fr)}
@@ -542,8 +586,8 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
   max-height:46vh;overflow:auto;-webkit-overflow-scrolling:touch}
 .floorGrid .fbtn{padding:8px 2px;line-height:1.15}
 .floorGrid .fbtn b{display:block;font-size:13px;font-variant-numeric:tabular-nums}
-.floorGrid .fbtn small{display:block;font-size:9px;font-weight:700;margin-top:1px}
-.fbtn{padding:10px 4px;border-radius:3px;border:1px solid var(--line);background:#100e18;color:var(--ink3);font-size:10px;font-weight:900;text-align:center}
+.floorGrid .fbtn small{display:block;font-size:11px;font-weight:700;margin-top:1px}
+.fbtn{padding:10px 4px;border-radius:3px;border:1px solid var(--line);background:#100e18;color:var(--ink3);font-size:11px;font-weight:900;text-align:center}
 .fbtn.on{border-color:var(--gold);background:linear-gradient(180deg,#6e5418,#2c2108);color:#ffeab4}
 .popClose{background:linear-gradient(180deg,#3a3348,#171320)!important;border-color:#746886!important;color:#efe8ff!important}
 /* ガチャは単発と10連を並べ、提供割合をその場から開けるようにする */
@@ -552,21 +596,21 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
 .skillSlot{border:1px solid var(--line);border-radius:3px;background:var(--panel);
   padding:9px 5px;text-align:center;min-height:62px}
 .skillSlot.on{border-color:var(--gold);background:linear-gradient(180deg,#3a2d10,#1a1408)}
-.skillSlot .pos{font-size:9px;color:var(--ink3);font-weight:700}
+.skillSlot .pos{font-size:11px;color:var(--ink3);font-weight:700}
 .skillSlot .nm{font-size:12px;font-weight:900;margin-top:3px;line-height:1.2;overflow-wrap:anywhere}
-.skillSlot .ty{font-size:9px;margin-top:2px}
+.skillSlot .ty{font-size:11px;margin-top:2px}
 .skillCard.on{border-color:var(--gold)}
 /* 固有技は一覧の先頭に置き、左端に金の帯を出して共通の技と区別する */
 .skillCard.uniqSkill{border-left:3px solid var(--gold)}
 .skillCard.no{opacity:.45}
-.skillCard .tag{white-space:nowrap;font-size:10px}
+.skillCard .tag{white-space:nowrap;font-size:11px}
 .gachaCard{position:relative}
 .gachaBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .gachaBtns .btn{margin:0;padding:11px 4px;line-height:1.2}
-.gachaBtns .btn small{display:block;font-size:9px;font-weight:700;opacity:.85;margin-top:2px}
-.rateLink{margin-top:6px;font-size:10px;font-weight:700;color:#8fb4e8;
+.gachaBtns .btn small{display:block;font-size:11px;font-weight:700;opacity:.85;margin-top:2px}
+.rateLink{margin-top:6px;font-size:11px;font-weight:700;color:#8fb4e8;
   text-decoration:underline;text-underline-offset:2px;display:inline-block}
-.gachaHold{margin-top:7px;font-size:10px;color:var(--ink3);text-align:right;font-weight:700}
+.gachaHold{margin-top:7px;font-size:11px;color:var(--ink3);text-align:right;font-weight:700}
 .helpHead{margin:14px 0 5px;font-size:12px;font-weight:900;color:var(--gold);
   border-bottom:1px solid var(--line);padding-bottom:4px}
 .helpList{margin:0;padding-left:17px;font-size:11px;line-height:1.75;color:#a49cb8}
@@ -579,27 +623,27 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
   letter-spacing:.06em;color:#cfc6dd;border-bottom:1px solid rgba(207,198,221,.16);padding-bottom:4px}
 .craftFam:first-child{margin-top:6px}
 .craftBtns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:9px}
-.craftBtns .btn{margin:0;padding:9px 2px;font-size:10px;line-height:1.2}
-.craftBtns .btn small{display:block;font-size:8px;opacity:.8;margin-top:2px}
+.craftBtns .btn{margin:0;padding:9px 2px;font-size:11px;line-height:1.2}
+.craftBtns .btn small{display:block;font-size:11px;opacity:.8;margin-top:2px}
 .rateRow{display:flex;justify-content:space-between;align-items:center;gap:10px;
   padding:8px 2px;border-bottom:1px solid var(--line);font-size:12px;font-weight:700}
 .rateRow b{font-variant-numeric:tabular-nums;color:var(--ink)}
 .gachaList{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;
   max-height:52vh;overflow:auto;-webkit-overflow-scrolling:touch;text-align:center}
 .gachaRow{border:1px solid var(--line);border-radius:3px;padding:8px 4px;background:#100d18}
-.gachaRow .nm{font-size:10px;line-height:1.25;overflow-wrap:anywhere}
-.gachaRow .st{font-size:9px;margin-top:3px}
+.gachaRow .nm{font-size:11px;line-height:1.25;overflow-wrap:anywhere}
+.gachaRow .st{font-size:11px;margin-top:3px}
 .gachaRow svg{width:30px;height:30px}
 .quickDelta{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin:10px 0}
-.qd{border:1px solid var(--line);background:#100d18;border-radius:3px;padding:7px 8px;font-size:10px}
+.qd{border:1px solid var(--line);background:#100d18;border-radius:3px;padding:7px 8px;font-size:11px}
 .qd b{display:block;font-size:13px;color:#efe8ff}.qd .up{color:#6ae86a}.qd .dn{color:#ff7070}
 .optBox{max-height:180px;overflow-y:auto;touch-action:pan-y;border-top:1px solid var(--line);margin-top:8px;padding-top:8px}
-.lootPanel{font-size:10px}.lootPanel h3{font-size:10px;line-height:1.3;letter-spacing:.12em;margin:10px 0 6px}.lootPanel .card{padding:9px}.lootPanel .st{font-size:10px;line-height:1.5;margin-top:5px}.bagList{display:flex;flex-direction:column;gap:5px}.bagRow{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);background:#100e18;border-radius:3px;padding:7px 9px;font-size:10px;line-height:1.3;font-weight:700}
+.lootPanel{font-size:11px}.lootPanel h3{font-size:11px;line-height:1.3;letter-spacing:.12em;margin:10px 0 6px}.lootPanel .card{padding:9px}.lootPanel .st{font-size:11px;line-height:1.5;margin-top:5px}.bagList{display:flex;flex-direction:column;gap:5px}.bagRow{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);background:#100e18;border-radius:3px;padding:7px 9px;font-size:11px;line-height:1.3;font-weight:700}
 .gearPanel{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:8px;align-items:start}
 .gearPanel h3{margin:4px 0 6px}.gearPanel .g3{grid-template-columns:repeat(4,1fr);gap:5px}
-.gearPanel .slot{height:70px;padding:5px 3px}.gearPanel .slot .si{font-size:8px}.gearPanel .slot .sl{font-size:8px}
+.gearPanel .slot{height:116px}
 .gearStats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:6px!important}
-.gearStats .ty{grid-column:1/-1}.gearStats .stat{font-size:9px;padding:4px 3px;gap:4px;min-width:0}
+.gearStats .ty{grid-column:1/-1}.gearStats .stat{font-size:11px;padding:4px 3px;gap:4px;min-width:0}
 .gearStats .stat:last-child{border-bottom:1px solid var(--line)}
 .gearStats .stat span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.gearStats .stat b{white-space:nowrap}
 .gearCompare{width:min(720px,calc(100vw - 24px));max-width:720px}.gearCompare .optBox{max-height:none;overflow:visible}
@@ -613,7 +657,7 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
 .deathCause{border-color:#6e2028;background:radial-gradient(circle at 50% 0,rgba(150,35,45,.26),transparent 65%),var(--panel2);text-align:center}
 .deathCause b{display:block;color:#ff8588;font-size:18px;margin:8px 0}.deathCause .skull{font-size:34px;filter:drop-shadow(0 0 12px #9e2630)}
 @media(max-width:520px){.gearPanel{grid-template-columns:1fr}.gearPanel .g3{grid-template-columns:repeat(4,1fr)}
-  .gearPanel{display:block}.gearPanel .gearStats{margin-top:6px}.gearPanel h3{display:none}.gearPanel .slot{height:64px;padding:4px 2px}.gearPanel .slot .si{font-size:7px}.gearStats .stat{padding:3px 2px}
+  .gearPanel{display:block}.gearPanel .gearStats{margin-top:6px}.gearPanel h3{display:none}.gearStats .stat{padding:3px 2px}
   .compareStats{grid-template-columns:1fr}.gearCompare{padding:14px}}
 </style>
 </head>
@@ -3313,7 +3357,7 @@ function updHUD(){
   $("xpF").style.width=(b.xp/xpNeed(b.lv)*100)+"%";
   $("lvT").textContent="Lv"+b.lv;
   const dg=dangerOf(S.floor);
-  $("flT").innerHTML=S.floor+' <span style="color:'+dg.c+';font-size:9px">'+dg.n+'</span>';
+  $("flT").innerHTML=S.floor+' <span style="color:'+dg.c+';font-size:11px">'+dg.n+'</span>';
   // 潜行中は所持金の総額より「今回いくら拾ったか」の方が意味がある。
   $("goldT").textContent="+"+S.runGold+" G";
   $("dpsT").style.display=S.settings.dps?"block":"none";
@@ -3490,15 +3534,8 @@ function openTown(){
 
 function gearGrid(host,inDungeon){
   const gg=document.createElement("div");gg.className="g3";
-  /* キャラクター枠は拠点の編成枠と同じ見た目にする。
-     同じ「誰で潜るか」を画面ごとに別の形で見せない。 */
-  {const ch=currentCharacter(),d=document.createElement("div");
-    d.className="slot member"+(inDungeon?" no":"");
-    d.style.borderColor=charTier(ch).col;
-    d.innerHTML=`<i class="clsMark" style="color:${CLASSES[S.cls].col}" title="${CLASSES[S.cls].name}">${CLASS_MARK[S.cls]||"?"}</i>`
-      +`<div class="face">${charFace(S.cls,ch.col,26)}</div>`
-      +`<div class="nm">${ch.n}</div><div class="mlv">Lv${S.base.lv}</div>`;
-    if(!inDungeon)tapEl(d,openCharacterPick);gg.appendChild(d);}
+  /* キャラクター枠はここには置かない。上のキャラバーと役割が重複していた。
+     この画面は「装備を見る」ためのものなので、7部位だけを並べる。 */
   for(const s of SLOTS){const it=S.gear[s.k];
     const d=document.createElement("div");d.className="slot"+(it?"":" empty");
     d.dataset.slot=s.k;
@@ -3508,11 +3545,14 @@ function gearGrid(host,inDungeon){
     /* レア度は倉庫と同じ「枠の色」で示す。装備タブだけ文字色だと、
        同じ持ち物なのに画面ごとに見分け方が変わってしまう。 */
     if(it)d.style.borderColor=it.rar===4?"#ff8adf":CFG.RARITY[it.rar][3];
-    d.innerHTML=`<div class="ic ${it?RC[it.rar]:"e"}" style="${it?`color:${ELEMENTS[it.element||"neutral"].col}`:""}">${icon(it?iconKey(it):s.k,22)}</div>
-      <div class="sl">${s.n}</div>
-      <div class="si ${it?RC[it.rar]:""}" title="${it?it.name:""}">${it?it.base:"—"}</div>
-      ${it&&(it.lv||1)>1?`<div class="enh">+${(it.lv||1)-1}</div>`:""}
-      ${up?'<div class="upMark">▲</div>':""}`;
+    /* 印は上段の帯に「左＝更新できる / 右＝強化値」で並べる。
+       絶対配置で角に置くと、印が増えたときに必ず重なる。 */
+    d.innerHTML=`<div class="slotTop"><span class="up">${up?"▲":""}</span>`
+      +`<span class="enh">${it&&(it.lv||1)>1?"+"+((it.lv||1)-1):""}</span></div>`
+      +`<div class="ic ${it?RC[it.rar]:"e"}" style="${it?`color:${ELEMENTS[it.element||"neutral"].col}`:""}">${icon(it?iconKey(it):s.k,24)}</div>`
+      +`<div class="sl">${s.n}</div>`
+      +`<div class="si ${it?RC[it.rar]:""}" title="${it?it.name:""}">${it?it.base:"—"}</div>`
+      +`<div class="sd">${it?`深度 ${it.ilvl}`:""}</div>`;
     tapEl(d,()=>{const t=S.tutorial||{};if(!inDungeon&&t.phase==="equip"&&TUTORIAL_SLOTS[t.gearIndex]===s.k){
       const training=S.stash.find(x=>x.tutorial&&x.slot===s.k);if(training){equip(training);t.gearIndex++;if(t.gearIndex>=TUTORIAL_SLOTS.length){t.phase="shop";S.tab="gear";}save();openTown();return;}}
       openGearDetail(s.k,inDungeon);});gg.appendChild(d);}
@@ -3673,16 +3713,56 @@ function renderAbilityTab(host,after){const h=document.createElement("h3");h.tex
 const STATDEF=[["str","筋力","物理攻撃力が上がる"],["mag","魔力","特殊攻撃力が上がる"],
   ["def","防御","防御力、状態異常耐性が上がる。"],["agi","素早さ","移動速度、攻撃速度、回避率が上がる。"],
   ["spi","精神","MP回復、クールダウン短縮が上がる。"],["luk","運","運が上がる。"]];
-/* 押しっぱなしで連続加算。1点ずつ連打させない。 */
+/* 押しっぱなしで連続加算。1点ずつ連打させない。
+   速度は押し続けるほど上げる。一定のままだと、ポイントが100あるときに
+   押し続ける時間だけが延びて、操作が作業になる。 */
 function repeatBtn(el,fn){
-  let tm=null,iv=null;
-  const start=()=>{fn();tm=setTimeout(()=>{iv=setInterval(fn,70);},380);};
-  const stop=()=>{clearTimeout(tm);clearInterval(iv);tm=iv=null;};
+  let tm=null,iv=null,held=0;
+  const tick=()=>{
+    held++;
+    /* 0.4秒ごとに間隔を詰め、1秒を超えたら1回で複数進める。 */
+    const step=held>34?10:held>20?5:1;
+    for(let i=0;i<step;i++)fn();
+    const wait=held>24?40:held>12?55:80;
+    clearInterval(iv);iv=setInterval(tick,wait);};
+  const start=()=>{held=0;fn();tm=setTimeout(()=>{iv=setInterval(tick,80);},360);};
+  const stop=()=>{clearTimeout(tm);clearInterval(iv);tm=iv=null;held=0;};
   el.addEventListener("touchstart",e=>{e.preventDefault();e.stopPropagation();aInit();start();},{passive:false});
   el.addEventListener("touchend",stop,{passive:true});
   el.addEventListener("touchcancel",stop,{passive:true});
   el.addEventListener("mousedown",e=>{e.preventDefault();e.stopPropagation();aInit();start();});
   addEventListener("mouseup",stop);}
+/* 個数を決めてから実行する共通の画面。
+   自由入力・−＋・最大の3つだけを置く。枠ごとに ×1 ×5 ×10 を並べると、
+   種類が増えるほどボタンだけで画面が埋まる。 */
+function askQuantity(title,note,max,onOk){
+  if(max<1)return;
+  let n=Math.min(1,max);
+  const c=$("itC");c.classList.remove("gearCompare");
+  const draw=()=>{
+    c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:2px">${title}</div>`
+      +`<div class="sub" style="margin-bottom:10px">${note||""}</div>`;
+    const row=document.createElement("div");row.className="qtyRow";
+    const minus=document.createElement("div");minus.className="btn gh";minus.textContent="−";
+    const val=document.createElement("input");val.className="qtyVal";val.type="text";
+    val.inputMode="numeric";val.value=n;
+    const plus=document.createElement("div");plus.className="btn gh";plus.textContent="＋";
+    const set=v=>{n=Math.max(1,Math.min(max,Math.floor(v)||1));val.value=n;info.textContent=`最大 ${max}`;};
+    repeatBtn(minus,()=>set(n-1));repeatBtn(plus,()=>set(n+1));
+    val.addEventListener("input",()=>{const v=parseInt(val.value.replace(/[^0-9]/g,""),10);
+      if(Number.isFinite(v))n=Math.max(1,Math.min(max,v));});
+    val.addEventListener("blur",()=>set(n));
+    row.append(minus,val,plus);c.appendChild(row);
+    const info=document.createElement("div");info.className="ty";info.style.textAlign="center";
+    info.textContent=`最大 ${max}`;c.appendChild(info);
+    const all=document.createElement("div");all.className="btn gh";all.textContent=`最大（${max}）にする`;
+    tapEl(all,()=>set(max));c.appendChild(all);
+    const ok=document.createElement("div");ok.className="btn gold";ok.textContent="決定";
+    tapEl(ok,()=>{$("itPop").classList.remove("on");onOk(n);});c.appendChild(ok);
+    const x=document.createElement("div");x.className="btn popClose";x.textContent="やめる";
+    tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);
+    $("itPop").classList.add("on");};
+  draw();}
 function allocBlock(host,after){
   const b2=S.base,C=CLASSES[S.cls];
   if(!S.alloc)S.alloc={add:{str:0,mag:0,def:0,agi:0,spi:0,luk:0}};
@@ -3707,7 +3787,15 @@ function allocBlock(host,after){
     repeatBtn(mi,()=>{if(A.add[k]<=0)return;A.add[k]--;A.pts++;SFX.tick();after();});
     const pl=document.createElement("div");pl.className="plus"+(A.pts>0?"":" no");pl.textContent="+";
     repeatBtn(pl,()=>{if(A.pts<=0)return;A.add[k]++;A.pts--;SFX.tick();after();});
-    box.insertBefore(mi,box.firstChild);box.appendChild(pl);host.appendChild(d);}
+    box.insertBefore(mi,box.firstChild);box.appendChild(pl);
+    /* 数値を押したら、入れる点数を直接決められるようにする。
+       残りが100点あるときに＋を押し続けさせるのは操作ではない。 */
+    const av=d.querySelector(".av");
+    if(av){av.classList.add("tapNum");
+      tapEl(av,()=>{const room=A.pts+A.add[k];if(room<1)return;
+        askQuantity(`${nm}に振る点数`,`いま +${A.add[k]} / 使える点数 ${room}`,room,v=>{
+          A.pts+=A.add[k]-v;A.add[k]=v;SFX.tick();after();});});}
+    host.appendChild(d);}
   const ok=document.createElement("div");ok.className="btn"+(dirty?" pri":" no");ok.textContent="確定する";
   tapEl(ok,()=>{if(!dirty)return;
     for(const k in A.add){b2[k]+=A.add[k];b2.pts-=A.add[k];}
@@ -4309,7 +4397,7 @@ function openLoadoutSlot(slot){invMenu(`持ち込み枠 ${slot+1}`,c=>{
   for(const k of keys){const x=CONSUMABLES[k],have=S.consumables[k]||0,d=document.createElement("div");
     d.className="card tap"+(have?"":" no");d.style.borderColor=hexA(rareFrame(x.rar),.75);
     d.innerHTML=`<div class="row"><div class="nm">${conIcon(k,20)} ${x.n}`
-      +` <b class="${RC[rarIdx(x.rar)]}" style="font-size:10px">${rareName(x.rar)}</b></div>`
+      +` <b class="${RC[rarIdx(x.rar)]}" style="font-size:11px">${rareName(x.rar)}</b></div>`
       +`<span class="tag">${Math.min(x.max,have)} / ${x.max}</span></div>`
       +`<div class="st">${x.d}</div>`
       +`<div class="ty">${have?"":"未所持 — 倉庫の調合で作る / "}${x.heal?`持ち込み ${x.max} / 道中は${runCap(k)}個まで拾える`:`持ち込み上限 ${x.max}`}</div>`;
@@ -4319,7 +4407,9 @@ function renderLoadout(b){const h=document.createElement("h3");h.textContent=`�
 /* 倉庫は「装備」「結晶」「分解」「調合」の4区画。
    ひとつの棚に絞込・並替・売却・分解・調合を横一列で置くと、
    いま何をする画面なのかが読めない。区画ごとに要るものだけ出す。 */
-const INV_TABS=[["gear","装備"],["item","道具"],["mat","結晶"],["dis","分解"],["craft","調合"]];
+/* 分解は売却と同じ「装備を選んで処分する」操作なので、装備区画の中に置く。
+   単独タブにすると、同じ一覧を2つの入口から開くことになる。 */
+const INV_TABS=[["gear","装備"],["item","道具"],["mat","結晶"],["craft","調合"]];
 /* 結晶と核。何をいくつ持っているか、上位へどう変換できるかをここへ集める。 */
 function renderMaterialPanel(b){
   for(const [kind,label,note] of [["crystal","結晶","装備の強化と調合に使う"],["core","核","限界突破と上位品の調合に使う"]]){
@@ -4383,7 +4473,7 @@ function renderHoldings(b,opt){
    for(const k of owned){const d=PARTS[k],card=document.createElement("div");card.className="card";
      card.style.borderColor=hexA(rareFrame(d.rar),.75);
      card.innerHTML=`<div class="row"><div class="nm">${partIcon(k,16)} ${d.n}`
-       +` <b class="${RC[rarIdx(d.rar)]}" style="font-size:10px">${rareName(d.rar)}</b></div>`
+       +` <b class="${RC[rarIdx(d.rar)]}" style="font-size:11px">${rareName(d.rar)}</b></div>`
        +`<span class="tag">${partCount(k)}${run&&run.parts[k]?` <b style="color:#7ad04e">(+${run.parts[k]})</b>`:""}</span></div>`;
      b.appendChild(card);}}
   {const h=document.createElement("div");h.className="craftFam";h.textContent="道具";b.appendChild(h);
@@ -4394,7 +4484,7 @@ function renderHoldings(b,opt){
      card.style.borderColor=hexA(rareFrame(x.rar),.75);
      const slot=S.loadout.indexOf(k);
      card.innerHTML=`<div class="row"><div class="nm">${conIcon(k,16)} ${x.n}`
-       +` <b class="${RC[rarIdx(x.rar)]}" style="font-size:10px">${rareName(x.rar)}</b>`
+       +` <b class="${RC[rarIdx(x.rar)]}" style="font-size:11px">${rareName(x.rar)}</b>`
        +(slot>=0?` <span class="tag">持ち込み${slot+1}枠</span>`:"")+`</div>`
        +`<span class="tag">${S.consumables[k]||0}</span></div>`
        +`<div class="ty">${x.d}</div>`;
@@ -4413,7 +4503,7 @@ function renderPartPanel(b){
     card.style.borderColor=hexA(rareFrame(d.rar),.75);   // 枠の色＝レア度
     const src=d.from.map(k=>(ET[k]&&ET[k].n)||k).join("・")+(d.boss?"・ボス":"");
     card.innerHTML=`<div class="row"><div class="nm">${partIcon(key,18)} ${d.n}`
-      +` <b class="${RC[rarIdx(d.rar)]}" style="font-size:10px">${rareName(d.rar)}</b></div>`
+      +` <b class="${RC[rarIdx(d.rar)]}" style="font-size:11px">${rareName(d.rar)}</b></div>`
       +`<span class="tag">${have}</span></div>`
       +`<div class="st">${d.d}</div>`
       +`<div class="ty">出どころ: ${src}（${Math.round(PART_DROP[rarIdx(d.rar)]*1000)/10}%）</div>`;
@@ -4422,37 +4512,43 @@ function renderPartPanel(b){
    系統ごとにまとめ、段階が上がるほど強く・作りにくいことが見えるようにする。 */
 function renderCraftPanel(b){
   const head=document.createElement("div");head.className="matLine";
-  head.innerHTML=`<span>結晶 <b>${materialCount("crystal")}</b></span><span>核 <b>${materialCount("core")}</b></span>`;
+  head.innerHTML=`<span>${icon("m_crystal",14)} 結晶 <b>${materialCount("crystal")}</b></span>`
+    +`<span>${icon("m_core",14)} 核 <b>${materialCount("core")}</b></span>`;
   b.appendChild(head);
-  const note=document.createElement("div");note.className="st";note.style.margin="6px 0 0";
-  note.textContent=`上の段ほど強く、特定の敵からしか落ちない素材が要ります。1種あたり${CFG.CRAFT_STOCK_CAP}個まで保有できます。`;
-  b.appendChild(note);
-  /* 系統ごとに見出しを立てて、1段目→3段目の順に並べる */
+  hint(b,"craft",`上の段ほど強く、特定の敵からしか落ちない素材が要ります。1種あたり${CFG.CRAFT_STOCK_CAP}個まで保有できます。`);
+  /* 22種を全部開いて並べると、下まで延々スクロールすることになる。
+     系統ごとに畳み、見出しに「いくつ作れるか」を出して、開く前に判断できるようにする。 */
+  S.craftOpen=S.craftOpen||{};
   const fams=[];for(const k of CONSUMABLE_KEYS){const f=CONSUMABLES[k].fam;if(!fams.includes(f))fams.push(f);}
   for(const fam of fams){
-    const h=document.createElement("div");h.className="craftFam";
-    h.innerHTML=`${conIcon(CONSUMABLE_KEYS.find(k=>CONSUMABLES[k].fam===fam),16)} ${fam}`;
+    const keys=CONSUMABLE_KEYS.filter(k=>CONSUMABLES[k].fam===fam);
+    const canMake=keys.filter(k=>craftableCount(k)>0).length;
+    const held=keys.reduce((a,k)=>a+(S.consumables[k]||0),0);
+    const open=!!S.craftOpen[fam];
+    const h=document.createElement("div");h.className="fold craftFold"+(open?" on":"");
+    h.innerHTML=`<span>${conIcon(keys[0],16)} ${fam}</span>`
+      +`<em>${canMake?`作れる ${canMake}種`:"材料不足"} / 所持 ${held}</em>`;
+    tapEl(h,()=>{S.craftOpen[fam]=!open;save();openTown();});
     b.appendChild(h);
-    for(const k of CONSUMABLE_KEYS.filter(k=>CONSUMABLES[k].fam===fam)){
+    if(!open)continue;
+    for(const k of keys){
       const x=CONSUMABLES[k],have=S.consumables[k]||0,max=craftableCount(k),miss=craftMissing(k);
-      const d=document.createElement("div");d.className="card craftRow"+(max?"":" no");
-      d.style.borderColor=hexA(rareFrame(x.rar),.75);   // 枠の色＝レア度
+      /* 1品1行。作る個数は押してから選ぶので、枠ごとに ×1 ×5 ×10 を並べない。 */
+      const d=document.createElement("div");d.className="card tap craftRow"+(max?"":" no");
+      d.style.borderColor=hexA(rareFrame(x.rar),.75);
       d.innerHTML=`<div class="row"><div class="nm">${conIcon(k,18)} ${x.n}`
-        +` <b class="${RC[rarIdx(x.rar)]}" style="font-size:10px">${rareName(x.rar)}</b></div>`
-        +`<span class="tag">所持 ${have} / ${CFG.CRAFT_STOCK_CAP}</span></div>`
+        +` <b class="${RC[rarIdx(x.rar)]}" style="font-size:11px">${rareName(x.rar)}</b></div>`
+        +`<span class="tag">所持 ${have}</span></div>`
         +`<div class="st">${x.d}</div>`
-        +`<div class="ty">材料 ${craftCostText(k)} — `
-        +(max?`<b style="color:#7ad04e">いま${max}個まで作れる</b>`
+        +`<div class="ty">材料 ${craftCostText(k)}</div>`
+        +`<div class="ty">`+(max?`<b style="color:#7ad04e">いま${max}個まで作れる — 押して個数を選ぶ</b>`
              :`<b style="color:#d05a54">不足: ${miss.join(" / ")}</b>`)+`</div>`;
-      const row=document.createElement("div");row.className="craftBtns";
-      for(const n of [1,5,10]){const btn=document.createElement("div");
-        btn.className="btn "+(max>=n?"gh":"no");btn.textContent="×"+n;
-        tapEl(btn,()=>{if(max>=n)craftItem(k,n);});row.appendChild(btn);}
-      const all=document.createElement("div");all.className="btn "+(max?"gold":"no");
-      all.textContent=max?`最大 ×${max}`:"材料不足";
-      tapEl(all,()=>{if(max)craftItem(k,max);});row.appendChild(all);
-      d.appendChild(row);b.appendChild(d);}}
+      tapEl(d,()=>{if(!max)return toast("材料が足りません","ng");
+        askQuantity(`${x.n} を作る`,`材料 ${craftCostText(k)}（1個あたり） / 所持 ${have}`,max,
+          n=>craftItem(k,n));});
+      b.appendChild(d);}}
 }
+
 function renderInv(b){
   const F=S.inv;F.filters=F.filters||[];F.sellSel=F.sellSel||[];
   const sub=INV_TABS.some(x=>x[0]===S.invSub)?S.invSub:"gear";S.invSub=sub;
@@ -4464,13 +4560,15 @@ function renderInv(b){
   if(sub==="craft"){renderCraftPanel(b);return;}
   if(sub==="mat"){renderMaterialPanel(b);return;}
   /* 装備と分解は同じ一覧を使う。分解のときだけ選択モードで開く。 */
-  F.dismantleMode=sub==="dis";
+  if(sub!=="gear"){F.dismantleMode=false;F.sellMode=false;}
   if(!F.dismantleMode)F.sellSel=F.sellSel.filter(()=>F.sellMode);
   const bar=document.createElement("div");bar.id="invBar";
   const mk=(lbl,fn,on)=>{const d=document.createElement("div");d.className="btn gh"+(on?" gold":"");d.style.marginTop="0";d.textContent=lbl;tapEl(d,fn);bar.appendChild(d);};
   mk("フィルタ"+(F.filters.length?` (${F.filters.length})`:""),openInvFilter,F.filters.length);
   mk(F.sort==="score"?"並び替え:強さ":F.sort==="rar"?"並び替え:レア":"並び替え:深度",openInvSort,0);
-  if(sub==="gear")mk(F.sellMode?"売却を終了":"売却",()=>{F.sellMode=!F.sellMode;if(!F.sellMode)F.sellSel=[];openTown();},F.sellMode);
+  if(sub==="gear"){
+    mk(F.sellMode?"売却をやめる":"売却",()=>{F.sellMode=!F.sellMode;F.dismantleMode=false;F.sellSel=[];openTown();},F.sellMode);
+    mk(F.dismantleMode?"分解をやめる":"分解",()=>{F.dismantleMode=!F.dismantleMode;F.sellMode=false;F.sellSel=[];openTown();},F.dismantleMode);}
   if(F.sellMode||F.dismantleMode)mk("低レア一括選択",openInvSell,0);
   b.appendChild(bar);
   const hint=document.createElement("div");hint.className="st";hint.style.margin="6px 0 0";
@@ -4493,11 +4591,15 @@ function renderInv(b){
   const g=document.createElement("div");g.className="grid";
   for(const it of list){
     const cur=S.gear[it.slot],better=effScore(it)>effScore(cur),equipped=isEquipped(it),sel=F.sellSel.includes(it);
-    const c=document.createElement("div");c.className="cell "+RC[it.rar]+(sel?" sel":"");c.style.borderColor=it.rar===4?"#ff8adf":CFG.RARITY[it.rar][3];
-    c.innerHTML=icon(iconKey(it),26)+(equipped?'<div class="eq">E</div>':"")+(better&&!equipped?'<div class="eq" style="left:3px;right:auto;color:#7ad04e">▲</div>':"")+(sel?`<div class="eq" style="left:3px;right:auto;color:#ffd24a">${F.dismantleMode?"分":"売"}</div>`:"")
-      +`<div class="lvl">${it.ilvl}</div>`
-      /* 強化レベルは装備の強さを直接動かすのに、マスからは読めなかった */
-      +((it.lv||1)>1?`<div class="enh">+${(it.lv||1)-1}</div>`:"");
+    const c=document.createElement("div");c.className="cell "+RC[it.rar]+(sel?" sel":"");
+    c.style.borderColor=it.rar===4?"#ff8adf":CFG.RARITY[it.rar][3];
+    /* 印は上段の帯に「左＝選択 / 右＝装備中か更新できるか」で並べる。
+       以前は選択の印と▲が同じ左上に出て重なっていた。 */
+    c.innerHTML=`<div class="cellTop"><span class="mk sel">${sel?(F.dismantleMode?"分":"売"):""}</span>`
+      +`<span class="mk">${equipped?'<b class="e">E</b>':(better?'<b class="u">▲</b>':"")}</span></div>`
+      +`<div class="cellIc">${icon(iconKey(it),26)}</div>`
+      +`<div class="cellBtm"><span class="enh">${(it.lv||1)>1?"+"+((it.lv||1)-1):""}</span>`
+      +`<span class="lvl">${it.ilvl}</span></div>`;
     tapEl(c,()=>{if(!equipped&&(F.sellMode||F.dismantleMode)){const i=F.sellSel.indexOf(it);if(i>=0)F.sellSel.splice(i,1);else F.sellSel.push(it);openTown();}else showItem(it,false);});
     c.addEventListener("touchstart",()=>{}, {passive:true});
     c.addEventListener("contextmenu",e=>{e.preventDefault();if(equipped)return;const i=F.sellSel.indexOf(it);if(i>=0)F.sellSel.splice(i,1);else F.sellSel.push(it);openTown();});

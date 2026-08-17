@@ -431,6 +431,7 @@ await page.goto(base); await page.waitForTimeout(500);
     return { tabs: INV_TABS.map(t => t[1]), town, dungeon };
   });
   if (!hold.tabs.includes('道具')) problems.push('倉庫に道具タブが無い');
+  if (hold.tabs.includes('分解')) problems.push('分解が単独タブのまま（装備区画へ統合したはず）');
   for (const [where, text] of [['倉庫', hold.town], ['ダンジョン内', hold.dungeon]]) {
     for (const want of ['癒血の雫', '灰の牙', '結晶']) {
       if (!text.includes(want)) problems.push(`${where}の所持品に「${want}」が出ていない`);
@@ -525,7 +526,7 @@ await page.goto(base); await page.waitForTimeout(500);
   }
   // 倉庫の4区画すべてが開くこと
   await tap('#scTown .tab[data-t="inv"]'); await page.waitForTimeout(250);
-  for (const label of ['装備', '結晶', '分解', '調合']) {
+  for (const label of ['装備', '道具', '結晶', '調合']) {
     const ok = await page.evaluate(l => {
       const b = [...document.querySelectorAll('.innerTabs .btn')].find(e => e.textContent === l);
       if (!b) return false; b.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); return true;

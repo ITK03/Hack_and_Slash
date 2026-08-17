@@ -167,6 +167,11 @@ const regressionSnippets = [
   '--press:',                      // 押せる面は地より明るい
   '.lootIn{',                      // 戦利品は1枚ずつ出す
   'recordRow',
+  'function askQuantity',          // 個数は押してから選ぶ
+  'const step=held>34?10:',        // 長押しは加速する
+  '.slotTop',                      // 印は帯に並べて重ならないようにする
+  '.cellTop',
+  'position:fixed;left:0;right:0;bottom:var(--tabH)',
   'function openProfileIconPick',
   'function openFormationChoices',
   'function confirmSelectedSell',
