@@ -161,6 +161,12 @@ const regressionSnippets = [
   'id="hpPill"',                   // HPを親指の近くへ
   'id="hurtVig"',
   'min-height:44px',
+  'const charFace=',               // キャラは「●」ではなく職業の姿
+  'ch_warrior:', 'ch_mage:',
+  'function clearRunVisuals',      // 潜行専用の表示を必ず片付ける
+  '--press:',                      // 押せる面は地より明るい
+  '.lootIn{',                      // 戦利品は1枚ずつ出す
+  'recordRow',
   'function openProfileIconPick',
   'function openFormationChoices',
   'function confirmSelectedSell',

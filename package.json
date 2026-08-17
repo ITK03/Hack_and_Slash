@@ -7,7 +7,8 @@
     "check:pr12": "node scripts/check-pr12-merge.mjs",
     "deploy": "wrangler deploy",
     "check:layout": "node scripts/check-layout.mjs",
-    "check:playable": "node scripts/check-playable.mjs"
+    "check:playable": "node scripts/check-playable.mjs",
+    "check:ui": "node scripts/check-ui.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.118.0"

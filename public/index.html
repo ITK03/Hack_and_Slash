@@ -11,6 +11,9 @@
 <style>
 :root{
   --bg:#08070c;--bg2:#0d0b13;--panel:#15121f;--panel2:#100e18;
+  /* 拠点で使う「押せる面」。地(#15121f)より明るく、枠も1段強い。
+     暗さはこのゲームの個性なので全体を明るくはしない。押せる物だけを浮かせる。 */
+  --press:#231d33;--press2:#2b2440;--pressLine:#4a3f68;
   --line:#2a2338;--line2:#3a3050;--ink:#ded7ec;--ink2:#8e86a2;--ink3:#5b5470;
   --gold:#e0a53c;--blood:#d64550;
   --c0:#c8c4bc;--c1:#5ad06a;--c2:#5a8fe0;--c3:#e0c040;--c4:#ff8adf;
@@ -227,10 +230,10 @@ h3{font-size:10px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
   flex-direction:column;justify-content:center;gap:2px;overflow:hidden}
 /* ON/OFF 切り替え。金は「択一で選ばれている」ものだけに使う。 */
 .btn.toggle{display:flex;align-items:center;justify-content:space-between;gap:6px;padding-left:11px;padding-right:9px}
-.btn.toggle em{font-style:normal;font-size:9px;font-weight:900;letter-spacing:.06em;
-  padding:2px 6px;border:1px solid var(--line2);color:var(--ink3);border-radius:2px}
+.btn.toggle em{font-style:normal;font-size:12px;font-weight:900;letter-spacing:.06em;
+  padding:2px 8px;border:1px solid var(--line2);color:var(--ink2);border-radius:2px}
 .btn.toggle.on em{border-color:rgba(224,165,60,.65);color:var(--gold);background:rgba(224,165,60,.12)}
-.setNote{font-size:9px;color:var(--ink3);line-height:1.6;margin:-2px 0 7px}
+.setNote{font-size:12px;color:var(--ink2);line-height:1.6;margin:-2px 0 7px}
 .invLegend{display:flex;flex-wrap:wrap;gap:4px 12px;padding:7px 10px;margin-bottom:8px;
   border:1px solid var(--line);background:var(--panel2);font-size:9px;color:var(--ink2)}
 .invLegend b{font-weight:900}
@@ -300,7 +303,9 @@ body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
 .member{min-height:0;padding:7px 3px 6px;text-align:center;border:1px solid var(--line);background:var(--panel);border-radius:3px}
 .member .mlv{font-size:9px;color:var(--ink3);font-weight:700;margin-top:1px}
 .member .nm.empty{color:var(--ink3);font-weight:700}
-.member.on{box-shadow:inset 0 0 0 1px var(--gold)}.member .face{font-size:21px;margin:1px 0 2px;line-height:1}.member .ty{font-size:8px}
+.member.on{box-shadow:inset 0 0 0 1px var(--gold)}
+.member .face{display:flex;justify-content:center;margin:1px 0 2px;line-height:1}
+.member .ty{font-size:12px}
 /* 名前は枠に収める。「レオンハル／ト」と語尾が落ちるのを避けるため、
    長い名前ほど字を詰める（4枠に4人並ぶので枠幅は伸ばせない）。 */
 .member .nm{font-size:11px;font-weight:900;line-height:1.2;letter-spacing:-.04em;
@@ -378,6 +383,34 @@ body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
 .cpBar b{font-size:26px;font-weight:900;color:var(--gold);line-height:1}
 .cpBar .btn{margin:0;width:auto;flex:0 0 auto;padding:0 14px}
 /* ヘッダー: いま何ができるか（Lv・経験値・スタミナ）と、強さの総合値を常駐させる。 */
+/* 戦利品の出現。いちばん嬉しい瞬間なので、順に現れる「間」を作る。
+   終わった状態（opacity:1）を既定値にしておき、演出が途中で止まっても消えたままにならない。 */
+.lootIn{animation:lootIn .34s ease-out backwards}
+@keyframes lootIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+/* 希少以上は枠が一度だけ光る。無限に光らせない（画面に残り続けるため）。 */
+.lootIn.rar2,.lootIn.rar3,.lootIn.rar4{animation:lootIn .34s ease-out backwards,lootGlow 1.1s ease-out .3s 1 backwards}
+@keyframes lootGlow{0%{box-shadow:0 0 0 0 rgba(255,255,255,0)}
+  35%{box-shadow:0 0 16px 2px rgba(255,220,140,.55)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}
+.lootIn.rar4{animation:lootIn .34s ease-out backwards,lootGlow4 1.4s ease-out .3s 1 backwards}
+@keyframes lootGlow4{0%{box-shadow:0 0 0 0 rgba(255,138,223,0)}
+  30%{box-shadow:0 0 22px 4px rgba(255,138,223,.7)}100%{box-shadow:0 0 0 0 rgba(255,138,223,0)}}
+.recordRow{border-color:rgba(224,192,64,.6);background:linear-gradient(180deg,rgba(224,192,64,.12),transparent)}
+@media (prefers-reduced-motion:reduce){
+  .lootIn,.lootIn.rar2,.lootIn.rar3,.lootIn.rar4{animation:none}
+}
+/* 押せる物は面で分かるようにする。以前は地もカードもボタンも同じ濃さで、
+   どこを押せるのか見分けが付かなかった。暗さは保ったまま、押せる面だけ持ち上げる。 */
+#scTown .btn:not(.gold):not(.pri):not(.go):not(.no),
+#scTown .card.tap,#scTown .slot,#scTown .member,#scTown .charChip,
+#scTown .loadSlot,#itC .btn:not(.gold):not(.pri):not(.go):not(.no),#itC .card.tap{
+  background:linear-gradient(180deg,var(--press2),var(--press));
+  border-color:var(--pressLine);}
+/* 押した瞬間に沈む。反応が無いと「押せたのか」が分からない。 */
+#scTown .btn:active,#scTown .card.tap:active,#scTown .slot:active,#scTown .member:active,
+#scTown .charChip:active,#scTown .loadSlot:active,#itC .btn:active,#itC .card.tap:active{
+  filter:brightness(1.35);transform:translateY(1px)}
+/* 読むだけのカードは面を持たない。押せる物と見分けが付くようにする。 */
+#scTown .card:not(.tap){background:var(--panel2);border-color:var(--line)}
 /* 押せる要素の最小の大きさ。実測で29pxしかない物が各画面に8〜13個あった。
    指の腹はおよそ45pxなので、押し間違いが起きて当然の大きさだった。
    見た目の余白ではなく最小高さで確保し、狭い枠は擬似要素で当たり判定だけ広げる。 */
@@ -411,7 +444,7 @@ body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
 .charBar .charChip .clsMark{position:absolute;right:2px;top:2px;width:14px;height:14px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;font-size:9px;font-style:normal;font-weight:800;
   background:rgba(10,8,14,.85);border:1px solid var(--line)}
-.charBar .charChip .face{font-size:13px;line-height:1.05}
+.charBar .charChip .face{display:flex;justify-content:center;line-height:1}
 .charBar .charChip .nm{font-size:11px;font-weight:800;color:var(--ink);white-space:nowrap}
 .charBar .charChip .mlv{font-size:9px;color:var(--ink2);white-space:nowrap}
 /* 「編集中の名前」と「編成外を選ぶ」は同じ行に置く。案内で縦を使わない。 */
@@ -1129,7 +1162,13 @@ const ICONP={
   p_husk:'M12 2 L20 7 L20 17 L12 22 L4 17 L4 7 Z M8 9 L16 9 M8 15 L16 15',
   p_vein:'M12 22 L12 12 L6 6 M12 12 L18 6 M9 9 L4 11 M15 9 L20 11 M12 17 L8 19 M12 17 L16 19',
   p_shard:'M9 2 L17 6 L20 14 L13 22 L5 17 L7 9 Z M11 7 L15 12 L10 16',
+  /* キャラの姿。立ち絵は用意できないが、職業が分かる輪郭があれば「●」よりは顔になる。
+     どちらも 24x24・stroke 2 で、小さくしても潰れない線数に抑えている。 */
+  ch_warrior:'M12 2 A3 3 0 1 0 12 8 A3 3 0 1 0 12 2 Z M6 22 L6 14 Q6 9 12 9 Q18 9 18 14 L18 22 M18 13 L21 10 M19.5 11.5 L22 14',
+  ch_mage:'M12 1 Q7 3 7 8 L17 8 Q17 3 12 1 Z M8 8 A4 4 0 0 0 16 8 M7 22 L7 15 Q7 11 12 11 Q17 11 17 15 L17 22 M4 22 L4 6 M4 5 A1.6 1.6 0 1 0 4 2 A1.6 1.6 0 1 0 4 5',
 };
+/* 職業ごとの姿。個人色を塗り、等級は枠の色で出す。 */
+const charFace=(k,col,sz)=>`<span style="color:${col};display:block">${icon("ch_"+k,sz||26)}</span>`;
 const iconKey=it=>{if(!it)return "helm";if(it.slot!=="weapon")return it.slot;
   if(it.base.includes("アックス"))return "axe";if(it.base.includes("ハンマー"))return "hammer";if(it.base.includes("パルチザン"))return "spear";
   if(it.base.includes("グリモワール"))return "book";return it.wt==="staff"?"staff":"sword";};
@@ -2491,7 +2530,8 @@ function update(dt){
 
   /* 弾: 細かく刻んで壁抜けを防ぐ */
   for(let i=S.bullets.length-1;i>=0;i--){
-    const b=S.bullets[i];b.t+=dt;
+    /* 途中で hurtP → endRun が走ると配列が空になる。空になった後も i は残るので守る。 */
+    const b=S.bullets[i];if(!b)continue;b.t+=dt;
     /* 追尾。homing は緩く short（走れば振り切れる）、seek は強く long。
        seek はプレイヤーより速く、寿命の限り曲がり続けるので「移動では避けられない」。
        ただし当たれば hurtP を通るので、素早さ（回避率）では避けられる。
@@ -2529,7 +2569,7 @@ function update(dt){
     if(dead)S.bullets.splice(i,1);}
 
   for(let i=S.fx.length-1;i>=0;i--){
-    const f=S.fx[i];const first=f.tm===0;f.tm+=dt;
+    const f=S.fx[i];if(!f)continue;const first=f.tm===0;f.tm+=dt;
     if(f.t==="boom"){
       if(first){burst(f.x,f.y,f.col,18,2);
         if(f.en){if(d2(f.x,f.y,p.x,p.y)<f.R*f.R)hurtP(f.dmg,"爆発",false,f.element);}
@@ -2546,7 +2586,7 @@ function update(dt){
     else if(f.tm>(f.t==="line"?.16:f.t==="slash"?.22:.42))S.fx.splice(i,1);}
 
   for(let i=S.drops.length-1;i>=0;i--){
-    const d=S.drops[i];d.t+=dt;
+    const d=S.drops[i];if(!d)continue;d.t+=dt;
     const dist=Math.hypot(p.x-d.x,p.y-d.y);
     // 0.1秒後から吸着。0.5m圏内は足元で拾った時と同じく即時回収する。
     // 回復は満タンでも消費して回収できるため、回収不能な落下物として残らない。
@@ -2565,11 +2605,11 @@ function update(dt){
       S.drops.splice(i,1);}}
   for(const q of S.props)if(q.t==="shrine")q.tm+=dt;
 
-  for(let i=S.parts.length-1;i>=0;i--){const q=S.parts[i];q.t+=dt;
+  for(let i=S.parts.length-1;i>=0;i--){const q=S.parts[i];if(!q)continue;q.t+=dt;
     if(q.t>=q.life){S.parts.splice(i,1);continue;}
     q.x+=q.vx*dt;q.y+=q.vy*dt;q.vx*=.9;q.vy*=.9;}
-  for(let i=S.nums.length-1;i>=0;i--){S.nums[i].t+=dt;if(S.nums[i].t>.8)S.nums.splice(i,1);}
-  for(let i=S.corpses.length-1;i>=0;i--){S.corpses[i].t+=dt;if(S.corpses[i].t>4)S.corpses.splice(i,1);}
+  for(let i=S.nums.length-1;i>=0;i--){const n=S.nums[i];if(!n)continue;n.t+=dt;if(n.t>.8)S.nums.splice(i,1);}
+  for(let i=S.corpses.length-1;i>=0;i--){const c=S.corpses[i];if(!c)continue;c.t+=dt;if(c.t>4)S.corpses.splice(i,1);}
   if(S.comboT>0){S.comboT-=dt;if(S.comboT<=0)S.combo=0;}
   while(S.dmgLog.length&&S.dmgLog[0].t<S.runT-5)S.dmgLog.shift();
   S.dps=Math.round(S.dmgLog.reduce((a,x)=>a+x.v,0)/5);
@@ -3341,6 +3381,13 @@ function openLvl(){
     c.appendChild(d);}
   $("lvPop").classList.add("on");}
 
+/* 潜行専用の表示と場の状態を消す。帰還・死亡・練習部屋の退出から呼ぶ。 */
+function clearRunVisuals(){
+  const v=$("hurtVig");if(v)v.style.opacity=0;
+  const pill=$("hpPill");if(pill){pill.style.display="none";pill.classList.remove("low");}
+  S.enemies.length=0;S.bullets.length=0;S.drops.length=0;
+  S.parts.length=0;S.nums.length=0;S.fx.length=0;S.corpses.length=0;
+  S.boss=null;$("bossBar").style.display="none";}
 /* ---------- 潜行終了 ---------- */
 let deathReturnTimer=null,deathCountdownTimer=null;
 function leaveEnd(){clearTimeout(deathReturnTimer);clearInterval(deathCountdownTimer);
@@ -3352,6 +3399,9 @@ function endRun(alive,cause){
     selectCharacter(k,id,()=>{S.p=newPlayer();S.paused=false;enterFloor(S.floor);
       /* 交代で技も持ち物の使い勝手も変わる。表示を新しいキャラクターに合わせ直す。 */
       refreshSkillButtons();renderRail();updBuffs();updHUD();toast(`${currentCharacter().n}に交代`);});return;}
+  /* 潜行専用の表示と場の状態をここで必ず片付ける。updHUD は潜行中しか回らないので、
+     戦闘HUDを消す責任を updHUD に持たせると、拠点へ戻っても出たままになる。 */
+  clearRunVisuals();
   const got=S.bag.slice();
   // boss_message は深度5ボス撃破時に設定され、そこから先へ進む経路が無かった。
   // 帰還した時点で装備・商店・編成の案内へ繋ぐ（無料ガチャ2回もこの枝にある）。
@@ -3371,9 +3421,19 @@ function endRun(alive,cause){
   if(!alive){const why=document.createElement("div");why.className="card deathCause";
     why.innerHTML=`<div class="skull">☠</div><div class="ty">死因</div><b>${cause||"敵の攻撃"}</b>
       <div class="sub">未帰還の装備 ${got.length} 個を失った</div>`;body.prepend(why);}
+  /* 最深記録の更新はいちばん嬉しい瞬間なので、専用の行で出す。
+     小さなトーストだと流れて気付けなかった。 */
+  if(alive&&S.floor>=S.deepest&&S.floor>S.startFloor){
+    const rec=document.createElement("div");rec.className="card recordRow";
+    rec.innerHTML=`<div class="nm" style="color:var(--gold)">最深記録を更新</div>`
+      +`<div class="st">${S.startFloor}F から ${S.floor}F まで（+${S.floor-S.startFloor}）</div>`;
+    body.appendChild(rec);}
   if(alive&&got.length){
     const h=document.createElement("h3");h.textContent="持ち帰った装備";body.appendChild(h);
-    for(const it of got){const d=document.createElement("div");d.className="card";
+    /* レア度が高いものほど後に出す。順に現れることで「何が出るか」の間が生まれる。 */
+    got.sort((a,z)=>a.rar-z.rar);
+    let step=0;
+    for(const it of got){const d=document.createElement("div");d.className="card lootIn rar"+it.rar;
       // 拾った物が今の装備より強いかどうかを、倉庫を開かずにここで分かるようにする。
       const cur=S.gear[it.slot],up=!cur||it.score>cur.score;
       d.innerHTML=`<div class="row" style="align-items:flex-start">
@@ -3383,6 +3443,9 @@ function endRun(alive,cause){
         ${up?'<span class="tag" style="color:#7ad04e;border-color:#7ad04e">▲ 装備中より強い</span>':""}</div>
         <div class="ty">${SLOTN(it.slot)} / 深度${it.ilvl}</div>
         <div class="st">${statsHTML(it,cur)}</div></div></div>`;
+      /* 演出は最大12枚ぶんで打ち切る。大量に持ち帰ったときに待たされないようにする。 */
+      d.style.animationDelay=(Math.min(step,12)*0.09).toFixed(2)+"s";step++;
+      d.style.borderColor=hexA(rarCol(it.rar),it.rar>=2?.7:.3);
       body.appendChild(d);}}
   S.bag.length=0;$("scEnd").classList.add("on");
   clearTimeout(deathReturnTimer);clearInterval(deathCountdownTimer);
@@ -3407,7 +3470,7 @@ function openTown(){
   const profile=allRoster().find(x=>x.k+":"+x.ch.id===S.profileAvatar)||{k:S.cls,ch:currentCharacter()};
   const tier=charTier(profile.ch);
   const icon=$("profileIcon");
-  icon.style.color=profile.ch.col;
+  icon.innerHTML=charFace(profile.k,profile.ch.col,30)+`<i class="clsMark" id="profileCls"></i>`;
   icon.style.borderColor=tier.col;                       // 枠の色＝等級
   icon.title=`${profile.ch.n}（${tier.n} / ${CLASSES[profile.k].name}）`;
   const mark=$("profileCls");
@@ -3433,7 +3496,7 @@ function gearGrid(host,inDungeon){
     d.className="slot member"+(inDungeon?" no":"");
     d.style.borderColor=charTier(ch).col;
     d.innerHTML=`<i class="clsMark" style="color:${CLASSES[S.cls].col}" title="${CLASSES[S.cls].name}">${CLASS_MARK[S.cls]||"?"}</i>`
-      +`<div class="face" style="color:${ch.col}">●</div>`
+      +`<div class="face">${charFace(S.cls,ch.col,26)}</div>`
       +`<div class="nm">${ch.n}</div><div class="mlv">Lv${S.base.lv}</div>`;
     if(!inDungeon)tapEl(d,openCharacterPick);gg.appendChild(d);}
   for(const s of SLOTS){const it=S.gear[s.k];
@@ -3545,7 +3608,7 @@ function renderCharacterBar(host,inDungeon,after){
     const d=document.createElement("div");d.className="charChip"+(on?" on":"");
     d.style.borderColor=charTier(entry.ch).col;
     d.innerHTML=`<i class="clsMark" style="color:${CLASSES[entry.k].col}">${CLASS_MARK[entry.k]||"?"}</i>`
-      +`<div class="face" style="color:${entry.ch.col}">●</div>`
+      +`<div class="face">${charFace(entry.k,entry.ch.col,22)}</div>`
       +`<div class="nm">${entry.ch.n}</div>`
       +`<div class="mlv">Lv${lv}${slot>=0?` / ${slot+1}番手`:""}</div>`;
     if(!on&&!inDungeon)tapEl(d,()=>{const [k,id]=key.split(":");
@@ -3735,7 +3798,7 @@ function renderTown(){
         const {k,ch}=entry,key=k+":"+ch.id,tier=charTier(ch),result=awardCharacter(key);
         S.profileAvatar=key;if(free)S.tutorial.phase="formation";SFX.lvl();
         return{title:result.kind==="unlock"?`${tier.n} キャラクター獲得`:result.kind==="breakthrough"?`限界突破 ${result.level}凸`:"最大突破重複",
-          html:`<div style="color:${ch.col};font-size:58px">●</div><div class="nm" style="color:${tier.col}">${tier.n}</div><div class="nm">${ch.n}</div><div class="st">${result.kind==="core"?`核 +${result.cores}`:`${CLASSES[k].name} / ${ch.trait}`}</div>`};});
+          html:`<div>${charFace(k,ch.col,64)}</div><div class="nm" style="color:${tier.col}">${tier.n}</div><div class="nm">${ch.n}</div><div class="st">${result.kind==="core"?`核 +${result.cores}`:`${CLASSES[k].name} / ${ch.trait}`}</div>`};});
       gacha("装備ガチャ",200,"equip","最大到達深度相当の装備を1つ。最低でも上質が出る。10連は希少以上が1つ以上確定。",(free,n,i)=>{
         /* 10連の最後の1回だけ希少を保証する。単発を10回引くのとの差はここだけ。 */
         const rar=free?2:gachaRarity(n===10&&i===9);
@@ -3927,7 +3990,7 @@ function renderPartySection(b){
     const lv=((S.characterStates[key]||{}).base||{lv:key===activeCharacterKey()?S.base.lv:1}).lv;
     d.innerHTML=entry
       ?`<i class="clsMark" style="color:${CLASSES[entry.k].col}" title="${CLASSES[entry.k].name}">${CLASS_MARK[entry.k]||"?"}</i>`
-       +`<div class="face" style="color:${entry.ch.col}">●</div>`
+       +`<div class="face">${charFace(entry.k,entry.ch.col,26)}</div>`
        +`<div class="nm">${entry.ch.n}</div><div class="mlv">Lv${lv}</div>`
       :`<div class="face">${i<cap?"＋":"🔒"}</div><div class="nm empty">${i<cap?"空き":"未解放"}</div>`
        +`<div class="mlv">${i<cap?"":i===1?"10Fボス":i===2?"20Fボス":"35Fボス"}</div>`;
