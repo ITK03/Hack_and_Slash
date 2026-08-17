@@ -440,6 +440,52 @@ await page.goto(base); await page.waitForTimeout(500);
   notes.push(`所持品: 倉庫タブ ${hold.tabs.join('/')} / ダンジョン内でも素材と道具を表示`);
 }
 
+/* 2o. 押せる要素の大きさ。指の腹に足りない当たり判定を作らない。 */
+{
+  const tapSizes = await page.evaluate(() => {
+    const vis = el => { const r = el.getBoundingClientRect();
+      return r.width > 0 && r.height > 0 && r.top < innerHeight && r.bottom > 0; };
+    const scan = () => [...document.querySelectorAll('#scTown *')].filter(vis)
+      .filter(e => typeof e.className === 'string' && /\b(btn|tap|card|slot|member|tab|charChip|fl)\b/.test(e.className))
+      .map(e => { const r = e.getBoundingClientRect();
+        return { min: Math.round(Math.min(r.width, r.height)), t: (e.textContent || '').trim().slice(0, 12) }; });
+    const out = {};
+    for (const [tab, sub] of [['prep', null], ['gear', 'equip'], ['gear', 'skill'], ['inv', 'gear'], ['shop', null]]) {
+      S.tab = tab; if (sub) S.gearSub = sub; if (tab === 'inv') S.invSub = 'gear';
+      openTown();
+      const tooSmall = scan().filter(x => x.min < 44);
+      out[tab + (sub ? ':' + sub : '')] = tooSmall;
+    }
+    return out;
+  });
+  const bad = Object.entries(tapSizes).filter(([, v]) => v.length);
+  if (bad.length) problems.push(`44px未満の操作がある: ${bad.map(([k, v]) => `${k}(${v.map(x => x.t + ':' + x.min).join(',')})`).join(' / ')}`);
+  notes.push(`タップ領域: 全${Object.keys(tapSizes).length}画面で44px以上`);
+}
+
+/* 2p. 戦闘力。装備を替えると増減し、強い物ほど大きいこと。 */
+{
+  const cp = await page.evaluate(() => {
+    S.cls = 'warrior'; S.formation = ['warrior:gai'];
+    S.base = { lv: 60, xp: 0, pts: 0, str: 180, mag: 0, def: 60, agi: 60, spi: 0, luk: 0 };
+    S.stash = []; S.gear = Object.fromEntries(SLOTK.map(k => [k, null]));
+    S.p = newPlayer();
+    const bare = combatPower(derive());
+    let weak; do weak = makeItem(20, 0, 0, 0); while (weak.slot !== 'weapon');
+    let strong; do strong = makeItem(300, 0, 0, 4); while (strong.slot !== 'weapon');
+    const withWeak = powerWith('weapon', weak), withStrong = powerWith('weapon', strong);
+    // 一括着用で戦闘力が上がること
+    S.stash = []; for (let i = 0; i < 30; i++) S.stash.push(makeItem(150 + i * 4, 0, 0, 3));
+    const before = combatPower(); autoEquipBest(); const after = combatPower();
+    return { bare, withWeak, withStrong, before, after };
+  });
+  if (!(cp.bare > 0)) problems.push('素手の戦闘力が0');
+  if (!(cp.withWeak > cp.bare)) problems.push('装備しても戦闘力が上がらない');
+  if (!(cp.withStrong > cp.withWeak)) problems.push('強い装備のほうが戦闘力が低い');
+  if (!(cp.after > cp.before)) problems.push(`おすすめ着用で戦闘力が上がらない（${cp.before}→${cp.after}）`);
+  notes.push(`戦闘力: 素手${cp.bare} / 並装備${cp.withWeak} / 伝説${cp.withStrong} — 一括着用 ${cp.before}→${cp.after}`);
+}
+
 /* 3. 帰還して拠点へ戻れること */
 {
   const back = await page.evaluate(() => { endRun(true); return { scene: S.scene }; });

@@ -139,7 +139,7 @@ const regressionSnippets = [
   'const pwStack=',                // 伝説専用効果の重ねがけ
   'const pwMul=',
   'pwN[it.pw]=(pwN[it.pw]||0)+1',
-  'add("強化","gold"',             // 「評価」では中身が伝わらない
+  'add("強化・売却","gold"',       // 「評価」では中身が伝わらない
   'const slotOf=ch=>',             // 編成中のキャラを先頭に並べる
   'const INHERIT_NEED=',           // 階層引き上げ（継承）
   'function applyInherit',
@@ -151,6 +151,16 @@ const regressionSnippets = [
   'function renderHoldings',       // 何を何個持っているか
   '["item","道具"]',
   'const runPick=',
+  'function combatPower',          // 強さを1つの数字で見せる
+  'function powerWith',
+  'function autoEquipBest',        // おすすめを一括で着せる
+  'function equipItem',
+  'function renderNextAction',     // 次にできること
+  'function pendingCounts',
+  'function hint(',                // 常駐の説明文を畳む
+  'id="hpPill"',                   // HPを親指の近くへ
+  'id="hurtVig"',
+  'min-height:44px',
   'function openProfileIconPick',
   'function openFormationChoices',
   'function confirmSelectedSell',

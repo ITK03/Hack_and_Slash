@@ -316,7 +316,9 @@ body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
 #diveBar.on{display:flex}
 #diveBar .step{display:flex;align-items:center;gap:4px;flex:0 0 auto}
 #diveBar .step .btn{margin:0;padding:9px 0;width:34px;text-align:center;font-size:15px;font-weight:900}
-#diveBar .fl{min-width:62px;text-align:center;line-height:1.1}
+#diveBar .fl{min-width:74px;min-height:44px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;line-height:1.15}
+#diveBar .btn.gh{min-width:44px}
 /* 数字自体が階層一覧への入口。押せると分かるよう枠と目印を出す */
 #diveBar .fl.tap{border:1px solid var(--line);border-radius:3px;background:#100d18;padding:5px 14px 5px 6px;position:relative}
 #diveBar .fl.tap::after{content:"▾";position:absolute;right:4px;top:50%;transform:translateY(-50%);font-size:9px;color:var(--ink3)}
@@ -334,6 +336,72 @@ body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
 .foldBody{padding-top:8px}
 #btnBack small{display:block;font-size:9px;font-weight:700;opacity:.75;margin-top:2px}
 .member{position:relative}
+/* HPを親指の近くへ。戦闘中は右下の技ボタンを見ているのに、HPは対角の左上にあった。
+   技の塊のすぐ上に太いバーを置き、視線を動かさずに残量が読めるようにする。 */
+#hpPill{position:fixed;right:78px;bottom:212px;width:164px;height:24px;z-index:6;pointer-events:none;
+  border:1px solid rgba(255,255,255,.16);border-radius:11px;overflow:hidden;
+  background:rgba(12,9,16,.72);display:none}
+#hpPill i{display:block;height:100%;width:100%;background:linear-gradient(180deg,#f0555f,#a8262f);
+  transition:width .16s linear}
+#hpPill span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:900;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9);letter-spacing:.02em}
+#hpPill.low{animation:hpPulse .9s ease-in-out infinite}
+@keyframes hpPulse{0%,100%{opacity:1}50%{opacity:.55}}
+/* 被弾。暗い画面ではフラッシュだけでは気付けない。画面の縁に赤を残す。 */
+#hurtVig{position:fixed;inset:0;pointer-events:none;z-index:5;opacity:0;
+  background:radial-gradient(ellipse at center,transparent 46%,rgba(190,30,40,.66) 100%);
+  transition:opacity .12s linear}
+/* 常駐の説明文。慣れたあともずっと画面を占有していたので、初回だけ出して畳む。 */
+.hint{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--ink2);
+  line-height:1.6;margin:4px 0 10px}
+.hintQ{flex:0 0 auto;width:20px;height:20px;border-radius:50%;border:1px solid var(--line2);
+  color:var(--ink2);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;position:relative}
+.hintQ::after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px}
+/* 拠点の先頭に置く「次にできること」。何から触ればいいのかの手掛かりを1つだけ出す。 */
+.nextCard{display:flex;align-items:center;gap:12px;padding:12px;margin-bottom:12px;
+  border:1px solid #4f9fd8;border-radius:3px;background:linear-gradient(180deg,rgba(79,159,216,.14),transparent)}
+.nextCard .nx{flex:1;min-width:0}
+.nextCard small{display:block;font-size:10px;letter-spacing:.1em;color:#8ab8e0;margin-bottom:2px}
+.nextCard b{font-size:14px;font-weight:800;color:var(--ink);line-height:1.4}
+.nextCard .btn{margin:0;width:auto;flex:0 0 auto;padding:0 16px;min-height:44px;display:flex;align-items:center}
+/* タブの未処理バッジ。数字付きの赤丸で、開かなくても残件が分かる。 */
+.tabs .tab{position:relative}
+.tabs .tab .badge{position:absolute;top:4px;right:8px;min-width:17px;height:17px;padding:0 4px;
+  border-radius:9px;background:#d0453f;color:#fff;font-size:10px;font-weight:900;font-style:normal;
+  display:flex;align-items:center;justify-content:center;line-height:1}
+/* 装備の上に置く戦闘力と一括着用。 */
+.cpBar{display:flex;align-items:center;gap:12px;padding:10px 12px;margin-bottom:8px;
+  border:1px solid var(--line2);border-radius:3px;background:linear-gradient(180deg,rgba(224,192,64,.08),transparent)}
+.cpBar>div:first-child{display:flex;align-items:baseline;gap:8px;flex:1}
+.cpBar small{font-size:11px;letter-spacing:.08em;color:var(--ink2)}
+.cpBar b{font-size:26px;font-weight:900;color:var(--gold);line-height:1}
+.cpBar .btn{margin:0;width:auto;flex:0 0 auto;padding:0 14px}
+/* ヘッダー: いま何ができるか（Lv・経験値・スタミナ）と、強さの総合値を常駐させる。 */
+/* 押せる要素の最小の大きさ。実測で29pxしかない物が各画面に8〜13個あった。
+   指の腹はおよそ45pxなので、押し間違いが起きて当然の大きさだった。
+   見た目の余白ではなく最小高さで確保し、狭い枠は擬似要素で当たり判定だけ広げる。 */
+.btn,.tab,.card.tap,.slot,.member,.charChip,.innerTabs .btn,.railBtn,.matCell,.loadSlot{min-height:44px}
+.innerTabs .btn{display:flex;align-items:center;justify-content:center}
+.tabs .tab{min-height:48px;display:flex;align-items:center;justify-content:center}
+/* 44pxに満たない小さな操作（フィルタの×、番手の入替など）は、
+   見た目を保ったまま当たり判定だけ外へ広げる。 */
+.tapPad{position:relative}
+.tapPad::after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:max(100%,44px);height:max(100%,44px)}
+/* 文字の下限。9〜11pxを所持数やレベルなど「読む必要のある情報」にも使っていた。 */
+.ty,.st,.cnt,.mlv,.sub{font-size:12px}
+.tag{font-size:12px}
+.nm{font-size:14px}
+.hdrLv{display:flex;align-items:center;gap:7px;margin-top:1px}
+.hdrLv b{font-size:13px;font-weight:800;color:var(--ink)}
+.xpBar{flex:1;max-width:118px;height:5px;border-radius:3px;background:rgba(255,255,255,.10);overflow:hidden}
+.xpBar i{display:block;height:100%;background:linear-gradient(90deg,#5ab4ff,#8ad8ff);width:0}
+.hdrCp{display:flex;align-items:baseline;gap:5px;margin-top:3px}
+.hdrCp small{font-size:9px;letter-spacing:.08em;color:var(--ink2)}
+.hdrCp span{font-size:17px;font-weight:900;color:var(--gold);letter-spacing:.01em}
+.currency.stam .stamI{color:#6ae0b0}
+.currency.stam{color:#9ff0d0}
 /* 装備・技・能力の上に常駐するキャラ切替。編成の面々を横に並べて1タップで移る。 */
 .charBar{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
 .charBar .charChip{position:relative;flex:0 0 auto;min-width:72px;padding:5px 7px 4px;text-align:center;
@@ -518,6 +586,8 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
 </head>
 <body>
 <canvas id="cv"></canvas>
+<div id="hurtVig"></div>
+<div id="hpPill"><i id="hpPillF"></i><span id="hpPillT">100%</span></div>
 
 <div id="hud">
   <div class="hrow"><div class="bar"><i id="hpF"></i></div><div class="hval" id="hpT">0/0</div></div>
@@ -556,9 +626,13 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
       <div class="profileIcon" id="profileIcon">●<i class="clsMark" id="profileCls"></i></div>
       <div class="whoami">
         <div class="uname" id="townName">冒険者</div>
-        <div class="depthBig"><small>最大深度</small><span id="townDepth">1</span>F</div>
+        <div class="hdrLv"><b id="hdrLv">Lv1</b><span class="xpBar"><i id="hdrXp"></i></span></div>
+        <div class="hdrCp"><small>戦闘力</small><span id="hdrCp">0</span></div>
       </div>
-      <div class="wallet"><div class="currency"><i class="gem">◆</i><span id="premiumT">0</span></div><div class="currency gold"><i class="coin">●</i><span id="townG">0</span></div></div>
+      <div class="wallet">
+        <div class="currency stam"><i class="stamI">▲</i><span id="hdrStam">3/3</span></div>
+        <div class="currency"><i class="gem">◆</i><span id="premiumT">0</span></div>
+        <div class="currency gold"><i class="coin">●</i><span id="townG">0</span></div></div>
     </div>
   </div>
   <div class="sbody" id="townBody"></div>
@@ -1892,6 +1966,16 @@ function burst(x,y,col,n,pw){if(S.parts.length>PART_MAX)return;
   for(let i=0;i<n;i++){const a=rnd()*TAU,s=rr(1.2,4.4)*(pw||1);
     S.parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,t:0,life:rr(.22,.5),col,sz:rr(1.6,3.4)});}}
 const shk=v=>{S.shake=Math.max(S.shake,v);S.shakeT=.2;};
+/* 戦闘力。能力値16項目を見比べないと強くなったか分からない状態を解消するための総合値。
+   期待火力と実効耐久の相乗平均にする。片方だけ伸ばしても頭打ちになるので、
+   「攻撃だけ盛る」が最適解にならない。装備を替えた瞬間の増減を見せるのが主目的。 */
+function combatPower(d){
+  d=d||(S.p&&S.p.d)||derive();
+  const atk=(d.atkFlat||0)*(1+(d.crit||0)*((d.cdmg||1)-1))*(d.as||1);
+  const tough=(d.max||1)/(1-Math.min(.8,d.dr||0));
+  return Math.max(1,Math.round(Math.sqrt(Math.max(1,atk)*Math.max(1,tough))));}
+/* 装備を1部位だけ入れ替えたときの戦闘力。比較表示で使う。 */
+function powerWith(slot,item){return combatPower(deriveWith(slot,item));}
 const hasPw=id=>S.p&&S.p.d.pw.includes(id);
 /* 伝説専用効果の重ねがけ。1個目を1.00として、2個目は+0.50、3個目は+0.25…と
    増分を半分ずつ落とす。何個重ねても2.00を超えないので、同じ効果を集めるだけで
@@ -3170,6 +3254,18 @@ function updHUD(){
   $("s0").style.display=S.settings.controlMode==="manual"?"":"none";
   $("stick").style.visibility=S.settings.stick?"visible":"hidden";
   $("hpF").style.width=(p.hp/p.max*100)+"%";
+  /* 親指の近くのHP。残量で色を変え、3割を切ったら脈打たせる。 */
+  {const r=Math.max(0,Math.min(1,p.hp/p.max)),pill=$("hpPill"),f=$("hpPillF");
+   if(pill){pill.style.display=S.scene==="dungeon"?"block":"none";
+     pill.classList.toggle("low",r<=.3);}
+   if(f){f.style.width=(r*100).toFixed(1)+"%";
+     f.style.background=r>.5?"linear-gradient(180deg,#f0555f,#a8262f)"
+       :r>.3?"linear-gradient(180deg,#f0a04a,#b06010)":"linear-gradient(180deg,#ff7a7a,#c02020)";}
+   const t=$("hpPillT");if(t)t.textContent=Math.round(p.hp)+" / "+Math.round(p.max);}
+  /* 被弾の残り香。被弾直後ほど濃く、低HPでは薄く出したままにする。 */
+  {const v=$("hurtVig");
+   if(v){const hit=p.hurtT>0?p.hurtT/.42:0,low=p.hp/p.max<.3?.30:0;
+     v.style.opacity=Math.max(low,Math.min(1,hit)).toFixed(2);}}
   $("hpT").textContent=Math.ceil(p.hp)+"/"+Math.ceil(p.max);
   $("mpF").style.width=(p.mp/p.d.mpMax*100)+"%";
   $("mpT").textContent="MP "+Math.floor(p.mp)+"/"+p.d.mpMax;
@@ -3301,7 +3397,13 @@ function openTown(){
   S.scene="town";S.paused=true;
   $("scTown").classList.add("on");$("pauseB").classList.remove("show");
   $("townG").textContent=S.gold;
-  $("townDepth").textContent=S.deepest;$("premiumT").textContent=S.premium||0;
+  $("premiumT").textContent=S.premium||0;
+  /* Lv・経験値・スタミナ・戦闘力。「いまどれだけ遊べて、どれだけ強いか」を常駐させる。 */
+  {const need=xpNeed(S.base.lv),cur=S.base.xp||0;
+   $("hdrLv").textContent="Lv"+S.base.lv;
+   $("hdrXp").style.width=Math.max(0,Math.min(100,need>0?cur/need*100:100))+"%";
+   $("hdrStam").textContent=(S.stamina==null?3:S.stamina)+"/3";
+   $("hdrCp").textContent=combatPower(derive()).toLocaleString();}
   const profile=allRoster().find(x=>x.k+":"+x.ch.id===S.profileAvatar)||{k:S.cls,ch:currentCharacter()};
   const tier=charTier(profile.ch);
   const icon=$("profileIcon");
@@ -3313,7 +3415,14 @@ function openTown(){
   mark.style.color=CLASSES[profile.k].col;
   mark.title=CLASSES[profile.k].name;
   $("townName").textContent=playerName();
-  for(const t of document.querySelectorAll("#scTown .tab"))t.classList.toggle("on",t.dataset.t===S.tab);
+  {const p=pendingCounts();
+   const badges={prep:p.quests,gear:p.better,inv:p.newItems};
+   for(const t of document.querySelectorAll("#scTown .tab")){
+     t.classList.toggle("on",t.dataset.t===S.tab);
+     const n=badges[t.dataset.t]||0;
+     let dot=t.querySelector(".badge");
+     if(n>0){if(!dot){dot=document.createElement("i");dot.className="badge";t.appendChild(dot);}dot.textContent=n>9?"9+":n;}
+     else if(dot)dot.remove();}}
   renderTown();setTimeout(refreshTutorial,0);}
 
 function gearGrid(host,inDungeon){
@@ -3394,7 +3503,29 @@ function statBlock(host){
         +(n>1?`<span class="tag">×${n} → 効果 ${mul.toFixed(2)}倍</span>`:"")+`</div>`
         +`<div class="st">${P.d}</div>`;
       host.appendChild(e);}}}
-function renderGearTab(host,inDungeon){const panel=document.createElement("div");panel.className="gearPanel";
+function renderGearTab(host,inDungeon){
+  /* 戦闘力と一括着用を装備の一番上に置く。「何をすれば強くなるか」への答えをここで返す。 */
+  const cp=combatPower(derive());
+  const head=document.createElement("div");head.className="cpBar";
+  head.innerHTML=`<div><small>戦闘力</small><b>${cp.toLocaleString()}</b></div>`;
+  if(!inDungeon){
+    const best=document.createElement("div");best.className="btn gold";best.textContent="おすすめを着せる";
+    tapEl(best,()=>{
+      /* 何がどれだけ変わるかを見せてから実行する。勝手に着替えさせない。 */
+      const before=combatPower();let n=0,gain=0;
+      const plan=[];
+      const bak={};for(const k of SLOTK)bak[k]=S.gear[k];
+      for(const slot of SLOTK){let b2=null,cp2=combatPower();
+        for(const x of S.stash){if(x.slot!==slot)continue;const c2=powerWith(slot,x);if(c2>cp2){cp2=c2;b2=x;}}
+        if(b2){S.gear[slot]=b2;plan.push(`${SLOTN(slot)}: ${b2.name}`);n++;}}
+      gain=combatPower()-before;
+      for(const k of SLOTK)S.gear[k]=bak[k];
+      if(!n)return toast("いま着けている物が最良です","ok");
+      ask("おすすめを着せる",`${n}部位を交換します。\n戦闘力 ${before.toLocaleString()} → ${(before+gain).toLocaleString()}（+${gain.toLocaleString()}）\n\n`+plan.join("\n"),
+        ()=>autoEquipBest(()=>openTown()));});
+    head.appendChild(best);}
+  host.appendChild(head);
+  const panel=document.createElement("div");panel.className="gearPanel";
   const left=document.createElement("div"),right=document.createElement("div");
   left.innerHTML="<h3>装備</h3>";right.innerHTML="<h3>能力値</h3>";
   gearGrid(left,inDungeon);statBlock(right);panel.append(left,right);host.appendChild(panel);}
@@ -3449,7 +3580,8 @@ function renderSkillTab(host,inDungeon,after){
   const all=skillPoolFor(),pool=all.filter(x=>x.uniq).concat(all.filter(x=>!x.uniq));
   const h=document.createElement("h3");h.textContent="技の編成（3枠）";host.appendChild(h);
   const note=document.createElement("div");note.className="st";
-  note.textContent=inDungeon?"潜行中は入れ替えできません。":"枠を選んでから、下の一覧で使う技を選びます。技は最大到達深度で解放されます。";
+  note.textContent="";note.style.display="none";
+  hint(host,"skillTab",inDungeon?"潜行中は入れ替えできません。":"枠を選んでから、下の一覧で使う技を選びます。技は最大到達深度で解放されます。");
   host.appendChild(note);
   /* どの枠も選ばれていない状態を作らない。選択なしだと
      「一覧を押すとどこへ入るのか」が画面から読み取れなくなる。 */
@@ -3702,6 +3834,7 @@ function renderDiveBar(onChange){
    日替わり任務を先頭に積むと、編成と潜るボタンが画面2枚分下に押しやられて
    毎回スクロールが要る。任務は下段の折りたたみへ回す。 */
 function renderPrepTab(b){
+  renderNextAction(b);
   renderPartySection(b);
   const fold=document.createElement("div");fold.className="fold"+(S.prepMissionsOpen?" on":"");
   const undone=[0,1,2].filter(i=>!dailyDone(i)).length;
@@ -3743,6 +3876,42 @@ function renderMissionSection(b){
   if(!S.beginnerClaimed){const beginner=document.createElement("div");beginner.className="btn gold";beginner.textContent=`初心者ミッション報酬（基準 ${beginnerTarget()}F）`;tapEl(beginner,()=>{if(claimBeginnerMission())openTown();});b.appendChild(beginner);}
   {const key=activeCharacterKey(),lv=breakthroughLevel(key),need=lv<5?CFG.BREAKTHROUGH_CORE_COST[lv+1]:0,paid=(S.breakthroughProgress||{})[key]||0,d=document.createElement("div");d.className="card";d.innerHTML=`<div class="nm">${currentCharacter().n} ${lv}凸 / 5凸</div><div class="st">${lv<5?`次段階：核 ${paid}/${need}`:"最大突破"}</div>`;if(lv<5){const x=document.createElement("div");x.className="btn "+(materialCount("core")?"gold":"no");x.textContent="核を投入";tapEl(x,()=>{breakthroughWithCore(key);openTown();});d.appendChild(x);}b.appendChild(d);}
 }
+/* いま片付いていないこと。タブのバッジと拠点の推奨カードが同じ根拠を使う。 */
+function pendingCounts(){
+  let quests=0;
+  try{ensureDaily();const d=S.daily;if(d)for(let i=0;i<3;i++)if(dailyDone(i)&&!d.claimed[i])quests++;}catch(e){}
+  const newItems=S.stash.filter(x=>x.isNew).length;
+  /* 倉庫に、いま着けている物より戦闘力が上がる装備があるか */
+  let better=0;
+  try{const now=combatPower();
+    for(const slot of SLOTK){for(const x of S.stash){if(x.slot!==slot)continue;
+      if(powerWith(slot,x)>now){better++;break;}}}}catch(e){}
+  return {quests,newItems,better,total:quests+newItems+better};}
+/* 拠点の一番上。「次に何をすればいいか」を1つだけ出す。 */
+/* 説明文を「?」の後ろへ入れる。一度読んだ説明が毎回画面を占有しないようにする。
+   key ごとに既読を覚え、初回だけ開いた状態で出す。 */
+function hint(b,key,text){
+  S.seenHints=S.seenHints||{};
+  const seen=!!S.seenHints[key];
+  const row=document.createElement("div");row.className="hint";
+  const q=document.createElement("i");q.className="hintQ";q.textContent="?";
+  const t=document.createElement("span");t.textContent=text;
+  t.style.display=seen?"none":"block";
+  tapEl(q,()=>{t.style.display=t.style.display==="none"?"block":"none";});
+  row.append(q,t);b.appendChild(row);
+  if(!seen){S.seenHints[key]=1;save();}
+  return row;}
+function renderNextAction(b){
+  const p=pendingCounts();
+  let msg=null,label=null,go=null;
+  if(p.quests)      {msg=`任務 ${p.quests}件 の報酬を受け取れます`;label="受け取る";go=()=>{S.tab="prep";S.missionOpen=true;openTown();};}
+  else if(p.better) {msg=`${p.better}部位に、いまより強い装備があります`;label="装備を見る";go=()=>{S.tab="gear";S.gearSub="equip";openTown();};}
+  else if(p.newItems){msg=`未確認の戦利品が ${p.newItems}個 あります`;label="倉庫へ";go=()=>{S.tab="inv";S.invSub="gear";openTown();};}
+  else              {msg=`最深 ${maxStartFloor()}F から潜れます`;label="潜る";go=()=>confirmDive(maxStartFloor());}
+  const d=document.createElement("div");d.className="nextCard";
+  d.innerHTML=`<div class="nx"><small>次にできること</small><b>${msg}</b></div>`;
+  const btn=document.createElement("div");btn.className="btn gold";btn.textContent=label;
+  tapEl(btn,go);d.appendChild(btn);b.appendChild(d);}
 function renderPartySection(b){
   const roster=unlockedRoster(),cap=formationCapacity();
   const h=document.createElement("h3");h.textContent=`潜入編成（現在${cap}人 / 最大4人）`;b.appendChild(h);
@@ -3763,7 +3932,7 @@ function renderPartySection(b){
       :`<div class="face">${i<cap?"＋":"🔒"}</div><div class="nm empty">${i<cap?"空き":"未解放"}</div>`
        +`<div class="mlv">${i<cap?"":i===1?"10Fボス":i===2?"20Fボス":"35Fボス"}</div>`;
     tapEl(d,()=>{if(i<cap)openFormationPick(i);});g.appendChild(d);}b.appendChild(g);
-  const note=document.createElement("div");note.className="st";note.textContent="倒れると次の番手へ交代。装備は倉庫で共有（装備中の品は他の番手では使えません）。";b.appendChild(note);
+  hint(b,"party","倒れると次の番手へ交代。装備は倉庫で共有（装備中の品は他の番手では使えません）。");
   renderLoadout(b);
   const maxStart=maxStartFloor();S.diveFloor=clamp(S.diveFloor||1,1,maxStart);
   const preview=document.createElement("div");preview.className="card";
@@ -4083,7 +4252,7 @@ function openLoadoutSlot(slot){invMenu(`持ち込み枠 ${slot+1}`,c=>{
       +`<div class="ty">${have?"":"未所持 — 倉庫の調合で作る / "}${x.heal?`持ち込み ${x.max} / 道中は${runCap(k)}個まで拾える`:`持ち込み上限 ${x.max}`}</div>`;
     tapEl(d,()=>{S.loadout[slot]=k;save();$("itPop").classList.remove("on");openTown();});c.appendChild(d);}},openTown);}
 function renderLoadout(b){const h=document.createElement("h3");h.textContent=`持ち込み（${loadoutCapacity()}枠）`;b.appendChild(h);const g=document.createElement("div");g.className="loadout";for(let i=0;i<loadoutCapacity();i++){const k=S.loadout[i],d=document.createElement("div");d.className="loadSlot";if(k)d.style.borderColor=hexA(rareFrame(CONSUMABLES[k].rar),.7);
-    d.innerHTML=k?`${conIcon(k,22)}<b>${CONSUMABLES[k].n}</b><span class="cnt">×${Math.min(CONSUMABLES[k].max,S.consumables[k]||0)} / ${CONSUMABLES[k].max}</span>`:`<b style="font-size:17px">＋</b><span class="cnt">空き</span>`;tapEl(d,()=>openLoadoutSlot(i));g.appendChild(d);}b.appendChild(g);const n=document.createElement("div");n.className="st";n.textContent="未使用品は死亡・断念時にも倉庫へ残ります。潜行中の補充はできません。";b.appendChild(n);}
+    d.innerHTML=k?`${conIcon(k,22)}<b>${CONSUMABLES[k].n}</b><span class="cnt">×${Math.min(CONSUMABLES[k].max,S.consumables[k]||0)} / ${CONSUMABLES[k].max}</span>`:`<b style="font-size:17px">＋</b><span class="cnt">空き</span>`;tapEl(d,()=>openLoadoutSlot(i));g.appendChild(d);}b.appendChild(g);hint(b,"loadout","未使用品は死亡・断念時にも倉庫へ残ります。潜行中の補充はできません。");}
 /* 倉庫は「装備」「結晶」「分解」「調合」の4区画。
    ひとつの棚に絞込・並替・売却・分解・調合を横一列で置くと、
    いま何をする画面なのかが読めない。区画ごとに要るものだけ出す。 */
@@ -4415,26 +4584,81 @@ function openInherit(it){
     tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);
     $("itPop").classList.add("on");};
   draw();}
+/* 装備枠を押したときの画面。以前は「枠→装備変更→一覧→選ぶ→決定」で5タップかかっていた。
+   候補をこの画面に直接並べ、押した瞬間に装備する（2タップ）。細かく見たい人だけ詳細へ降りる。 */
 function openGearDetail(slotK,inDungeon){
   const it=S.gear[slotK],c=$("itC");c.classList.remove("gearCompare");
-  c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:10px">${SLOTN(slotK)}</div>`;
-  if(it){c.innerHTML+=`<div class="${RC[it.rar]}" style="margin-bottom:8px">${icon(iconKey(it),34)}</div>
-    <div class="nm ${RC[it.rar]}" style="text-align:center">${it.name}</div>
-    <div class="st optBox" style="text-align:center">${statsHTML(it)}</div>`;}
+  const nowCp=combatPower();
+  c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:8px">${SLOTN(slotK)}</div>`;
+  if(it){c.innerHTML+=`<div class="card" style="border-color:${hexA(rarCol(it.rar),.5)}">
+    <div class="row"><div class="nm ${RC[it.rar]}">${it.name}</div><span class="tag">装備中 +${it.lv}</span></div>
+    <div class="st">${statsHTML(it)}</div></div>`;}
   else c.innerHTML+='<div class="card"><div class="st">装備されていません。</div></div>';
+  /* 候補。装備中より戦闘力が上がる物を上から3件。 */
+  if(!inDungeon){
+    const pool=S.stash.filter(x=>x.slot===slotK)
+      .map(x=>({x,cp:powerWith(slotK,x)}))
+      .filter(o=>o.cp>nowCp).sort((a,z)=>z.cp-a.cp).slice(0,3);
+    const h=document.createElement("div");h.className="craftFam";
+    h.textContent=pool.length?"押すとその場で装備します":"倉庫に、これより強い物はありません";
+    c.appendChild(h);
+    for(const o of pool){const d=document.createElement("div");d.className="card tap";
+      d.style.borderColor=hexA(rarCol(o.x.rar),.5);
+      d.innerHTML=`<div class="row"><div class="nm ${RC[o.x.rar]}">${o.x.name}</div>`
+        +`<span class="tag" style="color:#7ad04e;border-color:#7ad04e">戦闘力 +${(o.cp-nowCp).toLocaleString()}</span></div>`
+        +`<div class="ty">${SLOTN(o.x.slot)} / 深度${o.x.ilvl} / 強化+${o.x.lv}</div>`
+        +`<div class="st">${compareItemStats(o.x,it,true)}</div>`;
+      tapEl(d,()=>{equipItem(o.x,slotK);$("itPop").classList.remove("on");inDungeon?openPause():openTown();});
+      c.appendChild(d);}}
   const add=(text,cls,fn)=>{const d=document.createElement("div");d.className="btn "+cls;d.textContent=text;tapEl(d,fn);c.appendChild(d);};
-  if(it)add("強化","gold",()=>showItem(it,inDungeon));
-  add("装備変更","pri",()=>openPick(slotK,inDungeon));
+  if(it)add("強化・売却","gold",()=>showItem(it,inDungeon));
+  add("すべての候補から選ぶ","gh",()=>openPick(slotK,inDungeon));
   if(it)add("外す","gh",()=>{S.stash.push(it);S.gear[slotK]=null;S.p.d=derive();recalcHP(S.p);save();
     $("itPop").classList.remove("on");inDungeon?openPause():openTown();});
   add("閉じる","popClose",()=>$("itPop").classList.remove("on"));$("itPop").classList.add("on");}
+/* 1部位を装備する。倉庫から抜き、外した物を倉庫へ戻す。 */
+function equipItem(x,slotK){
+  const slot=slotK||x.slot,old=S.gear[slot];
+  const i=S.stash.indexOf(x);if(i>=0)S.stash.splice(i,1);
+  S.gear[slot]=x;if(old)S.stash.push(old);
+  S.p.d=derive();recalcHP(S.p);SFX.chest();save();}
+/* おすすめ装備の一括着用。7部位を手作業で埋め直す手間をなくす。
+   判定は effScore（職業・属性の補正込み）ではなく、戦闘力そのもので選ぶ。
+   1部位ずつ最良を採るので、共鳴が絡む組み合わせ最適解ではないが、迷いは消える。 */
+function autoEquipBest(after){
+  const before=combatPower();
+  let changed=0;
+  for(const slot of SLOTK){
+    const cur=S.gear[slot];let best=null,bestCp=combatPower();
+    for(const x of S.stash){if(x.slot!==slot)continue;
+      const cp=powerWith(slot,x);if(cp>bestCp){bestCp=cp;best=x;}}
+    if(best){equipItem(best,slot);changed++;}
+  }
+  const gain=combatPower()-before;
+  if(!changed)toast("いま着けている物が最良です","ok");
+  else toast(`${changed}部位を交換 — 戦闘力 +${gain.toLocaleString()}`,"ok");
+  save();if(after)after();}
 function itemStatTotals(it){const t={};if(!it)return t;
   if(it.main)t[it.main.id]=(t[it.main.id]||0)+mainV(it);
   for(const a of it.affs)t[a.id]=(t[a.id]||0)+a.v;return t;}
 function compareItemStats(it,other,isAfter){if(!it)return "効果なし";
   const own=itemStatTotals(it),base=itemStatTotals(other);
-  let h=Object.keys(own).map(k=>{const d=(own[k]||0)-(base[k]||0),cls=isAfter?(d>0?"up":d<0?"dn":""):"";
-    return `<span class="${cls}">${AFN(k)} +${own[k]}${AFP(k)?"%":""}</span>`;}).join("<br>");
+  let h;
+  if(isAfter&&other){
+    /* 比較のときは差分だけを符号付きで出す。増減のない項目を並べても読む手間が増えるだけ。 */
+    /* 表示名で合算する。armor と dr はどちらも「防御力」なので、
+       別行に出ると同じ名前が符号違いで2つ並んでしまう。 */
+    const keys=[...new Set([...Object.keys(own),...Object.keys(base)])];
+    const agg={};
+    for(const k of keys){const nm=AFN(k)+(AFP(k)?"%":"");
+      agg[nm]=(agg[nm]||0)+((own[k]||0)-(base[k]||0));}
+    const rows=Object.entries(agg).map(([nm,d])=>({nm,d,pct:nm.endsWith("%")}))
+      .filter(r=>r.d!==0).sort((a,z)=>Math.abs(z.d)-Math.abs(a.d));
+    h=rows.length?rows.map(r=>`<span class="${r.d>0?"up":"dn"}">${r.pct?r.nm.slice(0,-1):r.nm} ${r.d>0?"+":"−"}${Math.abs(r.d)}${r.pct?"%":""}</span>`).join("<br>")
+      :'<span class="ty">能力値は変わりません</span>';
+  }else{
+    h=Object.keys(own).map(k=>`<span>${AFN(k)} +${own[k]}${AFP(k)?"%":""}</span>`).join("<br>");
+  }
   if(it.pw){const p=POWER(it.pw);if(p){h+=`<div class="leg">◆ ${p.n} — ${p.d}</div>`;
     const worn=SLOTK.reduce((n,k)=>n+((S.gear[k]&&S.gear[k]!==it&&S.gear[k].pw===it.pw)?1:0),0);
     if(worn)h+=`<div class="ty">装備中に同じ効果が${worn}個。これを足すと効果 ${pwStack(worn+1).toFixed(2)}倍（重ねるほど伸びは小さくなります）。</div>`;}}return h;}
@@ -4718,6 +4942,9 @@ function renderRail(){
   for(let i=0;i<cap;i++){
     const key=S.loadout[i],def=key&&CONSUMABLES[key];
     const d=document.createElement("div");d.className="railBtn"+(def?"":" empty");
+    /* 持ち込んでいない枠は戦闘中に出さない。押せない物が画面端を占有していた。
+       拠点では「空き」を出す必要があるので、ダンジョン内だけ隠す。 */
+    if(!def&&S.scene==="dungeon")d.style.display="none";
     if(i===0)d.id="pot";                      // 練習部屋の案内が指す先
     d.dataset.slot=i;d.style.width=d.style.height=sz+"px";
     if(def){/* 枠＝等級、絵と地＝系統の色。倉庫・持ち込み・戦闘の3画面で同じ規則にする。 */
