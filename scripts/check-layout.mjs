@@ -151,7 +151,7 @@ for (const [width, height, name] of sizes) {
   // 装備名が枠から溢れて語尾が落ちていないこと
   await page.evaluate(() => { document.querySelector('#scTown .tab[data-t="gear"]').dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); });
   await page.waitForTimeout(200);
-  await page.evaluate(() => { S.allyView = 'equip'; openTown(); });
+  await page.evaluate(() => { S.gearSub = 'equip'; openTown(); });
   await page.waitForTimeout(350);
   const names = await page.evaluate(() => {
     const bad = [];
@@ -173,7 +173,7 @@ for (const [width, height, name] of sizes) {
   // 技を差し替えると戦闘のボタンにもそのまま出ること
   await page.evaluate(() => { document.querySelector('#scTown .tab[data-t="gear"]').dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); });
   await page.waitForTimeout(300);
-  await page.evaluate(() => { S.allyView = 'skill'; openTown(); });
+  await page.evaluate(() => { S.gearSub = 'skill'; openTown(); });
   await page.waitForTimeout(300);
   const skillTab = await page.evaluate(() => ({
     slots: document.querySelectorAll('.skillSlot').length,
