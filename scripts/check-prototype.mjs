@@ -159,7 +159,10 @@ const regressionSnippets = [
   'function renderNextAction',     // 次にできること
   'function pendingCounts',
   'function hint(',                // 常駐の説明文を畳む
-  'id="hpPill"',                   // HPを親指の近くへ
+  'const mmSize=',                 // 地図は押すと大きく開く
+  'function toggleMap',
+  'function revealAround',          // 部屋に入ってから地図に出る
+  'ONEHAND_DMG:',                  // 片手は与ダメージを落とす
   'id="hurtVig"',
   'min-height:44px',
   'const charFace=',               // キャラは「●」ではなく職業の姿

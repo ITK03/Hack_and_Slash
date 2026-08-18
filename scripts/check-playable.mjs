@@ -489,6 +489,87 @@ await page.goto(base); await page.waitForTimeout(500);
   notes.push(`タップ領域: 全${Object.keys(tapSizes).length}画面で44px以上`);
 }
 
+/* 2p2. 戦闘中の画面まわり。
+   - 上のHPバーと二重だった技の近くのHPバーが無いこと
+   - 拾った物の行が戦闘中に出ず、一時停止の「戦利品」には出ること
+   - 道具の丸が真円で、操作切替が列のいちばん下にあり、空き枠も出ていること
+   - 地図は入った部屋から埋まり、押すと大きくなること
+   - 行き先の矢印は伏せてあること（CFG.GUIDE_ARROWS で戻せる） */
+{
+  const hud = await page.evaluate(() => {
+    S.loadout = ['mend1', null, null, null];
+    beginRun(20); S.paused = false;
+    for (let i = 0; i < 30; i++) update(1 / 60);
+    const out = {};
+    out.pill = !!document.getElementById('hpPill');
+    out.loot = !!document.getElementById('loot');
+    out.arrows = getComputedStyle(document.getElementById('mmGuide')).display;
+    /* 右端の列。下から: 切替 → 道具4枠 */
+    const rail = [...document.querySelectorAll('#railR > *')]
+      .map(e => { const r = e.getBoundingClientRect();
+        return { id: e.id, w: Math.round(r.width), h: Math.round(r.height), bottom: Math.round(r.bottom) }; });
+    out.rail = rail;
+    out.railRound = rail.filter(x => x.w !== x.h);
+    out.autoLowest = rail.length > 1 && rail.find(x => x.id === 'autoBtn')
+      && rail.every(x => x.id === 'autoBtn' || x.bottom < rail.find(y => y.id === 'autoBtn').bottom);
+    out.slots = rail.filter(x => x.id !== 'autoBtn').length;
+    /* 地図。最初は自分のいる部屋だけ。別の部屋の真ん中はまだ出ていないこと */
+    let lit = 0; for (let i = 0; i < MW * MH; i++) if (seen[i]) lit++;
+    out.seenAtStart = lit;
+    out.floorTiles = (() => { let n = 0; for (let i = 0; i < MW * MH; i++) if (map[i]) n++; return n; })();
+    out.roomsSeen = rooms.filter(r => r.seen).length;
+    out.roomsTotal = rooms.length;
+    /* 未踏の部屋へ運ぶと、その部屋が丸ごと出ること */
+    const far = rooms.find(r => !r.seen);
+    if (far) { S.p.x = far.cx; S.p.y = far.cy; update(1 / 60); }
+    out.roomsSeenAfter = rooms.filter(r => r.seen).length;
+    let lit2 = 0; for (let i = 0; i < MW * MH; i++) if (seen[i]) lit2++;
+    out.seenAfter = lit2;
+    /* 地図を押すと大きくなり、もう一度押すと戻ること。時間は止まらないこと */
+    const small = document.getElementById('mm').getBoundingClientRect().width;
+    toggleMap();
+    const big = document.getElementById('mm').getBoundingClientRect().width;
+    out.pausedWhileBig = S.paused;
+    toggleMap();
+    out.small = Math.round(small); out.big = Math.round(big);
+    out.backToSmall = Math.round(document.getElementById('mm').getBoundingClientRect().width);
+    return out;
+  });
+  if (hud.pill) problems.push('技の近くのHPバーがまだある');
+  if (hud.loot) problems.push('戦闘中の取得アイテムの行がまだある');
+  if (hud.arrows !== 'none') problems.push('行き先の矢印が出たまま');
+  if (hud.railRound.length) problems.push(`道具の丸が真円でない: ${hud.railRound.map(x => `${x.id || '道具'} ${x.w}x${x.h}`).join(',')}`);
+  if (!hud.autoLowest) problems.push('操作切替が列のいちばん下にない');
+  if (hud.slots !== 4) problems.push(`道具の枠が4つでない（${hud.slots}）— 空き枠も出すこと`);
+  if (!(hud.roomsSeen >= 1 && hud.roomsSeen < hud.roomsTotal)) problems.push(`開始時に見えている部屋が ${hud.roomsSeen}/${hud.roomsTotal}`);
+  if (!(hud.seenAtStart < hud.floorTiles * .5)) problems.push(`開始時に床の ${Math.round(hud.seenAtStart / hud.floorTiles * 100)}% が見えている`);
+  if (!(hud.roomsSeenAfter > hud.roomsSeen)) problems.push('部屋へ入っても地図に出ない');
+  if (!(hud.big > hud.small * 3)) problems.push(`地図を押しても大きくならない（${hud.small}→${hud.big}）`);
+  if (hud.pausedWhileBig) problems.push('地図を開くと時間が止まる');
+  if (hud.backToSmall !== hud.small) problems.push('地図をもう一度押しても戻らない');
+  notes.push(`戦闘画面: HPバー二重なし / 取得行なし / 矢印なし / 道具${hud.slots}枠+切替が最下段・真円${hud.rail[0].w}px`);
+  notes.push(`  地図: 開始 ${hud.roomsSeen}/${hud.roomsTotal}部屋（床の${Math.round(hud.seenAtStart / hud.floorTiles * 100)}%）→ 入室で ${hud.roomsSeenAfter}部屋 / 押すと ${hud.small}→${hud.big}px`);
+}
+
+/* 2p3. 片手操作は手動より与ダメージが低いこと。 */
+{
+  const modes = await page.evaluate(() => {
+    beginRun(20); S.paused = false;
+    const hit = mode => {
+      S.settings.controlMode = mode;
+      const e = { x: S.p.x + 1, y: S.p.y, hp: 1e9, max: 1e9, r: .4, res: {}, element: 'neutral' };
+      const before = e.hp; hurtE(e, 1000, false, 0, 0, true);
+      return Math.round(before - e.hp);
+    };
+    return { manual: hit('manual'), onehand: hit('onehand'), auto: hit('auto') };
+  });
+  const want = Math.round(1000 * 0.67 / 1000 * 100) / 100;
+  const ratio = modes.onehand / modes.manual;
+  if (!(ratio > .6 && ratio < .74)) problems.push(`片手の与ダメージが手動の ${(ratio * 100).toFixed(0)}%（${Math.round(want * 100)}%前後のはず）`);
+  if (modes.auto !== modes.manual) problems.push(`オートの与ダメージが手動と違う（${modes.auto} / ${modes.manual}）`);
+  notes.push(`与ダメージ: 手動${modes.manual} / 片手${modes.onehand}（${(ratio * 100).toFixed(0)}%）/ オート${modes.auto}`);
+}
+
 /* 2p. 戦闘力。装備を替えると増減し、強い物ほど大きいこと。
  *
  * 比較は主ステータスを揃える。武器の主ステータスは攻撃力か魔力のどちらかで、

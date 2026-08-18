@@ -44,7 +44,6 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
   color:var(--ink3);font-weight:600;letter-spacing:.03em;align-items:center}
 #meta b{color:var(--ink);font-weight:800}
 #goldT{color:var(--gold)}
-#loot{margin-top:4px;font-size:11px;font-weight:800;display:flex;gap:7px}
 #pauseB{position:absolute;right:9px;top:calc(env(safe-area-inset-top) + 6px);z-index:14;
   width:34px;height:34px;border-radius:3px;border:1px solid var(--line2);background:rgba(14,11,22,.88);
   display:none;align-items:center;justify-content:center;pointer-events:auto;color:var(--ink2)}
@@ -52,7 +51,11 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
 #pauseB span{width:3px;height:13px;background:currentColor;margin:0 2px;border-radius:1px}
 #mmW{position:absolute;right:9px;top:calc(env(safe-area-inset-top) + 74px);z-index:11;
   width:88px;border-radius:3px;overflow:hidden;border:1px solid var(--line);
-  background:rgba(8,7,14,.72);pointer-events:none}
+  background:rgba(8,7,14,.72);pointer-events:auto;cursor:pointer}
+/* 押して開いた大きい地図。画面の中央に置く。時間は止まらないので、
+   縁を光らせて「まだ戦っている」ことが分かるようにする。 */
+#mmW.big{right:auto;left:50%;transform:translateX(-50%);z-index:24;
+  border-color:rgba(120,200,255,.55);box-shadow:0 8px 30px rgba(0,0,0,.6)}
 #mm{width:88px;height:88px;display:block}
 #mmGuide{display:grid;grid-template-columns:44px 44px;border-top:1px solid rgba(80,70,105,.7)}
 .mmDist{height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:900;background:rgba(10,8,16,.82)}
@@ -123,24 +126,26 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
   transform-origin:center;}
 .sk .cost{font-size:11px;color:#7fb4f0;font-weight:700;margin:1px 0 0;text-align:center;font-style:normal}
 /* アイテムと自動切替は右端の縦一列。技の弧より上に置いて重ならないようにする。
-   よく押すアイテムほど下（親指に近い側）へ、切替はいちばん上。
+   切替はいちばん下に固定し、その上にアイテムを並べる。位置が動かない方が、
+   盤面を見たまま指で探せる（持ち込み数で列の長さが変わっても切替は動かない）。
    長押しで扇を開く方式は、押しっぱなしが要る上に何が選ばれるか見えないのでやめた。 */
 #railR{position:absolute;right:6px;bottom:calc(env(safe-area-inset-bottom) + 186px);
   z-index:21;display:flex;flex-direction:column-reverse;gap:4px;align-items:center;
   pointer-events:none}
 /* 道具は技より一段おとなしく。技と同じ濃さで並べると、
    主役（技・攻撃）がどれか分からなくなり、盤面の視線も右へ引っ張られる。 */
-.railBtn{pointer-events:auto;border-radius:50%;display:flex;flex-direction:column;
+.railBtn{pointer-events:auto;flex:0 0 auto;border-radius:50%;display:flex;flex-direction:column;
   align-items:center;justify-content:center;text-align:center;line-height:1.1;
   border:1px solid rgba(196,120,128,.34);color:#e4c4c8;font-weight:800;
   background:radial-gradient(circle at 34% 28%,rgba(58,30,38,.82),rgba(16,12,20,.82) 72%);
   box-shadow:0 2px 7px rgba(0,0,0,.45)}
 .railBtn b{font-size:14px;line-height:1;font-weight:900}
 .railBtn small{font-size:11px;font-weight:700;opacity:.8;white-space:nowrap}
-.railBtn.empty{border-color:var(--line2);color:var(--ink3);background:rgba(18,15,26,.7)}
+.railBtn.empty{border-style:dashed;border-color:rgba(122,110,152,.6);color:var(--ink2);
+  background:rgba(18,15,26,.7);opacity:.72}
 .railBtn.no{opacity:.34;filter:grayscale(.6)}
 .railBtn:active{transform:scale(.92)}
-#autoBtn{pointer-events:auto;border:1px solid #5aa0ff;color:#cfe4ff;border-radius:50%;
+#autoBtn{pointer-events:auto;flex:0 0 auto;border:1px solid #5aa0ff;color:#cfe4ff;border-radius:50%;
   background:radial-gradient(circle at 34% 28%,#1d3050,#0c1421 72%);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   font-size:11px;font-weight:900;line-height:1.15;text-align:center;
@@ -358,17 +363,6 @@ body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
 .foldBody{padding-top:8px}
 #btnBack small{display:block;font-size:11px;font-weight:700;opacity:.75;margin-top:2px}
 .member{position:relative}
-/* HPを親指の近くへ。戦闘中は右下の技ボタンを見ているのに、HPは対角の左上にあった。
-   技の塊のすぐ上に太いバーを置き、視線を動かさずに残量が読めるようにする。 */
-#hpPill{position:fixed;right:78px;bottom:212px;width:164px;height:24px;z-index:6;pointer-events:none;
-  border:1px solid rgba(255,255,255,.16);border-radius:11px;overflow:hidden;
-  background:rgba(12,9,16,.72);display:none}
-#hpPill i{display:block;height:100%;width:100%;background:linear-gradient(180deg,#f0555f,#a8262f);
-  transition:width .16s linear}
-#hpPill span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  font-size:12px;font-weight:900;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9);letter-spacing:.02em}
-#hpPill.low{animation:hpPulse .9s ease-in-out infinite}
-@keyframes hpPulse{0%,100%{opacity:1}50%{opacity:.55}}
 /* 被弾。暗い画面ではフラッシュだけでは気付けない。画面の縁に赤を残す。 */
 #hurtVig{position:fixed;inset:0;pointer-events:none;z-index:5;opacity:0;
   background:radial-gradient(ellipse at center,transparent 46%,rgba(190,30,40,.66) 100%);
@@ -684,7 +678,6 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
 <body>
 <canvas id="cv"></canvas>
 <div id="hurtVig"></div>
-<div id="hpPill"><i id="hpPillF"></i><span id="hpPillT">100%</span></div>
 
 <div id="hud">
   <div class="hrow"><div class="bar"><i id="hpF"></i></div><div class="hval" id="hpT">0/0</div></div>
@@ -694,7 +687,6 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
     <div>深度 <b id="flT">1</b> <b id="floorElement"></b></div><div id="goldT">0 G</div>
     <div id="dpsT">DPS 0</div><div id="tmT">0:00</div>
   </div>
-  <div id="loot"></div>
 </div>
 <div id="pauseB"><span></span><span></span></div>
 <div id="mmW"><canvas id="mm" width="88" height="88"></canvas><div id="mmGuide"><div class="mmDist" id="mmStair"><i></i><span>--m</span></div><div class="mmDist" id="mmPortal"><i></i><span>--m</span></div></div></div>
@@ -853,6 +845,11 @@ const CFG={
   SELL_DIV:50,
   EXIT_CLEAR:10,         // 帰還/階段に必要な「周囲に敵がいない」距離
   STAIR_MIN:50,          // 階段までの最低距離
+  /* ミニマップ下の「階段まで◯m／帰還まで◯m」の矢印。行き先を常に指されると
+     探索する意味が薄れるので伏せてある。戻したくなったら true にするだけでよい。 */
+  GUIDE_ARROWS:false,
+  MM_SEE_R:3.2,          // 通路で足元を照らす半径。部屋は入った時点で全体が出る
+  ONEHAND_DMG:.67,       // 片手操作の与ダメージ。手動がいちばん強くあるべき
 };
 
 const TAU=Math.PI*2;
@@ -1504,6 +1501,24 @@ const shrineRate=sh=>clamp(sh.base+S.p.d.luk*.006,.15,.95);
 /* ---------- ダンジョン（部屋も通路も広く、通路は少なく） ---------- */
 const MW=88,MH=88;
 let map=null,rooms=[],seen=null;
+/* 地図の見え方。最初は何も見えていない状態から始める。
+   部屋は足を踏み入れた時点で丸ごと現れ、通路は歩いたぶんだけ細く残る。
+   以前は半径6の円を常に開けていたので、部屋へ入る前から先の形が読めてしまい、
+   踏み込む前にその部屋を通るかどうか決められた。 */
+function revealAround(px,py){
+  if(!seen)return;
+  for(let k=0;k<rooms.length;k++){
+    const r=rooms[k];
+    if(px<r.x-1||px>r.x+r.w||py<r.y-1||py>r.y+r.h)continue;
+    if(r.seen)continue;
+    r.seen=true;
+    for(let y=r.y-1;y<=r.y+r.h;y++)for(let x=r.x-1;x<=r.x+r.w;x++){
+      if(x<0||y<0||x>=MW||y>=MH)continue;
+      if(map[y*MW+x])seen[y*MW+x]=1;}}
+  const R=CFG.MM_SEE_R,ri=Math.ceil(R),tx=px|0,ty=py|0;
+  for(let j=-ri;j<=ri;j++)for(let i=-ri;i<=ri;i++){
+    const X=tx+i,Y=ty+j;if(X<0||Y<0||X>=MW||Y>=MH)continue;
+    if(i*i+j*j<=R*R)seen[Y*MW+X]=1;}}
 function genFloor(fl){
   for(let attempt=0;attempt<26;attempt++){
     map=new Uint8Array(MW*MH);seen=new Uint8Array(MW*MH);rooms=[];
@@ -1656,7 +1671,7 @@ const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   runT:0,hitstop:0,shake:0,shakeT:0,flash:0,paused:true,
   log:{runs:[]},tab:"prep",gearSub:"equip",skillPick:null,ptab:"drops",lvlQ:0,
   settings:{map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0},admin:false,debug:false,debugFloor:1,adminOpts:{},chars:{},characterStates:{},avatars:{},
-  combo:0,comboT:0,dmgLog:[],dps:0,startFloor:1,runGold:0,
+  combo:0,comboT:0,dmgLog:[],dps:0,startFloor:1,runGold:0,mapBig:false,
   inv:{filters:[],sort:"score",sellSel:[],sellRar:1},mats:{crystal:{},core:{}},stock:{},consumables:{},loadout:["mend1",null,null,null],runItems:[0,0,0,0],itemSlot:0,
   playerName:"",invSub:"gear",craftOpen:{},seenHints:{},formation:[],partyIndex:0,diveFloor:1,stamina:3,premium:0,profileAvatar:null,shopSub:"gacha",alloc:null,breakthroughs:{},weeklyCore:{week:"",bought:0},beginnerClaimed:false,prepMissionsOpen:false,invLegendOpen:false,skillLoadout:{},
   paidInventory:{catalysts:[],feathers:[],slots:[],sigils:[]},tactical:{trap:null,reveal:false},
@@ -1741,8 +1756,8 @@ function refreshTutorial(){
   else if(t.phase==="training_dash")tutorialTarget("#s2","<b>突進斬り</b>：攻撃を避ける時や、素早い移動手段として使えます。敵へ使ってみましょう。");
   else if(t.phase==="training_slam")tutorialTarget("#s3","<b>大地砕き</b>：複数の敵をまとめて攻撃したい時に使います。3体へ使ってみましょう。");
   else if(t.phase==="training_potion")tutorialTarget("#pot",`HPが減ったら<b>${CONSUMABLES.mend1.n}</b>で回復できます。練習では3個。探索中は最大${runCap("mend1")}個まで拾えます。回復品は倉庫の調合で作り、深く潜って素材を集めるほど強い品が作れます。`);
-  else if(t.phase==="training_return")tutorialTarget("#mmW","ミニマップには<b>橙の階段</b>と<b>青の帰還ポータル</b>への矢印が出ます。練習部屋の階段は使用できません。確認後、青矢印をたどって帰還してください。");
-  else if(t.phase==="return")tutorialTarget(null,"ミニマップ下の<b>青い矢印</b>をたどり、帰還ポータルから拠点へ戻りましょう。");
+  else if(t.phase==="training_return")tutorialTarget("#mmW","ミニマップは入った部屋から順に埋まります。<b>橙が階段</b>、<b>青が帰還ポータル</b>で、見つけた場所だけ印が出ます。地図を押すと大きく開けます。練習部屋の階段は使用できません。確認後、帰還ポータルへ戻ってください。");
+  else if(t.phase==="return")tutorialTarget(null,"ミニマップの<b>青い印</b>が帰還ポータルです。そこまで戻って拠点へ帰りましょう。");
   else if(t.phase==="equip_tab")tutorialTarget('#scTown .tab[data-t="gear"]',"まず下の<b>装備タブ</b>を開きます。");
   else if(t.phase==="equip")tutorialTarget(`.slot[data-slot="${TUTORIAL_SLOTS[t.gearIndex]}"]`,`訓練用装備を順番に装備します。<b>${SLOTN(TUTORIAL_SLOTS[t.gearIndex])}</b>をタップしてください。`);
   else if(t.phase==="shop")tutorialTarget('#scTown .tab[data-t="shop"]',"次は<b>商店タブ</b>へ進みましょう。");
@@ -2096,6 +2111,9 @@ function pDmg(base,mul){const p=S.p;
   return (rr(base[0],base[1])+p.d.atkFlat)*m;}
 function hurtE(e,dmg,crit,kx,ky,quiet){
   if(e.hp<=0)return;
+  /* 片手操作は与ダメージを落とす。移動しながら狙いを自動で合わせてくれるぶん、
+     手動より楽をしている。手動がいちばん強くなければ、丁寧に動かす意味が無くなる。 */
+  if(S.settings.controlMode==="onehand")dmg*=CFG.ONEHAND_DMG;
   const resonanceNow=resonance(),match=elementMultiplier(resonanceNow.element,e.element),weak=match>1;
   dmg*=resonanceDamageMultiplier(resonanceNow,e.element,S.floor)*(e.boss?1:(e.eleRes&&e.eleRes[resonanceNow.element]||1));
   if(e.weaken>0)dmg/=(1-(e.weakenAmt||.25)); // 蝕み: 落とした防御分だけ被ダメージへ反映
@@ -2171,7 +2189,7 @@ function killE(e){
     save();
     if(S.floor===5&&(S.tutorial||{}).phase==="boss"){
       S.bag.push(...TUTORIAL_SLOTS.map(tutorialItem));S.tutorial.phase="boss_message";S.returnInvulnerable=true;save();
-      setTimeout(()=>ask("初回ボス撃破おめでとう！","深度3相当の訓練用装備一式を獲得しました。\n確認後はダメージを受けません。ミニマップ下の青い矢印をたどり、帰還ポータルから拠点へ戻りましょう。",()=>{S.tutorial.phase="return";S.paused=false;save();refreshTutorial();}),250);
+      setTimeout(()=>ask("初回ボス撃破おめでとう！","深度3相当の訓練用装備一式を獲得しました。\n確認後はダメージを受けません。ミニマップの青い印が帰還ポータルです。そこまで戻って拠点へ帰りましょう。",()=>{S.tutorial.phase="return";S.paused=false;save();refreshTutorial();}),250);
     }else for(let k=0;k<ri(1,2);k++)dropItem(e.x+rr(-1,1),e.y+rr(-1,1),2);
     dropPart(e);
     dropGold(e.x,e.y,300+S.floor*50);if(S.floor!==5||!["boss_message","return"].includes((S.tutorial||{}).phase))toast("ボス撃破 — 深度 "+(S.floor+1)+" 開始を解放");}
@@ -2481,10 +2499,7 @@ function update(dt){
     mv(p,w.x*sp*dt,w.y*sp*dt);
     const fl=Math.hypot(w.x,w.y)||1;p.face=Math.atan2(w.y/fl,w.x/fl);}
 
-  const tx=p.x|0,ty=p.y|0;
-  for(let j=-6;j<=6;j++)for(let i=-6;i<=6;i++){
-    const X=tx+i,Y=ty+j;if(X<0||Y<0||X>=MW||Y>=MH)continue;
-    if(i*i+j*j<=36)seen[Y*MW+X]=1;}
+  revealAround(p.x,p.y);
 
   p.cd-=dt;
   if(S.settings.controlMode==="onehand"){
@@ -3229,9 +3244,25 @@ function dDrop(d){
   if(d.shard){ctx.fillStyle="rgba(106,224,160,.95)";
     ctx.beginPath();ctx.arc(s.sx,s.sy-6,3,0,TAU);ctx.fill();
     ctx.globalCompositeOperation="source-over";return;}
-  if(d.pot){ctx.fillStyle="rgba(225,65,85,.95)";
-    ctx.beginPath();ctx.arc(s.sx,s.sy-6,4.2,0,TAU);ctx.fill();
-    ctx.globalCompositeOperation="source-over";return;}
+  /* 回復薬。直径8pxの赤い点では、暗い床と敵の血糊に紛れて拾い逃がす。
+     床に脈打つ輪、細い光柱、瓶の形、十字の順に重ねて、遠目でも「回復」と読めるようにする。 */
+  if(d.pot){
+    /* 回復枠が満杯、または回復薬を持ち込んでいないと拾えない。
+       拾えない物を光らせると、取りに行かせて無駄足を踏ませる。 */
+    const room=S.loadout.some((k,j)=>k&&CONSUMABLES[k].heal&&S.runItems[j]<runCap(k));
+    if(!room){ctx.globalAlpha=.34;}
+    const pl=.72+Math.sin(d.t*4.6)*.28;
+    ctx.fillStyle="rgba(240,80,100,.30)";ctx.globalAlpha=pl;
+    ctx.beginPath();ctx.ellipse(s.sx,s.sy,12,6,0,0,TAU);ctx.fill();ctx.globalAlpha=1;
+    const g=ctx.createLinearGradient(s.sx,s.sy-40,s.sx,s.sy);
+    g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(1,"rgba(240,80,100,.85)");
+    ctx.fillStyle=g;ctx.fillRect(s.sx-2.5,s.sy-40,5,40);
+    ctx.fillStyle="rgba(245,90,110,.98)";
+    ctx.beginPath();ctx.arc(s.sx,s.sy-8,5.4,0,TAU);ctx.fill();      // 瓶の胴
+    ctx.fillRect(s.sx-2,s.sy-16,4,5);                                // 首
+    ctx.fillStyle="rgba(255,225,230,.95)";                           // 十字
+    ctx.fillRect(s.sx-3.2,s.sy-9,6.4,1.8);ctx.fillRect(s.sx-.9,s.sy-11.6,1.8,6.4);
+    ctx.globalAlpha=1;ctx.globalCompositeOperation="source-over";return;}
   const col=rarCol(d.rar),H=[40,70,110,170,250][d.rar],W=[3,5,8,13,20][d.rar];
   const pl=.72+Math.sin(d.t*4.2)*.28;
   const g=ctx.createLinearGradient(s.sx,s.sy-H,s.sx,s.sy);
@@ -3319,34 +3350,56 @@ function dStairs(){
   ctx.fillStyle=`rgba(200,110,40,${.18*k})`;ctx.fill();
   ctx.fillStyle="rgba(255,190,120,.9)";ctx.font="700 11px sans-serif";ctx.textAlign="center";
   ctx.fillText("▼",s.sx,s.sy+4);ctx.globalCompositeOperation="source-over";}
-let MMBG=null,mmSeen=-1,mmSkip=0;
-function drawMM(){
-  const p=S.p,sc=88/MW;
-  $("mmW").style.display=S.settings.map?"block":"none";
+let MMBG=null,mmSeen=-1,mmSkip=0,mmPx=0;
+/* 地図の一辺。押すと大きい方へ切り替わる。小さいままでは通路の分岐が潰れて
+   どちらへ進んだか読めない。時間は止めない（止まると地図を開くのが最善手になる）。 */
+/* 大きさは画面に合わせて詰める。下端は右の道具列の上で止め、
+   開いている間も技と攻撃に手が届くようにする（時間は止まらないため）。 */
+const mmSize=()=>S.mapBig?Math.max(160,Math.min(352,innerWidth-32,innerHeight-500)):88;
+function toggleMap(){S.mapBig=!S.mapBig;mmSeen=-1;
+  $("mmW").classList.toggle("big",!!S.mapBig);drawMM(true);}
+function drawMM(force){
+  const p=S.p;if(!p)return;
+  const w=$("mmW");w.style.display=S.settings.map?"block":"none";
   if(!S.settings.map)return;
-  const nav=(id,tg)=>{const dx=tg.x-p.x,dy=tg.y-p.y,a=Math.atan2(dy,dx),el=$(id);
-    el.querySelector("i").style.setProperty("--dir",a+"rad");
-    el.querySelector("span").textContent=Math.round(Math.hypot(dx,dy))+"m";};
-  nav("mmStair",S.stairs);nav("mmPortal",S.portal);
-  if(++mmSkip%3)return;
-  if(!MMBG){MMBG=document.createElement("canvas");MMBG.width=MMBG.height=88;}
+  /* 行き先を指す矢印。伏せてあるので普段は組み立てない（CFG.GUIDE_ARROWS）。 */
+  const gd=$("mmGuide");
+  if(gd)gd.style.display=CFG.GUIDE_ARROWS?"grid":"none";
+  if(CFG.GUIDE_ARROWS){
+    const nav=(id,tg)=>{const dx=tg.x-p.x,dy=tg.y-p.y,a=Math.atan2(dy,dx),el=$(id);
+      el.querySelector("i").style.setProperty("--dir",a+"rad");
+      el.querySelector("span").textContent=Math.round(Math.hypot(dx,dy))+"m";};
+    nav("mmStair",S.stairs);nav("mmPortal",S.portal);}
+  if(!force&&++mmSkip%3)return;
+  const N=mmSize(),sc=N/MW,mm=$("mm");
+  if(mmPx!==N){mmPx=N;mm.width=mm.height=N;mm.style.width=mm.style.height=N+"px";
+    w.style.width=N+"px";mmSeen=-1;}
+  if(!MMBG){MMBG=document.createElement("canvas");}
+  if(MMBG.width!==N){MMBG.width=MMBG.height=N;mmSeen=-1;}
   let cnt=0;for(let i=0;i<MW*MH;i++)if(seen[i])cnt++;
   if(cnt!==mmSeen){mmSeen=cnt;const g=MMBG.getContext("2d");
-    g.clearRect(0,0,88,88);g.fillStyle="#3a3a4a";
+    g.clearRect(0,0,N,N);g.fillStyle="#3a3a4a";
     for(let y=0;y<MH;y++)for(let x=0;x<MW;x++)
       if(map[y*MW+x]&&seen[y*MW+x])g.fillRect(x*sc,y*sc,sc+.6,sc+.6);}
-  mctx.clearRect(0,0,88,88);
-  mctx.fillStyle="rgba(20,20,28,.85)";mctx.fillRect(0,0,88,88);
+  const k=N/88;                      // 印の大きさは地図の縮尺に合わせる
+  mctx.clearRect(0,0,N,N);
+  mctx.fillStyle="rgba(20,20,28,.85)";mctx.fillRect(0,0,N,N);
   mctx.drawImage(MMBG,0,0);
-  mctx.fillStyle="#e08830";mctx.fillRect(S.stairs.x*sc-1.5,S.stairs.y*sc-1.5,3.5,3.5);
-  mctx.fillStyle="#5aa0ff";mctx.fillRect(S.portal.x*sc-1.5,S.portal.y*sc-1.5,3.5,3.5);
-  for(const e of S.enemies)if(e.agro||e.elite||e.boss){
-    mctx.fillStyle=e.boss?"#ff3030":e.elite?e.elite.col:"#a04040";
-    mctx.fillRect(e.x*sc-1,e.y*sc-1,e.boss?4:2.2,e.boss?4:2.2);}
-  for(const q of S.props)if(S.tactical.reveal&&(q.t==="chest"||q.t==="shrine")){mctx.fillStyle="#ffd24a";mctx.fillRect(q.x*sc-1.5,q.y*sc-1.5,3,3);}
-  for(const d of S.drops)if(d.it){mctx.fillStyle=rarCol(d.rar);
-    mctx.fillRect(d.x*sc-1,d.y*sc-1,2.4,2.4);}
-  mctx.fillStyle="#fff";mctx.fillRect(p.x*sc-1.5,p.y*sc-1.5,3.5,3.5);}
+  /* 印はすべて踏み込んだ場所にだけ出す。未踏の先に階段や強敵が浮かんでいたら、
+     矢印を消して部屋ごとに開ける意味が無くなる。
+     探知の香（tactical.reveal）だけは、それを使ったぶんとして未踏でも出す。 */
+  const known=t=>seen[(t.y|0)*MW+(t.x|0)];
+  const dot=(t,col,w)=>{mctx.fillStyle=col;mctx.fillRect(t.x*sc-w/2*k,t.y*sc-w/2*k,w*k,w*k);};
+  if(known(S.stairs)||S.tactical.reveal)dot(S.stairs,"#e08830",3.5);
+  if(known(S.portal))dot(S.portal,"#5aa0ff",3.5);
+  for(const e of S.enemies)if((e.agro||e.elite||e.boss)&&known(e))
+    dot(e,e.boss?"#ff3030":e.elite?e.elite.col:"#a04040",e.boss?4:2.2);
+  for(const q of S.props)if(S.tactical.reveal&&(q.t==="chest"||q.t==="shrine"))dot(q,"#ffd24a",3);
+  for(const d of S.drops){
+    if(!known(d))continue;
+    if(d.it)dot(d,rarCol(d.rar),2.4);
+    else if(d.pot)dot(d,"#f0506a",2.4);}   // 回復薬も地図に出す
+  mctx.fillStyle="#fff";mctx.fillRect(p.x*sc-1.5*k,p.y*sc-1.5*k,3.5*k,3.5*k);}
 
 /* ---------- HUD ---------- */
 function updHUD(){
@@ -3360,14 +3413,6 @@ function updHUD(){
   $("s0").style.display=S.settings.controlMode==="manual"?"":"none";
   $("stick").style.visibility=S.settings.stick?"visible":"hidden";
   $("hpF").style.width=(p.hp/p.max*100)+"%";
-  /* 親指の近くのHP。残量で色を変え、3割を切ったら脈打たせる。 */
-  {const r=Math.max(0,Math.min(1,p.hp/p.max)),pill=$("hpPill"),f=$("hpPillF");
-   if(pill){pill.style.display=S.scene==="dungeon"?"block":"none";
-     pill.classList.toggle("low",r<=.3);}
-   if(f){f.style.width=(r*100).toFixed(1)+"%";
-     f.style.background=r>.5?"linear-gradient(180deg,#f0555f,#a8262f)"
-       :r>.3?"linear-gradient(180deg,#f0a04a,#b06010)":"linear-gradient(180deg,#ff7a7a,#c02020)";}
-   const t=$("hpPillT");if(t)t.textContent=Math.round(p.hp)+" / "+Math.round(p.max);}
   /* 被弾の残り香。被弾直後ほど濃く、低HPでは薄く出したままにする。 */
   {const v=$("hurtVig");
    if(v){const hit=p.hurtT>0?p.hurtT/.42:0,low=p.hp/p.max<.3?.30:0;
@@ -3387,12 +3432,9 @@ function updHUD(){
   const t=Math.floor(S.runT);
   $("tmT").style.display=S.settings.timer?"block":"none";
   $("tmT").textContent=Math.floor(t/60)+":"+String(t%60).padStart(2,"0");
-  /* 持ち物はレアリティと個数だけ（中身は帰還後に分かる） */
-  const cnt=[0,0,0,0,0];for(const it of S.bag)cnt[it.rar]++;
-  const lootHTML=cnt.map((v,i)=>v?`<span class="${RC[i]}">${CFG.RARITY[i][0]} ${v}</span>`:"").filter(Boolean).join("");
-  // 何も拾っていない間は「未取得」を出さない。常時1行を占有するだけで情報が無い。
-  $("loot").style.display=S.settings.loot&&lootHTML?"flex":"none";
-  $("loot").innerHTML=lootHTML;
+  /* 拾った物の一覧は戦闘中に出さない。HP/MPのすぐ下で数字が増減すると、
+     盤面から目を離させるだけで、戦っている間にできることが何も無い。
+     同じ内容は一時停止の「戦利品」にゴールド・素材・道具まで含めて出る。 */
   $("s0").querySelector(".cd").style.transform=
     "scaleY("+clamp(p.cd/(CFG.ATK_CD/(p.d.as*p.mAs*p.sAs)),0,1)+")";
   {const skills=activeSkills();
@@ -3408,7 +3450,9 @@ function updHUD(){
   // 右端のアイテムは1個ずつ独立したボタン。残数と使用可否をそれぞれ更新する。
   for(const el of document.querySelectorAll("#railR .railBtn")){
     const i=+el.dataset.slot,key=S.loadout[i];
-    if(!key){el.classList.add("no");continue;}
+    /* 空き枠は「押せない道具」ではなく「まだ何も入れていない場所」。
+       使用不能と同じ34%まで落とすと、枠があること自体が読めなくなる。 */
+    if(!key){el.classList.remove("no");continue;}
     const n=el.querySelector("b");if(n)n.textContent=S.runItems[i]||0;
     el.classList.toggle("no",!S.runItems[i]||p.itemCd>0||p.itemLock>0);}
   const cb=$("combo");
@@ -3449,8 +3493,8 @@ function openLvl(){
 
 /* 潜行専用の表示と場の状態を消す。帰還・死亡・練習部屋の退出から呼ぶ。 */
 function clearRunVisuals(){
+  S.mapBig=false;{const w=$("mmW");if(w)w.classList.remove("big");}
   const v=$("hurtVig");if(v)v.style.opacity=0;
-  const pill=$("hpPill");if(pill){pill.style.display="none";pill.classList.remove("low");}
   S.enemies.length=0;S.bullets.length=0;S.drops.length=0;
   S.parts.length=0;S.nums.length=0;S.fx.length=0;S.corpses.length=0;
   S.boss=null;$("bossBar").style.display="none";}
@@ -4160,9 +4204,9 @@ function renderSettings(b,after,inDungeon){
   const h=document.createElement("h3");h.textContent="表示・省電力";b.appendChild(h);const cg=document.createElement("div");cg.className="compactGrid";b.appendChild(cg);
   /* ON/OFF の切り替えに一番強い金色を使うと、既定で7個ONなので画面が金一色になり
      「選ばれているもの」が見分けられない。金は択一の選択中だけに残し、切り替えは control 表示にする。 */
-  for(const [k,lbl] of [["map","ミニマップ"],["dmg","ダメージ数値"],["dps","DPS"],["loot","取得アイテム"],["timer","タイマー"],["shake","画面の揺れ"],["stick","移動キー表示"],["eco","省電力モード"]]){const d=document.createElement("div");d.className="btn toggle"+(S.settings[k]?" on":"");d.innerHTML=`${lbl}<em>${S.settings[k]?"ON":"OFF"}</em>`;tapEl(d,()=>{S.settings[k]=S.settings[k]?0:1;if(k==="eco")resize();save();after();});cg.appendChild(d);}
+  for(const [k,lbl] of [["map","ミニマップ"],["dmg","ダメージ数値"],["dps","DPS"],["timer","タイマー"],["shake","画面の揺れ"],["stick","移動キー表示"],["eco","省電力モード"]]){const d=document.createElement("div");d.className="btn toggle"+(S.settings[k]?" on":"");d.innerHTML=`${lbl}<em>${S.settings[k]?"ON":"OFF"}</em>`;tapEl(d,()=>{S.settings[k]=S.settings[k]?0:1;if(k==="eco")resize();save();after();});cg.appendChild(d);}
   const controlHead=document.createElement("h3");controlHead.textContent="操作モード";b.appendChild(controlHead);
-  const controlNote=document.createElement("div");controlNote.className="setNote";controlNote.textContent="片手＝移動だけ手動、攻撃は自動。オートは移動も自動（未到達の深度では選べません）。戦闘中は右端の切替ボタンからも変えられます。";b.appendChild(controlNote);
+  const controlNote=document.createElement("div");controlNote.className="setNote";controlNote.textContent=`片手＝移動だけ手動、攻撃は自動。狙いを自動で合わせるぶん与ダメージが ${Math.round((1-CFG.ONEHAND_DMG)*100)}% 下がります。オートは移動も自動（未到達の深度では選べません）。戦闘中は右端いちばん下の切替ボタンからも変えられます。`;b.appendChild(controlNote);
   const controlModes=document.createElement("div");controlModes.className="compactGrid three";for(const [k,n] of CONTROL_MODES){const disabled=k==="auto"&&S.diveFloor>=S.deepest,d=document.createElement("div");d.className="btn "+(disabled?"no":S.settings.controlMode===k?"gold":"gh");d.textContent=n;tapEl(d,()=>{if(disabled)return;S.settings.controlMode=k;save();after();});controlModes.appendChild(d);}b.appendChild(controlModes);
   // 見出しが無く、操作モードの3つと同じ見た目で並んでいたため別設定だと分からなかった。
   const presetHead=document.createElement("h3");presetHead.textContent="自動時の戦い方";b.appendChild(presetHead);
@@ -4230,7 +4274,7 @@ const HELP_SECTIONS=[
     `${CFG.BOSS_EVERY}深度ごとにボスが出る。倒すと次の深度が解放される。`]],
   ["操作",()=>[
     "左半分がスティック、右下が<b>攻撃</b>、その周りの3つが<b>技</b>。右端の縦一列が<b>持ち込みアイテム</b>で1タップで使う。",
-    "右端いちばん上の丸で<b>操作モード</b>を切り替える。手動 → 片手（移動だけ手動）→ オート（全自動）。",
+    `右端いちばん下の丸で<b>操作モード</b>を切り替える。手動 → 片手（移動だけ手動・与ダメージ ${Math.round((1-CFG.ONEHAND_DMG)*100)}%減）→ オート（全自動）。`,
     "オートは未到達の深度では選べない。自動時の判断は設定の「自動時の戦い方」で決める。"]],
   ["属性と共鳴",()=>[
     "装備7部位のうち同じ属性が3個で共鳴、5個・7個でさらに強くなる。",
@@ -5130,7 +5174,7 @@ tapEl($("tutorialShow"),()=>{refreshTutorial();updTutorialBar();});
 tapEl($("tutorialQuit"),skipTutorial);
 for(let i=0;i<4;i++)holdBtn($("s"+i),i);
 (()=>{let down=null;const el=$("cv");el.addEventListener("pointerdown",e=>{if(S.settings.controlMode!=="onehand"||S.scene!=="dungeon")return;down={x:e.clientX,y:e.clientY};IN.ox=e.clientX;IN.oy=e.clientY;});el.addEventListener("pointermove",e=>{if(!down||S.settings.controlMode!=="onehand")return;let dx=e.clientX-down.x,dy=e.clientY-down.y,l=Math.hypot(dx,dy)||1;IN.dx=dx/l;IN.dy=dy/l;});el.addEventListener("pointerup",e=>{if(!down)return;if(Math.hypot(e.clientX-down.x,e.clientY-down.y)<12){HELD[0]=true;setTimeout(()=>HELD[0]=false,80);}IN.dx=IN.dy=0;down=null;});})();
-/* 右端の縦一列。持ち込み枠ぶんのアイテムボタンと、いちばん上に操作モード切替。
+/* 右端の縦一列。いちばん下に操作モード切替、その上に持ち込み枠ぶんのアイテムボタン。
    アイテムは1タップで使える（長押しの扇は廃止）。枠が5つ以上のときは少し小さくして、
    縦に伸びすぎて上部HUDへ食い込まないようにする。 */
 const CONTROL_MODES=[["manual","手動"],["onehand","片手"],["auto","オート"]];
@@ -5144,14 +5188,24 @@ function cycleControlMode(){
   toast("操作: "+label);IN.dx=IN.dy=0;renderRail();updHUD();}
 function renderRail(){
   const rail=$("railR");if(!rail)return;
-  const cap=loadoutCapacity(),sz=cap>4?36:40;
+  /* 一辺は44px。40pxで作ると全体規則の min-height:44px に引き伸ばされ、
+     border-radius:50% が真円ではなく縦長の楕円になる。 */
+  const cap=loadoutCapacity(),sz=44;
   rail.innerHTML="";
+  /* 操作の切替は列のいちばん下に固定する（column-reverse なので先に入れる）。
+     いつも同じ場所にある方が、盤面を見たまま指で探せる。
+     その上に道具の枠を並べる。 */
+  const a=document.createElement("div");a.id="autoBtn";a.style.width=a.style.height=sz+"px";
+  const mode=CONTROL_MODES.find(x=>x[0]===(S.settings.controlMode||"manual"))||CONTROL_MODES[0];
+  a.classList.toggle("on",mode[0]!=="manual");
+  a.innerHTML=`${mode[1]}<small>切替</small>`;
+  hook(a,()=>{if(S.scene==="dungeon")cycleControlMode();});
+  rail.appendChild(a);
   for(let i=0;i<cap;i++){
     const key=S.loadout[i],def=key&&CONSUMABLES[key];
     const d=document.createElement("div");d.className="railBtn"+(def?"":" empty");
-    /* 持ち込んでいない枠は戦闘中に出さない。押せない物が画面端を占有していた。
-       拠点では「空き」を出す必要があるので、ダンジョン内だけ隠す。 */
-    if(!def&&S.scene==="dungeon")d.style.display="none";
+    /* 空き枠も出す。持ち込んでいない時だけ列の長さが変わると、
+       同じ道具が毎回ちがう高さに来て、見ずに押せなくなる。 */
     if(i===0)d.id="pot";                      // 練習部屋の案内が指す先
     d.dataset.slot=i;d.style.width=d.style.height=sz+"px";
     if(def){/* 枠＝等級、絵と地＝系統の色。倉庫・持ち込み・戦闘の3画面で同じ規則にする。 */
@@ -5161,14 +5215,9 @@ function renderRail(){
       d.style.color=col;}
     d.innerHTML=def?`${conIcon(key,15)}<b>${S.runItems[i]||0}</b>`:'<small>空き</small>';
     if(def)hook(d,()=>{if(S.scene==="dungeon"&&!S.paused)useItem(i);});
-    rail.appendChild(d);}
-  const a=document.createElement("div");a.id="autoBtn";a.style.width=a.style.height=sz+"px";
-  const mode=CONTROL_MODES.find(x=>x[0]===(S.settings.controlMode||"manual"))||CONTROL_MODES[0];
-  a.classList.toggle("on",mode[0]!=="manual");
-  a.innerHTML=`${mode[1]}<small>切替</small>`;
-  hook(a,()=>{if(S.scene==="dungeon")cycleControlMode();});
-  rail.appendChild(a);}
+    rail.appendChild(d);}}
 hook($("act"),()=>{if(S.scene==="dungeon"&&!S.paused)doAction();});
+tapEl($("mmW"),()=>{if(S.scene==="dungeon")toggleMap();});
 tapEl($("profileIcon"),openProfileIconPick);
 tapEl($("townName"),editPlayerName);
 hook($("pauseB"),()=>{if(S.scene==="dungeon"&&!S.paused){S.ptab="drops";openPause();}});

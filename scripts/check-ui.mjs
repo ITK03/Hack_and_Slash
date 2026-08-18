@@ -235,14 +235,18 @@ notes.push(`画面 ${SCREENS.length}面: 枠の大きさ・スクロール・文
     S.p.hp = S.p.max * .3; hurtP(50, 't', true);
     for (let i = 0; i < 10; i++) update(1 / 60);
     out.duringVig = +(document.getElementById('hurtVig')?.style.opacity || 0);
-    out.duringPill = getComputedStyle(document.getElementById('hpPill')).display;
+    /* 開いて、閉じて、開いたままにする（帰還で片付くかを見るため） */
+    S.mapBig = false; toggleMap(); out.opened = S.mapBig;
+    toggleMap(); out.closed = S.mapBig;
+    toggleMap();
     endRun(true);
     await new Promise(r => setTimeout(r, 60));
     document.getElementById('scEnd')?.classList.remove('on');
     openTown();
     out.town = {
       vig: +(document.getElementById('hurtVig')?.style.opacity || 0),
-      pill: getComputedStyle(document.getElementById('hpPill')).display,
+      mapBig: !!S.mapBig,
+      mapBigClass: document.getElementById('mmW').classList.contains('big'),
       fx: S.fx.length, bullets: S.bullets.length, parts: S.parts.length, nums: S.nums.length,
       enemies: S.enemies.length, drops: S.drops.length,
       openPopups: ['itPop', 'askPop', 'lvPop', 'scPause', 'scEnd']
@@ -252,10 +256,11 @@ notes.push(`画面 ${SCREENS.length}面: 枠の大きさ・スクロール・文
     return out;
   });
   const t = leftover.town;
-  if (leftover.duringPill === 'none') add('潜行中にHPバーが出ていない');
   if (!(leftover.duringVig > 0)) add('被弾しても画面の縁が赤くならない');
   if (t.vig > 0) add(`帰還後も被弾の赤が残っている（不透明度 ${t.vig}）`);
-  if (t.pill !== 'none') add('拠点でも戦闘用のHPバーが出たまま');
+  if (!leftover.opened) add('地図を押しても開かない');
+  if (leftover.closed) add('地図をもう一度押しても閉じない');
+  if (t.mapBig || t.mapBigClass) add('帰還後も大きい地図が開いたまま');
   for (const [k, label] of [['fx', '演出'], ['bullets', '弾'], ['nums', 'ダメージ表示'], ['enemies', '敵'], ['drops', '落ちている物']]) {
     if (t[k] > 0) add(`帰還後も${label}が残っている（${t[k]}件）`);
   }
