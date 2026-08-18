@@ -387,33 +387,49 @@ await page.goto(base); await page.waitForTimeout(500);
   notes.push(`継承: 深度${inh.before.score ? 30 : 30} → ${inh.target}（素材の最浅）/ 強さ ${inh.before.score} → ${inh.after.score} / 名前と固有効果は維持`);
 }
 
-/* 2m. 誰を編集中かが装備・技・能力のどれでも分かり、1タップで切り替わること。 */
+/* 2m. 仲間タブ。人を選んでから、その人に対して何をするかを選べること。 */
 {
-  const bar = await page.evaluate(() => {
+  const ally = await page.evaluate(() => {
     S.unlockedCharacters = CHARACTERS.warrior.map(c => 'warrior:' + c.id).concat(CHARACTERS.mage.map(c => 'mage:' + c.id));
     S.formation = ['warrior:leon', 'mage:noa'];
     S.cls = 'warrior'; S.avatars.warrior = 'leon';
-    const out = {};
-    for (const sub of ['equip', 'skill', 'ability']) {
-      S.tab = 'gear'; S.gearSub = sub; openTown();
-      out[sub] = {
-        chips: [...document.querySelectorAll('.charBar .charChip .nm')].map(x => x.textContent),
-        note: (document.querySelector('.charBarNote') || {}).textContent || '',
-      };
-    }
-    // チップを押すだけで切り替わること
-    S.gearSub = 'skill'; openTown();
-    const chips = [...document.querySelectorAll('.charBar .charChip')];
-    const other = chips.find(c => !c.classList.contains('on'));
+    S.tab = 'gear'; S.allyView = null; S.allyFilter = 'all'; openTown();
+    const cards = [...document.querySelectorAll('.allyCard')];
+    const out = { count: cards.length, names: cards.map(c => c.querySelector('.nm').textContent) };
+    /* 別の仲間を押すと、その人に切り替わって詳細が開くこと */
+    const other = cards.find(c => !c.classList.contains('on'));
     if (other) other.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    return { ...out, switched: currentCharacter().n };
+    out.switchedTo = currentCharacter().n;
+    out.view = S.allyView;
+    /* 4つの選択肢がそろっていること */
+    S.allyView = 'detail'; openTown();
+    out.actions = [...document.querySelectorAll('.allyActions .btn')].map(b => b.textContent);
+    out.headName = (document.querySelector('.allyHead .nm') || {}).textContent || '';
+    /* 各画面が開き、誰の何かが出ていること */
+    out.views = {};
+    for (const v of ['equip', 'skill', 'stat', 'brk']) {
+      S.allyView = v; openTown();
+      const head = (document.querySelector('.viewHead') || {}).textContent || '';
+      out.views[v] = { head, body: document.getElementById('townBody').textContent.length };
+    }
+    /* 絞込が効くこと */
+    S.allyView = null; S.allyFilter = 'formation'; openTown();
+    out.filtered = document.querySelectorAll('.allyCard').length;
+    S.allyFilter = 'all'; openTown();
+    return out;
   });
-  for (const sub of ['equip', 'skill', 'ability']) {
-    if (!bar[sub].chips.length) problems.push(`${sub}タブにキャラ切替が出ていない`);
-    if (!bar[sub].note.includes('編集中')) problems.push(`${sub}タブに編集中のキャラが出ていない`);
+  if (ally.count < 2) problems.push(`仲間一覧に ${ally.count} 人しか出ていない`);
+  if (ally.view !== 'detail') problems.push('仲間を押しても詳細が開かない');
+  if (!ally.headName.includes(ally.switchedTo)) problems.push(`詳細の見出しが切り替えた仲間と違う（${ally.headName} / ${ally.switchedTo}）`);
+  for (const want of ['装備変更', '技変更', 'ステータス割り振り', '限界突破']) {
+    if (!ally.actions.includes(want)) problems.push(`仲間詳細に「${want}」が無い`);
   }
-  if (bar.switched !== 'ノア') problems.push(`チップのタップで切り替わらない（${bar.switched}）`);
-  notes.push(`キャラ切替: ${bar.skill.chips.join('/')} — ${bar.skill.note.replace(/\s+/g, '')} → タップで ${bar.switched}`);
+  for (const [v, r] of Object.entries(ally.views)) {
+    if (!r.head.includes(ally.switchedTo)) problems.push(`${v} の画面に誰の画面か出ていない`);
+    if (r.body < 60) problems.push(`${v} の画面が空`);
+  }
+  if (!(ally.filtered > 0 && ally.filtered < ally.count)) problems.push(`絞込が効いていない（${ally.count} → ${ally.filtered}）`);
+  notes.push(`仲間タブ: ${ally.count}人 → 押して切替(${ally.switchedTo}) → ${ally.actions.join('/')} / 絞込 ${ally.count}→${ally.filtered}`);
 }
 
 /* 2n. 所持品が拠点の倉庫とダンジョン内の両方で見えること。 */
@@ -451,8 +467,10 @@ await page.goto(base); await page.waitForTimeout(500);
       .map(e => { const r = e.getBoundingClientRect();
         return { min: Math.round(Math.min(r.width, r.height)), t: (e.textContent || '').trim().slice(0, 12) }; });
     const out = {};
-    for (const [tab, sub] of [['prep', null], ['gear', 'equip'], ['gear', 'skill'], ['inv', 'gear'], ['shop', null]]) {
-      S.tab = tab; if (sub) S.gearSub = sub; if (tab === 'inv') S.invSub = 'gear';
+    for (const [tab, sub] of [['prep', null], ['gear', null], ['gear', 'equip'], ['gear', 'skill'], ['inv', 'gear'], ['shop', null]]) {
+      S.tab = tab; if (sub) S.allyView = sub === 'equip' ? 'equip' : sub === 'skill' ? 'skill' : null;
+      if (tab === 'gear' && !sub) S.allyView = null;
+      if (tab === 'inv') S.invSub = 'gear';
       openTown();
       const tooSmall = scan().filter(x => x.min < 44);
       out[tab + (sub ? ':' + sub : '')] = tooSmall;
@@ -464,7 +482,13 @@ await page.goto(base); await page.waitForTimeout(500);
   notes.push(`タップ領域: 全${Object.keys(tapSizes).length}画面で44px以上`);
 }
 
-/* 2p. 戦闘力。装備を替えると増減し、強い物ほど大きいこと。 */
+/* 2p. 戦闘力。装備を替えると増減し、強い物ほど大きいこと。
+ *
+ * 比較は主ステータスを揃える。武器の主ステータスは攻撃力か魔力のどちらかで、
+ * 魔力0の戦士に魔力の杖を持たせれば深度300の伝説でも深度20の並より弱い。
+ * それは戦闘力が正しく効き目を映している証拠であって不具合ではないので、
+ * 「深いほど強い」は同じ主ステータス同士で確かめ、
+ * 「効かない主ステータスは高く出ない」は別項目として押さえる。 */
 {
   const cp = await page.evaluate(() => {
     S.cls = 'warrior'; S.formation = ['warrior:gai'];
@@ -472,19 +496,28 @@ await page.goto(base); await page.waitForTimeout(500);
     S.stash = []; S.gear = Object.fromEntries(SLOTK.map(k => [k, null]));
     S.p = newPlayer();
     const bare = combatPower(derive());
-    let weak; do weak = makeItem(20, 0, 0, 0); while (weak.slot !== 'weapon');
-    let strong; do strong = makeItem(300, 0, 0, 4); while (strong.slot !== 'weapon');
+    const pick = (depth, rarity, mainId) => {
+      for (let guard = 0; guard < 4000; guard++) {
+        const it = makeItem(depth, 0, 0, rarity);
+        if (it.slot === 'weapon' && it.main.id === mainId) return it;
+      }
+      return null;
+    };
+    const weak = pick(20, 0, 'atk'), strong = pick(300, 4, 'atk'), staff = pick(300, 4, 'matk');
     const withWeak = powerWith('weapon', weak), withStrong = powerWith('weapon', strong);
+    const withStaff = powerWith('weapon', staff);
     // 一括着用で戦闘力が上がること
     S.stash = []; for (let i = 0; i < 30; i++) S.stash.push(makeItem(150 + i * 4, 0, 0, 3));
     const before = combatPower(); autoEquipBest(); const after = combatPower();
-    return { bare, withWeak, withStrong, before, after };
+    return { bare, withWeak, withStrong, withStaff, before, after };
   });
   if (!(cp.bare > 0)) problems.push('素手の戦闘力が0');
   if (!(cp.withWeak > cp.bare)) problems.push('装備しても戦闘力が上がらない');
   if (!(cp.withStrong > cp.withWeak)) problems.push('強い装備のほうが戦闘力が低い');
+  if (!(cp.withStaff < cp.withStrong)) problems.push('魔力0の戦士に魔力武器が攻撃武器と同等以上に出る');
   if (!(cp.after > cp.before)) problems.push(`おすすめ着用で戦闘力が上がらない（${cp.before}→${cp.after}）`);
   notes.push(`戦闘力: 素手${cp.bare} / 並装備${cp.withWeak} / 伝説${cp.withStrong} — 一括着用 ${cp.before}→${cp.after}`);
+  notes.push(`  戦士(魔力0)に伝説の魔力武器: ${cp.withStaff}（伝説の攻撃武器 ${cp.withStrong} より低い）`);
 }
 
 /* 3. 帰還して拠点へ戻れること */
@@ -514,15 +547,15 @@ await page.goto(base); await page.waitForTimeout(500);
     const shown = await page.evaluate(() => document.querySelector('#scTown .sbody').children.length);
     if (!shown) problems.push(`${name}タブの中身が空`);
   }
-  // 装備の3サブタブ
+  // 仲間の4つの画面
   await tap('#scTown .tab[data-t="gear"]'); await page.waitForTimeout(250);
-  for (const label of ['装備', '技', '能力']) {
-    const ok = await page.evaluate(l => {
-      const b = [...document.querySelectorAll('.innerTabs .btn')].find(e => e.textContent === l);
-      if (!b) return false; b.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); return true;
-    }, label);
-    if (!ok) problems.push(`装備タブに「${label}」が無い`);
-    await page.waitForTimeout(250);
+  for (const [v, label] of [['equip', '装備変更'], ['skill', '技変更'], ['stat', 'ステータス割り振り'], ['brk', '限界突破']]) {
+    const ok = await page.evaluate(view => {
+      S.allyView = view; openTown();
+      return document.getElementById('townBody').textContent.length > 60;
+    }, v);
+    if (!ok) problems.push(`仲間の「${label}」が開かない`);
+    await page.waitForTimeout(200);
   }
   // 倉庫の4区画すべてが開くこと
   await tap('#scTown .tab[data-t="inv"]'); await page.waitForTimeout(250);
@@ -539,7 +572,7 @@ await page.goto(base); await page.waitForTimeout(500);
   // 枠の大きさが揃っていること（装備あり/なしで段の高さが変わっていた）
   // 一部だけ装備した状態にして、埋まった段と空の段を並べて測る
   await page.evaluate(() => {
-    S.gearSub = 'equip'; S.tab = 'gear';
+    S.allyView = 'equip'; S.tab = 'gear';
     for (const slot of SLOTK) S.gear[slot] = null;
     for (const slot of ['weapon', 'helm', 'armor']) { let it; do it = makeItem(30, 0, 0, 3); while (it.slot !== slot || (it.ac && it.ac !== S.cls) || (it.wt && WCLS[it.wt] !== S.cls)); it.lv = 5; S.gear[slot] = it; }
     save(); openTown();
@@ -553,7 +586,7 @@ await page.goto(base); await page.waitForTimeout(500);
   if (!sizes.装備.length) problems.push('装備枠が1つも描画されていない');
   if (sizes.装備.length > 1) problems.push(`装備枠の高さが揃っていない ${sizes.装備.join('/')}`);
   // 固有技が一覧の先頭にあること
-  await page.evaluate(() => [...document.querySelectorAll('.innerTabs .btn')].find(e => e.textContent === '技').dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
+  await page.evaluate(() => { S.allyView = 'skill'; openTown(); });
   await page.waitForTimeout(300);
   const firstSkill = await page.evaluate(() => {
     const c = document.querySelector('.skillCard');

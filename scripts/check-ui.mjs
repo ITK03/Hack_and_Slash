@@ -41,9 +41,12 @@ await page.evaluate(() => {
 /* 画面を開く手順。ここに足すだけで全検査の対象になる。 */
 const SCREENS = [
   ['拠点', () => { S.tab = 'prep'; openTown(); }],
-  ['装備', () => { S.tab = 'gear'; S.gearSub = 'equip'; openTown(); }],
-  ['技', () => { S.tab = 'gear'; S.gearSub = 'skill'; openTown(); }],
-  ['能力', () => { S.tab = 'gear'; S.gearSub = 'ability'; openTown(); }],
+  ['仲間一覧', () => { S.tab = 'gear'; S.allyView = null; openTown(); }],
+  ['仲間詳細', () => { S.tab = 'gear'; S.allyView = 'detail'; openTown(); }],
+  ['装備変更', () => { S.tab = 'gear'; S.allyView = 'equip'; openTown(); }],
+  ['技変更', () => { S.tab = 'gear'; S.allyView = 'skill'; openTown(); }],
+  ['ステータス', () => { S.tab = 'gear'; S.allyView = 'stat'; openTown(); }],
+  ['限界突破', () => { S.tab = 'gear'; S.allyView = 'brk'; openTown(); }],
   ['倉庫:装備', () => { S.tab = 'inv'; S.invSub = 'gear'; openTown(); }],
   ['倉庫:道具', () => { S.tab = 'inv'; S.invSub = 'item'; openTown(); }],
   ['倉庫:結晶', () => { S.tab = 'inv'; S.invSub = 'mat'; openTown(); }],
@@ -64,7 +67,7 @@ for (const [name, open] of SCREENS) {
 
     /* 1. 同じ並びの枠は同じ大きさであること。
           横に並ぶ兄弟（グリッド／フレックス）の高さを比べる。 */
-    const rows = ['.g3', '.formation', '.loadout', '.innerTabs', '.charBar', '.craftBtns', '.matGrid', '.packs'];
+    const rows = ['.g3', '.formation', '.loadout', '.innerTabs', '.allyGrid', '.allyActions', '.craftBtns', '.matGrid'];
     for (const sel of rows) {
       for (const box of document.querySelectorAll(sel)) {
         const kids = [...box.children].filter(seen);
@@ -75,7 +78,7 @@ for (const [name, open] of SCREENS) {
         /* 1行に収まっている並びだけを見る（折り返していれば高さが揃わなくて当然） */
         const tops = new Set(kids.map(k => Math.round(k.getBoundingClientRect().top / 4)));
         if (tops.size === 1 && spread(hs) > 2) out.uneven.push(`${sel} 高さ ${hs.join('/')}`);
-        if (tops.size === 1 && spread(ws) > 2 && !box.classList.contains('charBar')) out.uneven.push(`${sel} 幅 ${ws.join('/')}`);
+        if (tops.size === 1 && spread(ws) > 2 && !box.classList.contains('allyGrid')) out.uneven.push(`${sel} 幅 ${ws.join('/')}`);
       }
     }
 
@@ -164,7 +167,7 @@ for (const [name, open] of SCREENS) {
 
     /* 7. 印どうしの重なり。角に絶対配置した印が増えると必ずぶつかる。
           同じ親の中で重なっている small な要素を探す。 */
-    for (const box of document.querySelectorAll('#scTown .slot,#scTown .cell,#scTown .member,#scTown .charChip,#scTown .loadSlot')) {
+    for (const box of document.querySelectorAll('#scTown .slot,#scTown .cell,#scTown .member,#scTown .allyCard,#scTown .loadSlot')) {
       const marks = [...box.querySelectorAll('*')].filter(e => {
         const cs = getComputedStyle(e);
         return seen(e) && cs.position === 'absolute' && (e.textContent || '').trim();

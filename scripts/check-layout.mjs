@@ -149,7 +149,9 @@ for (const [width, height, name] of sizes) {
   await page.evaluate(() => $('itPop').classList.remove('on'));
 
   // 装備名が枠から溢れて語尾が落ちていないこと
-  await page.evaluate(() => document.querySelector('#scTown .tab[data-t="gear"]').dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
+  await page.evaluate(() => { document.querySelector('#scTown .tab[data-t="gear"]').dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); });
+  await page.waitForTimeout(200);
+  await page.evaluate(() => { S.allyView = 'equip'; openTown(); });
   await page.waitForTimeout(350);
   const names = await page.evaluate(() => {
     const bad = [];
@@ -166,12 +168,12 @@ for (const [width, height, name] of sizes) {
     }
     return bad;
   });
-  if (names.length) problems.push(`装備タブ: 装備名が枠に収まらない ${names.join(', ')}`);
+  if (names.length) problems.push(`装備画面: 装備名が枠に収まらない ${names.join(', ')}`);
 
   // 技を差し替えると戦闘のボタンにもそのまま出ること
   await page.evaluate(() => { document.querySelector('#scTown .tab[data-t="gear"]').dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); });
   await page.waitForTimeout(300);
-  await page.evaluate(() => [...document.querySelectorAll('.innerTabs .btn')].find(e => e.textContent === '技').dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
+  await page.evaluate(() => { S.allyView = 'skill'; openTown(); });
   await page.waitForTimeout(300);
   const skillTab = await page.evaluate(() => ({
     slots: document.querySelectorAll('.skillSlot').length,

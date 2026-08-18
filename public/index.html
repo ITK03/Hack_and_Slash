@@ -229,14 +229,14 @@ h3{font-size:11px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 /* 高さは固定。min-height だと中身の量で段ごとに背が変わり、
    装備している段と空の段で枠の大きさが揃わなかった。 */
 .slot{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
-  border-radius:3px;padding:4px 3px 6px;text-align:center;height:116px;display:flex;
-  flex-direction:column;align-items:center;gap:1px;overflow:hidden}
+  border-radius:3px;padding:3px 3px 5px;text-align:center;height:90px;display:flex;
+  flex-direction:column;align-items:center;gap:0;overflow:hidden}
 /* 印の帯。左＝更新できる、右＝強化値。帯にすることで重なりようがない。 */
 .slot .slotTop{width:100%;display:flex;justify-content:space-between;align-items:center;
   height:14px;font-size:12px;font-weight:900;line-height:1}
 .slot .slotTop .up{color:#7ad04e}
 .slot .slotTop .enh{color:#7ad0ff}
-.slot .sd{font-size:11px;color:var(--ink3);font-weight:700;margin-top:1px}
+.slot .sd{font-size:11px;color:var(--ink3);font-weight:700;line-height:1.2}
 /* ON/OFF 切り替え。金は「択一で選ばれている」ものだけに使う。 */
 .btn.toggle{display:flex;align-items:center;justify-content:space-between;gap:6px;padding-left:11px;padding-right:9px}
 .btn.toggle em{font-style:normal;font-size:12px;font-weight:900;letter-spacing:.06em;
@@ -251,13 +251,12 @@ h3{font-size:11px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 
 .slot .ic{color:var(--ink3);margin-bottom:2px}
 .slot .ic.e{opacity:.28}
-.slot .sl{font-size:11px;color:var(--ink2);font-weight:700}
+.slot .sl{font-size:11px;color:var(--ink2);font-weight:700;line-height:1.2}
 /* 枠には品目名（バトルアックス等）だけを1行で出す。
    接頭辞まで入れると狭い枠で折り返して「バトルアック／ス」と語尾が落ち、
    7部位すべてが読めなくなる。接頭辞付きの正式名はタップ後の詳細で見る。 */
-.slot .si{font-size:11px;font-weight:800;line-height:1.25;max-width:100%;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
-  word-break:break-all}
+.slot .si{font-size:11px;font-weight:800;line-height:1.2;max-width:100%;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .slot.empty{border-style:dashed;border-color:#221c30}
 .slot.empty .si{color:#3d3750}
 .slot:active{background:#1c1728}
@@ -378,6 +377,36 @@ body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
   color:var(--ink2);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;
   cursor:pointer;position:relative}
 .hintQ::after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:44px;height:44px}
+/* 仲間の絞込と並び替え。この画面には区画タブが無いので、帯は一番上に固定する。 */
+.allyBar{display:flex;gap:6px;position:sticky;top:0;z-index:5;
+  background:var(--bg);padding:2px 0 7px}
+.allyBar .btn{flex:1;margin:0;padding:8px 4px;font-size:12px}
+/* 仲間の一覧。アイコンを並べ、押した先で何をするかを選ぶ。 */
+.allyGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:8px}
+.allyCard{position:relative;border:1px solid var(--line);border-radius:3px;padding:5px 4px 7px;
+  text-align:center;background:linear-gradient(180deg,var(--press2),var(--press));min-height:44px}
+.allyCard.on{box-shadow:inset 0 0 0 1px var(--gold)}
+.allyCard .allyTop{display:flex;justify-content:space-between;align-items:center;height:19px}
+.allyCard .slotNo{font-size:11px;color:var(--gold);font-weight:800;line-height:1}
+.allyCard .clsMark{position:static;width:19px;height:19px;border-radius:50%;border:1px solid var(--line2);
+  background:#0d0b14;display:grid;place-items:center;font-size:11px;font-style:normal;font-weight:900;line-height:1}
+.allyCard .face{display:flex;justify-content:center;margin:2px 0 3px}
+.allyCard .nm{font-size:12px;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.allyCard .mlv{font-size:11px;color:var(--ink2)}
+.allyCp{font-size:11px;color:var(--ink2);margin-top:2px}
+.allyCp b{color:var(--gold);font-weight:900;font-size:12px}
+/* 仲間1人の見出しと、その人にできること。 */
+.allyHead{display:flex;align-items:center;gap:11px}
+.allyHead .face{flex:0 0 auto}
+.allyHeadTxt{flex:1;min-width:0}
+.allyActions{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin:9px 0 4px}
+.allyActions .btn{margin:0}
+.backBtn{margin:0 0 8px;width:auto;padding:0 14px;min-height:44px;display:inline-flex;align-items:center}
+.viewHead{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px}
+.viewHead .face{display:flex}
+.viewHead b{font-weight:800;color:var(--ink)}
+.btProg{height:7px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden;margin:7px 0}
+.btProg i{display:block;height:100%;background:linear-gradient(90deg,#e0a53c,#ffd98a)}
 /* 調合の系統見出し。畳んだ状態でも「作れるか」が分かるようにする。 */
 .craftFold{margin-top:8px}
 .craftFold span{display:flex;align-items:center;gap:7px;font-weight:800}
@@ -461,7 +490,7 @@ body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
 .hdrCp{display:flex;align-items:baseline;gap:5px;margin-top:3px}
 .hdrCp small{font-size:11px;letter-spacing:.06em;color:var(--ink2)}
 .hdrCp span{font-size:17px;font-weight:900;color:var(--gold);letter-spacing:.01em}
-.currency.stam .stamI{color:#6ae0b0;font-size:12px}
+.currency.stam .stamI{color:#6ae0b0;font-size:13px;font-style:normal}
 .currency.stam{color:#9ff0d0}
 /* 装備・技・能力の上に常駐するキャラ切替。編成の面々を横に並べて1タップで移る。 */
 .charBar{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
@@ -641,7 +670,7 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
 .lootPanel{font-size:11px}.lootPanel h3{font-size:11px;line-height:1.3;letter-spacing:.12em;margin:10px 0 6px}.lootPanel .card{padding:9px}.lootPanel .st{font-size:11px;line-height:1.5;margin-top:5px}.bagList{display:flex;flex-direction:column;gap:5px}.bagRow{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);background:#100e18;border-radius:3px;padding:7px 9px;font-size:11px;line-height:1.3;font-weight:700}
 .gearPanel{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:8px;align-items:start}
 .gearPanel h3{margin:4px 0 6px}.gearPanel .g3{grid-template-columns:repeat(4,1fr);gap:5px}
-.gearPanel .slot{height:116px}
+.gearPanel .slot{height:90px}
 .gearStats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:6px!important}
 .gearStats .ty{grid-column:1/-1}.gearStats .stat{font-size:11px;padding:4px 3px;gap:4px;min-width:0}
 .gearStats .stat:last-child{border-bottom:1px solid var(--line)}
@@ -707,7 +736,7 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
         <div class="hdrCp"><small>戦闘力</small><span id="hdrCp">0</span></div>
       </div>
       <div class="wallet">
-        <div class="currency stam"><i class="stamI">▲</i><span id="hdrStam">3/3</span></div>
+        <div class="currency stam"><i class="stamI">⚡</i><span id="hdrStam">3/3</span></div>
         <div class="currency"><i class="gem">◆</i><span id="premiumT">0</span></div>
         <div class="currency gold"><i class="coin">●</i><span id="townG">0</span></div></div>
     </div>
@@ -716,7 +745,7 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
   <div id="diveBar"></div>
   <div class="tabs">
       <div class="tab on" data-t="prep">拠点</div>
-      <div class="tab" data-t="gear">装備</div>
+      <div class="tab" data-t="gear">仲間</div>
       <div class="tab" data-t="inv">倉庫</div>
       <div class="tab" data-t="shop">商店</div>
       <div class="tab" data-t="conf">設定</div>
@@ -1636,7 +1665,7 @@ const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   settings:{map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0},admin:false,debug:false,debugFloor:1,adminOpts:{},chars:{},characterStates:{},avatars:{},
   combo:0,comboT:0,dmgLog:[],dps:0,startFloor:1,runGold:0,
   inv:{filters:[],sort:"score",sellSel:[],sellRar:1},mats:{crystal:{},core:{}},stock:{},consumables:{},loadout:["mend1",null,null,null],runItems:[0,0,0,0],itemSlot:0,
-  playerName:"",invSub:"gear",formation:[],partyIndex:0,diveFloor:1,stamina:3,premium:0,profileAvatar:null,shopSub:"gacha",alloc:null,breakthroughs:{},weeklyCore:{week:"",bought:0},beginnerClaimed:false,prepMissionsOpen:false,invLegendOpen:false,skillLoadout:{},
+  playerName:"",invSub:"gear",allyView:null,allyFilter:"all",allySort:"formation",craftOpen:{},seenHints:{},formation:[],partyIndex:0,diveFloor:1,stamina:3,premium:0,profileAvatar:null,shopSub:"gacha",alloc:null,breakthroughs:{},weeklyCore:{week:"",bought:0},beginnerClaimed:false,prepMissionsOpen:false,invLegendOpen:false,skillLoadout:{},
   paidInventory:{catalysts:[],feathers:[],slots:[],sigils:[]},tactical:{trap:null,reveal:false},
   runPick:{crystal:0,core:0,parts:{},pots:0},
   daily:null,dailyMatMul:1,
@@ -1721,7 +1750,7 @@ function refreshTutorial(){
   else if(t.phase==="training_potion")tutorialTarget("#pot",`HPが減ったら<b>${CONSUMABLES.mend1.n}</b>で回復できます。練習では3個。探索中は最大${runCap("mend1")}個まで拾えます。回復品は倉庫の調合で作り、深く潜って素材を集めるほど強い品が作れます。`);
   else if(t.phase==="training_return")tutorialTarget("#mmW","ミニマップには<b>橙の階段</b>と<b>青の帰還ポータル</b>への矢印が出ます。練習部屋の階段は使用できません。確認後、青矢印をたどって帰還してください。");
   else if(t.phase==="return")tutorialTarget(null,"ミニマップ下の<b>青い矢印</b>をたどり、帰還ポータルから拠点へ戻りましょう。");
-  else if(t.phase==="equip_tab")tutorialTarget('#scTown .tab[data-t="gear"]',"まず下の<b>装備タブ</b>を開きます。");
+  else if(t.phase==="equip_tab")tutorialTarget('#scTown .tab[data-t="gear"]',"まず下の<b>仲間タブ</b>を開きます。");
   else if(t.phase==="equip")tutorialTarget(`.slot[data-slot="${TUTORIAL_SLOTS[t.gearIndex]}"]`,`訓練用装備を順番に装備します。<b>${SLOTN(TUTORIAL_SLOTS[t.gearIndex])}</b>をタップしてください。`);
   else if(t.phase==="shop")tutorialTarget('#scTown .tab[data-t="shop"]',"次は<b>商店タブ</b>へ進みましょう。");
   else if(t.phase==="equip_gacha")tutorialTarget('[data-tutorial="equip-gacha"]',"装備ガチャを<b>無料</b>で1回引きます。希少装備が確定します。");
@@ -3510,6 +3539,10 @@ function openTown(){
    $("hdrLv").textContent="Lv"+S.base.lv;
    $("hdrXp").style.width=Math.max(0,Math.min(100,need>0?cur/need*100:100))+"%";
    $("hdrStam").textContent=(S.stamina==null?3:S.stamina)+"/3";
+   /* 何の数字か分からないと意味がないので、押したら説明を出す。 */
+   const st=$("hdrStam").parentElement;
+   if(st&&!st.dataset.wired){st.dataset.wired="1";st.style.cursor="pointer";
+     tapEl(st,()=>toast("報酬2倍で潜れる残り回数（1日3回、4:00に回復）","ok"));}
    $("hdrCp").textContent=combatPower(derive()).toLocaleString();}
   const profile=allRoster().find(x=>x.k+":"+x.ch.id===S.profileAvatar)||{k:S.cls,ch:currentCharacter()};
   const tier=charTier(profile.ch);
@@ -3549,10 +3582,10 @@ function gearGrid(host,inDungeon){
        絶対配置で角に置くと、印が増えたときに必ず重なる。 */
     d.innerHTML=`<div class="slotTop"><span class="up">${up?"▲":""}</span>`
       +`<span class="enh">${it&&(it.lv||1)>1?"+"+((it.lv||1)-1):""}</span></div>`
-      +`<div class="ic ${it?RC[it.rar]:"e"}" style="${it?`color:${ELEMENTS[it.element||"neutral"].col}`:""}">${icon(it?iconKey(it):s.k,24)}</div>`
+      +`<div class="ic ${it?RC[it.rar]:"e"}" style="${it?`color:${ELEMENTS[it.element||"neutral"].col}`:""}">${icon(it?iconKey(it):s.k,22)}</div>`
       +`<div class="sl">${s.n}</div>`
       +`<div class="si ${it?RC[it.rar]:""}" title="${it?it.name:""}">${it?it.base:"—"}</div>`
-      +`<div class="sd">${it?`深度 ${it.ilvl}`:""}</div>`;
+      +`<div class="sd">${it?`深度${it.ilvl}`:""}</div>`;
     tapEl(d,()=>{const t=S.tutorial||{};if(!inDungeon&&t.phase==="equip"&&TUTORIAL_SLOTS[t.gearIndex]===s.k){
       const training=S.stash.find(x=>x.tutorial&&x.slot===s.k);if(training){equip(training);t.gearIndex++;if(t.gearIndex>=TUTORIAL_SLOTS.length){t.phase="shop";S.tab="gear";}save();openTown();return;}}
       openGearDetail(s.k,inDungeon);});gg.appendChild(d);}
@@ -3632,49 +3665,130 @@ function renderGearTab(host,inDungeon){
   const left=document.createElement("div"),right=document.createElement("div");
   left.innerHTML="<h3>装備</h3>";right.innerHTML="<h3>能力値</h3>";
   gearGrid(left,inDungeon);statBlock(right);panel.append(left,right);host.appendChild(panel);}
-/* 装備・技・能力のどれを開いていても、いま誰をいじっているのかが分かるようにする。
-   以前は「装備」タブの枠にしか出ておらず、技や能力の画面では手掛かりが無かった。
-   編成の面々を横並びにして、タップだけで切り替えられるようにもする
-   （旧来は 職業を選ぶ → キャラを選ぶ の2段階だった）。 */
-function renderCharacterBar(host,inDungeon,after){
-  const bar=document.createElement("div");bar.className="charBar";
-  const cur=activeCharacterKey(),roster=unlockedRoster();
-  const keys=(S.formation||[]).filter(Boolean).slice(0,formationCapacity());
-  if(!keys.includes(cur))keys.unshift(cur);          // 編成外を編集中でも自分は出す
-  for(const key of keys){
-    const entry=roster.find(x=>x.k+":"+x.ch.id===key);if(!entry)continue;
-    const on=key===cur,slot=(S.formation||[]).indexOf(key);
-    const lv=((S.characterStates[key]||{}).base||{lv:on?S.base.lv:1}).lv;
-    const d=document.createElement("div");d.className="charChip"+(on?" on":"");
-    d.style.borderColor=charTier(entry.ch).col;
-    d.innerHTML=`<i class="clsMark" style="color:${CLASSES[entry.k].col}">${CLASS_MARK[entry.k]||"?"}</i>`
-      +`<div class="face">${charFace(entry.k,entry.ch.col,22)}</div>`
-      +`<div class="nm">${entry.ch.n}</div>`
-      +`<div class="mlv">Lv${lv}${slot>=0?` / ${slot+1}番手`:""}</div>`;
-    if(!on&&!inDungeon)tapEl(d,()=>{const [k,id]=key.split(":");
-      selectCharacter(k,id,()=>{save();after();});});
-    bar.appendChild(d);}
-  host.appendChild(bar);
-  const now=roster.find(x=>x.k+":"+x.ch.id===cur);
-  const row=document.createElement("div");row.className="charBarRow";
-  const label=document.createElement("div");label.className="charBarNote";
-  label.innerHTML=`編集中: <b style="color:${now?now.ch.col:"#fff"}">${now?now.ch.n:"?"}</b>`
-    +`（${CLASSES[S.cls].name} / Lv${S.base.lv}）`
-    +(inDungeon?" — 潜行中は切り替えできません":"");
-  row.appendChild(label);
-  if(!inDungeon){const more=document.createElement("div");more.className="btn gh";
-    more.textContent="他のキャラ";tapEl(more,openCharacterPick);row.appendChild(more);}
-  host.appendChild(row);}
+const ALLY_VIEWS={equip:"装備変更",skill:"技変更",stat:"ステータス割り振り",brk:"限界突破"};
 function renderCombinedGear(host,inDungeon,after){
-  renderCharacterBar(host,inDungeon,after);
-  const tabs=document.createElement("div");tabs.className="innerTabs";
-  for(const [k,n] of [["equip","装備"],["skill","技"],["ability","能力"]]){const d=document.createElement("div");d.className="btn "+(S.gearSub===k?"gold":"gh");d.textContent=n;
-    tapEl(d,()=>{if(advanceTour("gear",k))return;S.gearSub=k;after();});tabs.appendChild(d);}
-  host.appendChild(tabs);
-  if(S.gearSub==="ability")renderAbilityTab(host,after);
-  else if(S.gearSub==="skill")renderSkillTab(host,inDungeon,after);
-  else renderGearTab(host,inDungeon);
-}
+  if(S.allyView&&ALLY_VIEWS[S.allyView])return renderAllyView(host,inDungeon,after);
+  if(S.allyView==="detail")return renderAllyDetail(host,inDungeon,after);
+  renderAllyList(host,inDungeon,after);}
+/* 仲間の一覧。絞込と並び替えを上に置き、あとはアイコンを並べるだけ。 */
+function renderAllyList(host,inDungeon,after){
+  S.allyFilter=S.allyFilter||"all";S.allySort=S.allySort||"formation";
+  const bar=document.createElement("div");bar.className="allyBar";
+  const mk=(lbl,fn,on)=>{const d=document.createElement("div");d.className="btn gh"+(on?" gold":"");
+    d.style.marginTop="0";d.textContent=lbl;tapEl(d,fn);bar.appendChild(d);};
+  const FLT={all:"すべて",formation:"編成中",warrior:"戦士",mage:"魔術師"};
+  mk("絞込: "+FLT[S.allyFilter],()=>{const ks=Object.keys(FLT);
+    S.allyFilter=ks[(ks.indexOf(S.allyFilter)+1)%ks.length];save();after();},S.allyFilter!=="all");
+  const SRT={formation:"編成順",power:"戦闘力",level:"レベル",tier:"等級"};
+  mk("並び替え: "+SRT[S.allySort],()=>{const ks=Object.keys(SRT);
+    S.allySort=ks[(ks.indexOf(S.allySort)+1)%ks.length];save();after();},false);
+  host.appendChild(bar);
+
+  const cur=activeCharacterKey();
+  let list=unlockedRoster().map(e=>{
+    const key=e.k+":"+e.ch.id,st=S.characterStates[key]||{};
+    const lv=key===cur?S.base.lv:((st.base||{}).lv||1);
+    /* 戦闘力は各キャラの保存済みの能力と装備から出す。
+       いま選んでいる人だけ実データ、他は保存値から概算する。 */
+    const cp=key===cur?combatPower(derive()):allyPower(key);
+    return {...e,key,lv,cp,slot:(S.formation||[]).indexOf(key),bt:breakthroughLevel(key)};});
+  if(S.allyFilter==="formation")list=list.filter(x=>x.slot>=0);
+  else if(S.allyFilter!=="all")list=list.filter(x=>x.k===S.allyFilter);
+  const rank=t=>TIER_ORDER.indexOf(t);
+  list.sort((a,z)=>S.allySort==="power"?z.cp-a.cp
+    :S.allySort==="level"?z.lv-a.lv
+    :S.allySort==="tier"?rank(charTier(z.ch).n)-rank(charTier(a.ch).n)
+    :((a.slot<0?99:a.slot)-(z.slot<0?99:z.slot)));
+
+  if(!list.length){const e=document.createElement("div");e.className="card";
+    e.innerHTML='<div class="st">この条件に合う仲間がいません。</div>';host.appendChild(e);return;}
+  const g=document.createElement("div");g.className="allyGrid";
+  for(const e of list){
+    const on=e.key===cur,d=document.createElement("div");
+    d.className="allyCard"+(on?" on":"");d.style.borderColor=charTier(e.ch).col;
+    d.innerHTML=`<div class="allyTop"><span class="slotNo">${e.slot>=0?(e.slot+1)+"番手":""}</span>`
+      +`<i class="clsMark" style="color:${CLASSES[e.k].col}">${CLASS_MARK[e.k]||"?"}</i></div>`
+      +`<div class="face">${charFace(e.k,e.ch.col,30)}</div>`
+      +`<div class="nm">${e.ch.n}</div>`
+      +`<div class="mlv">Lv${e.lv}${e.bt?` / ${e.bt}凸`:""}</div>`
+      +`<div class="allyCp">戦闘力 <b>${e.cp.toLocaleString()}</b></div>`;
+    if(!inDungeon)tapEl(d,()=>{const [k,id]=e.key.split(":");
+      selectCharacter(k,id,()=>{S.allyView="detail";save();after();});});
+    g.appendChild(d);}
+  host.appendChild(g);
+  hint(host,"allyList","仲間を選ぶと、装備・技・ステータス・限界突破を変更できます。");}
+/* 選んでいない仲間の戦闘力。保存された能力値と装備から概算する。 */
+function allyPower(key){
+  const st=S.characterStates[key];if(!st||!st.base)return 0;
+  const bakCls=S.cls,bakAv=S.avatars[bakCls],bakBase=S.base,bakGear=S.gear;
+  const [k,id]=key.split(":");
+  try{S.cls=k;S.avatars[k]=id;S.base=st.base;S.gear=st.gear||{};return combatPower(derive());}
+  catch(e){return 0;}
+  finally{S.cls=bakCls;S.avatars[bakCls]=bakAv;S.base=bakBase;S.gear=bakGear;}}
+/* 仲間1人の画面。能力値と、その人に対してできる4つ。 */
+function renderAllyDetail(host,inDungeon,after){
+  const ch=currentCharacter(),tier=charTier(ch),key=activeCharacterKey();
+  const back=document.createElement("div");back.className="btn gh backBtn";back.textContent="← 仲間一覧へ";
+  tapEl(back,()=>{S.allyView=null;save();after();});host.appendChild(back);
+  const head=document.createElement("div");head.className="card allyHead";
+  head.style.borderColor=tier.col;
+  head.innerHTML=`<div class="face">${charFace(S.cls,ch.col,40)}</div>`
+    +`<div class="allyHeadTxt"><div class="nm" style="color:${ch.col}">${ch.n}`
+    +` <b class="tag" style="color:${tier.col};border-color:${tier.col}">${tier.n}</b></div>`
+    +`<div class="ty">${CLASSES[S.cls].name} / Lv${S.base.lv} / ${breakthroughLevel(key)}凸</div>`
+    +`<div class="allyCp">戦闘力 <b>${combatPower(derive()).toLocaleString()}</b></div></div>`;
+  host.appendChild(head);
+  const g=document.createElement("div");g.className="allyActions";
+  for(const [k,n] of Object.entries(ALLY_VIEWS)){
+    const d=document.createElement("div");d.className="btn"+(k==="brk"?" gh":" gh");d.textContent=n;
+    if(inDungeon&&k!=="equip"){d.className="btn no";tapEl(d,()=>toast("潜行中は変更できません","ng"));}
+    else tapEl(d,()=>{S.allyView=k;save();after();});
+    g.appendChild(d);}
+  host.appendChild(g);
+  statBlock(host);}
+/* 4つのうちのどれか。上に「誰の何か」を出して、戻る道を必ず置く。 */
+function renderAllyView(host,inDungeon,after){
+  const ch=currentCharacter();
+  const back=document.createElement("div");back.className="btn gh backBtn";
+  back.textContent=`← ${ch.n} へ戻る`;
+  tapEl(back,()=>{S.allyView="detail";save();after();});host.appendChild(back);
+  const h=document.createElement("div");h.className="viewHead";
+  h.innerHTML=`<span class="face">${charFace(S.cls,ch.col,20)}</span>`
+    +`<b>${ch.n}</b><span class="ty">${ALLY_VIEWS[S.allyView]}</span>`;
+  host.appendChild(h);
+  if(S.allyView==="equip")renderGearTab(host,inDungeon);
+  else if(S.allyView==="skill")renderSkillTab(host,inDungeon,after);
+  else if(S.allyView==="stat")renderAbilityTab(host,after);
+  else if(S.allyView==="brk")renderBreakthroughTab(host,after);}
+/* 限界突破。何段目で何が増えるのかを表にして、核の残りを出す。 */
+function renderBreakthroughTab(host,after){
+  const key=activeCharacterKey(),lv=breakthroughLevel(key);
+  const need=lv<5?CFG.BREAKTHROUGH_CORE_COST[lv+1]:0;
+  const paid=(S.breakthroughProgress||{})[key]||0,have=materialCount("core");
+  const c=document.createElement("div");c.className="card";
+  c.innerHTML=`<div class="row"><div class="nm">${lv}凸 / 5凸</div>`
+    +`<span class="tag">基礎能力 ×${breakthroughStatMul(lv).toFixed(2)}</span></div>`
+    +(lv<5?`<div class="st">次の段階まで 核 <b>${paid}/${need}</b>（所持 ${have}）</div>`
+          :`<div class="st">最大まで突破しています。</div>`);
+  if(lv<5){const bar=document.createElement("div");bar.className="btProg";
+    bar.innerHTML=`<i style="width:${Math.min(100,paid/need*100)}%"></i>`;c.appendChild(bar);
+    const x=document.createElement("div");x.className="btn "+(have?"gold":"no");
+    x.textContent=have?`核を投入（残り ${need-paid}）`:"核が足りません";
+    tapEl(x,()=>{if(!have)return;
+      askQuantity("核を投入する",`次の段階まで 残り ${need-paid} 個 / 所持 ${have}`,Math.min(have,need-paid),
+        n=>{for(let i=0;i<n;i++)breakthroughWithCore(key);SFX.chest();save();after();});});
+    c.appendChild(x);}
+  host.appendChild(c);
+  /* 段階ごとの効果。何が増えるのか分からないまま核を入れさせない。 */
+  const t=document.createElement("div");t.className="card";
+  t.innerHTML='<div class="nm">段階ごとの効果</div>';
+  const rows=[[1,"基礎能力 ×1.06"],[2,"基礎能力 ×1.06 / 攻撃 +2.5%"],[3,"基礎能力 ×1.12 / 攻撃 +2.5%"],
+    [4,"基礎能力 ×1.12 / 攻撃 +2.5% / 最大HP +2.5%"],[5,"基礎能力 ×1.20 / 攻撃 +2.5% / 最大HP +2.5% / 全体 +2%"]];
+  for(const [n,d] of rows){const r=document.createElement("div");r.className="stat";
+    r.innerHTML=`<span style="color:${n<=lv?"#7ad04e":"var(--ink3)"}">${n}凸${n<=lv?" ✓":""}</span><b style="font-weight:700">${d}</b>`;
+    t.appendChild(r);}
+  host.appendChild(t);
+  hint(host,"brk","同じ仲間がガチャで重なると自動で1段階進みます。核を入れても進められます。");}
 /* 技の編成。3枠それぞれに、解放済みの技から好きなものを差す。 */
 function renderSkillTab(host,inDungeon,after){
   const equipped=activeSkills();
@@ -4761,11 +4875,15 @@ function openGearDetail(slotK,inDungeon){
   else c.innerHTML+='<div class="card"><div class="st">装備されていません。</div></div>';
   /* 候補。装備中より戦闘力が上がる物を上から3件。 */
   if(!inDungeon){
-    const pool=S.stash.filter(x=>x.slot===slotK)
-      .map(x=>({x,cp:powerWith(slotK,x)}))
-      .filter(o=>o.cp>nowCp).sort((a,z)=>z.cp-a.cp).slice(0,3);
+    /* 候補は「戦闘力が最も高くなる物」だけ。同値が並んだときは全部出す。
+       上位3件を出すと、どれを選べばよいのかを結局こちらで判断させることになる。 */
+    const cands=S.stash.filter(x=>x.slot===slotK).map(x=>({x,cp:powerWith(slotK,x)}))
+      .filter(o=>o.cp>nowCp);
+    const best=cands.length?Math.max(...cands.map(o=>o.cp)):0;
+    const pool=cands.filter(o=>o.cp===best);
     const h=document.createElement("div");h.className="craftFam";
-    h.textContent=pool.length?"押すとその場で装備します":"倉庫に、これより強い物はありません";
+    h.textContent=pool.length?(pool.length>1?`最も強くなる候補（同値 ${pool.length}件）— 押すと装備します`:"最も強くなる装備 — 押すと装備します")
+      :"倉庫に、これより強い物はありません";
     c.appendChild(h);
     for(const o of pool){const d=document.createElement("div");d.className="card tap";
       d.style.borderColor=hexA(rarCol(o.x.rar),.5);
@@ -4976,7 +5094,7 @@ const KEY="descent_v5";
 function save(){storeActiveCharacter();try{localStorage.setItem(KEY,JSON.stringify({cls:S.cls,deepest:S.deepest,
   gold:S.gold,stash:S.stash,gear:S.gear,base:S.base,log:S.log,mats:S.mats,stock:S.stock,consumables:S.consumables,loadout:S.loadout,consumableVersion:1,
   matTierVersion:2,
-  settings:S.settings,admin:S.admin,debug:S.debug,debugFloor:S.debugFloor,adminOpts:S.adminOpts,chars:S.chars,characterStates:S.characterStates,avatars:S.avatars,formation:S.formation,diveFloor:S.diveFloor,stamina:S.stamina,daily:S.daily,premium:S.premium,paidInventory:S.paidInventory,profileAvatar:S.profileAvatar,shopSub:S.shopSub,gearSub:S.gearSub,unlockedCharacters:S.unlockedCharacters,tutorial:S.tutorial,returnInvulnerable:S.returnInvulnerable,breakthroughs:S.breakthroughs,breakthroughProgress:S.breakthroughProgress,weeklyCore:S.weeklyCore,beginnerClaimed:S.beginnerClaimed,prepMissionsOpen:S.prepMissionsOpen,invLegendOpen:S.invLegendOpen,skillLoadout:S.skillLoadout,playerName:S.playerName,invSub:S.invSub}));}catch(e){}}
+  settings:S.settings,admin:S.admin,debug:S.debug,debugFloor:S.debugFloor,adminOpts:S.adminOpts,chars:S.chars,characterStates:S.characterStates,avatars:S.avatars,formation:S.formation,diveFloor:S.diveFloor,stamina:S.stamina,daily:S.daily,premium:S.premium,paidInventory:S.paidInventory,profileAvatar:S.profileAvatar,shopSub:S.shopSub,gearSub:S.gearSub,unlockedCharacters:S.unlockedCharacters,allyView:S.allyView,allyFilter:S.allyFilter,allySort:S.allySort,craftOpen:S.craftOpen,seenHints:S.seenHints,tutorial:S.tutorial,returnInvulnerable:S.returnInvulnerable,breakthroughs:S.breakthroughs,breakthroughProgress:S.breakthroughProgress,weeklyCore:S.weeklyCore,beginnerClaimed:S.beginnerClaimed,prepMissionsOpen:S.prepMissionsOpen,invLegendOpen:S.invLegendOpen,skillLoadout:S.skillLoadout,playerName:S.playerName,invSub:S.invSub}));}catch(e){}}
 /* セーブの数値は必ず有限な数へ均す。文字列や負値がそのまま入ると
    S.gold+=500 が文字列連結になったり、深度が負のまま階梯計算へ流れる。 */
 const numAt=(v,fallback,min)=>{const n=Number(v);return Number.isFinite(n)?(min==null?n:Math.max(min,n)):fallback;};
@@ -5022,6 +5140,8 @@ function load(){try{
    S.loadout=S.loadout.map(k=>!k?null:CONSUMABLES[k]?k:(OLD[k]||null));}while(S.loadout.length<loadoutCapacity())S.loadout.push(null);S.runItems=[0,0,0,0];S.log=d.log||{runs:[]};
   S.settings=Object.assign({map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0,controlMode:"manual",autoPreset:"aggressive",automationEditor:0},d.settings||{});
   S.admin=!!d.admin;S.debug=!!d.debug;S.debugFloor=numAt(d.debugFloor,1,1);S.adminOpts=d.adminOpts||{};S.chars=d.chars||{};S.characterStates=d.characterStates||{};S.avatars=d.avatars||{};S.breakthroughs=d.breakthroughs||{};S.breakthroughProgress=d.breakthroughProgress||{};S.weeklyCore=d.weeklyCore||{week:"",bought:0};S.beginnerClaimed=!!d.beginnerClaimed;S.prepMissionsOpen=!!d.prepMissionsOpen;S.invLegendOpen=!!d.invLegendOpen;S.playerName=typeof d.playerName==="string"?d.playerName:"";S.invSub=d.invSub||"gear";S.skillLoadout=d.skillLoadout||{};
+  S.allyView=d.allyView||null;S.allyFilter=d.allyFilter||"all";S.allySort=d.allySort||"formation";
+  S.craftOpen=d.craftOpen||{};S.seenHints=d.seenHints||{};
   /* 旧セーブは職ごとに1つだけ持っていた。その職の先頭キャラクターの設定として引き継ぐ。 */
   for(const k of CKEYS)if(S.skillLoadout[k]){
     const first=(CHARACTERS[k]||[])[0];

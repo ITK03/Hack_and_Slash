@@ -146,8 +146,12 @@ const regressionSnippets = [
   'function openInherit',
   'const inheritCandidates=',
   '"sigils","継承の印"',
-  'function renderCharacterBar',   // 誰を編集中かを常に出す
-  '.charBar{',
+  'const ALLY_VIEWS=',             // 仲間 → やること、の順に選ぶ
+  'function renderAllyList',
+  'function renderAllyDetail',
+  'function renderBreakthroughTab',
+  'function allyPower',
+  '.allyGrid{',
   'function renderHoldings',       // 何を何個持っているか
   '["item","道具"]',
   'const runPick=',
