@@ -46,8 +46,11 @@ result.doesNotPause=!after.paused&&after.time>before.time;
 // 操作モードの切替が戦闘中に呼べること（右端の切替ボタンから使う関数）
 result.modes=game.run(()=>{S.floor=5;S.deepest=50;S.settings.controlMode='manual';
   const seen=[];for(let i=0;i<4;i++){cycleControlMode();seen.push(S.settings.controlMode);}return seen;});
-result.autoBlockedAtFrontier=game.run(()=>{S.floor=50;S.deepest=50;S.settings.controlMode='onehand';
-  cycleControlMode();return S.settings.controlMode;});
+/* 未到達の深度でもオートまで手が届くこと。以前は黙って飛ばしていたので、
+   最深で潜っている間は「手動と片手の2択」にしか見えなかった。
+   飛ばすのはやめ、代わりに autoAllowed() で理由を出す方針へ変えた。 */
+result.autoAtFrontier=game.run(()=>{S.floor=50;S.deepest=50;S.settings.controlMode='onehand';
+  cycleControlMode();return {mode:S.settings.controlMode,allowed:autoAllowed()};});
 console.log('消耗品実測',result);
 console.table(result.at.map(r=>({深度:r.depth,無し:`${(r.無し*100).toFixed(1)}%`,一段目:`${(r.一段目*100).toFixed(1)}%`,
   三段目:`${(r.三段目*100).toFixed(1)}%`,一段目差:`${(r.一段目差*100).toFixed(1)}pt`,三段目差:`${(r.三段目差*100).toFixed(1)}pt`})));
@@ -63,4 +66,5 @@ if(result.tierGain<.08)throw new Error(`段階差 ${pt(result.tierGain)}pt が�
 if(!result.itemUseWorks)throw new Error('アイテムを1タップ相当の呼び出しで使用できない');
 if(!result.doesNotPause)throw new Error('アイテム使用でゲームが停止した');
 if(new Set(result.modes).size!==3)throw new Error(`操作モードの巡回が3種類にならない（${result.modes.join(',')}）`);
-if(result.autoBlockedAtFrontier==='auto')throw new Error('未到達の深度でオートに切り替わった');
+if(result.autoAtFrontier.mode!=='auto')throw new Error(`未到達の深度で切替がオートまで回らない（${result.autoAtFrontier.mode}）`);
+if(result.autoAtFrontier.allowed)throw new Error('未到達の深度が「到達済み」と判定されている（注意書きが出ない）');

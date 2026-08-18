@@ -37,7 +37,7 @@ if (missingShopConfirmation.length) {
 
 const gameplayQualitySnippets = [
   'ECO_DPR:1.25',
-  'settings:{map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0}',
+  'eco:0,mirStick:0,mirSkill:0,mirItem:0',   // 表示設定と操作キーの左右
   'S.runGold+=d.gold',
   '今回獲得したゴールド',
   'const CHARACTERS=',
@@ -160,6 +160,15 @@ const regressionSnippets = [
   'function pendingCounts',
   'function hint(',                // 常駐の説明文を畳む
   'const mmSize=',                 // 地図は押すと大きく開く
+  'const TRANSFER_TAG=',           // データ引き継ぎ
+  'function makeTransferCode',
+  'function readTransferCode',
+  'function applyTransfer',
+  'function undoTransfer',         // 読み込みを間違えても1つ前へ戻せる
+  'function applyMirror',          // 操作キーの左右
+  'body.mirStick #stickZone{',
+  'body.mirSkill #pad{',
+  'body.mirItem #railR{',
   'function toggleMap',
   'function revealAround',          // 部屋に入ってから地図に出る
   'ONEHAND_DMG:',                  // 片手は与ダメージを落とす

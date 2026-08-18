@@ -88,6 +88,17 @@ canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
 #bossF{background:linear-gradient(180deg,#f0404a,#5e0a12);color:#d8342c}
 
 #stickZone{position:absolute;left:30px;bottom:0;width:50%;height:46%;z-index:20}
+/* 操作キーの左右反転。移動キー・技・道具をそれぞれ独立に入れ替える。
+   利き手も持ち方も人によるので、3つまとめてではなく別々に選ばせる。
+   反転は left/right を入れ替えるだけにする。transform:scaleX(-1) だと
+   中の文字まで鏡文字になる。 */
+body.mirStick #stickZone{left:auto;right:30px}
+body.mirSkill #pad{right:auto;left:6px}
+body.mirSkill #s0{right:auto;left:6px}
+body.mirSkill #w1{right:auto;left:94px}
+body.mirSkill #w2{right:auto;left:78px}
+body.mirSkill #w3{right:auto;left:6px}
+body.mirItem #railR{right:auto;left:6px}
 #stick{position:absolute;width:114px;height:114px;border-radius:50%;
   left:96px;bottom:calc(env(safe-area-inset-bottom) + 54px);border:1px solid rgba(220,210,235,.15);background:rgba(25,21,34,.12);
   transform:translate(-50%,0);opacity:.22;transition:opacity .1s;pointer-events:none}
@@ -849,7 +860,9 @@ const CFG={
      探索する意味が薄れるので伏せてある。戻したくなったら true にするだけでよい。 */
   GUIDE_ARROWS:false,
   MM_SEE_R:3.2,          // 通路で足元を照らす半径。部屋は入った時点で全体が出る
-  ONEHAND_DMG:.67,       // 片手操作の与ダメージ。手動がいちばん強くあるべき
+  /* 操作を任せたぶんだけ与ダメージを落とす。手動 ＞ 片手 ＞ オート の順に強い。
+     片手は狙いを、オートは狙いと移動の両方を任せている。 */
+  ONEHAND_DMG:.67, AUTO_DMG:.50,
 };
 
 const TAU=Math.PI*2;
@@ -1670,7 +1683,7 @@ const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   bag:[],stash:[],gear:{},
   runT:0,hitstop:0,shake:0,shakeT:0,flash:0,paused:true,
   log:{runs:[]},tab:"prep",gearSub:"equip",skillPick:null,ptab:"drops",lvlQ:0,
-  settings:{map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0},admin:false,debug:false,debugFloor:1,adminOpts:{},chars:{},characterStates:{},avatars:{},
+  settings:{map:1,dmg:1,shake:1,dps:1,timer:1,stick:1,eco:0,mirStick:0,mirSkill:0,mirItem:0},admin:false,debug:false,debugFloor:1,adminOpts:{},chars:{},characterStates:{},avatars:{},
   combo:0,comboT:0,dmgLog:[],dps:0,startFloor:1,runGold:0,mapBig:false,
   inv:{filters:[],sort:"score",sellSel:[],sellRar:1},mats:{crystal:{},core:{}},stock:{},consumables:{},loadout:["mend1",null,null,null],runItems:[0,0,0,0],itemSlot:0,
   playerName:"",invSub:"gear",craftOpen:{},seenHints:{},formation:[],partyIndex:0,diveFloor:1,stamina:3,premium:0,profileAvatar:null,shopSub:"gacha",alloc:null,breakthroughs:{},weeklyCore:{week:"",bought:0},beginnerClaimed:false,prepMissionsOpen:false,invLegendOpen:false,skillLoadout:{},
@@ -2111,9 +2124,10 @@ function pDmg(base,mul){const p=S.p;
   return (rr(base[0],base[1])+p.d.atkFlat)*m;}
 function hurtE(e,dmg,crit,kx,ky,quiet){
   if(e.hp<=0)return;
-  /* 片手操作は与ダメージを落とす。移動しながら狙いを自動で合わせてくれるぶん、
-     手動より楽をしている。手動がいちばん強くなければ、丁寧に動かす意味が無くなる。 */
-  if(S.settings.controlMode==="onehand")dmg*=CFG.ONEHAND_DMG;
+  /* 任せたぶんだけ与ダメージを落とす。片手は狙いを、オートは狙いと移動を
+     自動に任せている。手動がいちばん強くなければ、丁寧に動かす意味が無くなる。 */
+  const md=S.settings.controlMode;
+  if(md==="onehand")dmg*=CFG.ONEHAND_DMG;else if(md==="auto")dmg*=CFG.AUTO_DMG;
   const resonanceNow=resonance(),match=elementMultiplier(resonanceNow.element,e.element),weak=match>1;
   dmg*=resonanceDamageMultiplier(resonanceNow,e.element,S.floor)*(e.boss?1:(e.eleRes&&e.eleRes[resonanceNow.element]||1));
   if(e.weaken>0)dmg/=(1-(e.weakenAmt||.25)); // 蝕み: 落とした防御分だけ被ダメージへ反映
@@ -3408,6 +3422,7 @@ function updHUD(){
   /* 技ボタンは手動のときだけ出す。以前は #s1..#s3 へ直接 display:block を書いており、
      .sk の display:flex を打ち消してコストの中央寄せが壊れていた。
      技名を円の外へ出した今は、名前ごと入っている #w1..#w3 を出し入れする。 */
+  applyMirror();
   $("stickZone").style.display=S.settings.controlMode==="auto"?"none":"block";
   for(let i=1;i<=3;i++)$("w"+i).style.display=S.settings.controlMode==="manual"?"":"none";
   $("s0").style.display=S.settings.controlMode==="manual"?"":"none";
@@ -4212,6 +4227,35 @@ function renderSettings(b,after,inDungeon){
   const presetHead=document.createElement("h3");presetHead.textContent="自動時の戦い方";b.appendChild(presetHead);
   const presetNote=document.createElement("div");presetNote.className="setNote";presetNote.textContent="片手・オートのとき、技とアイテムをどう使うか。";b.appendChild(presetNote);
   const presets=document.createElement("div");presets.className="compactGrid three";for(const [k,n] of [["aggressive","積極"],["conserve","温存"],["survival","生存優先"]]){const d=document.createElement("div");d.className="btn "+(S.settings.autoPreset===k?"gold":"gh");d.textContent=n;tapEl(d,()=>{S.settings.autoPreset=k;save();after();});presets.appendChild(d);}b.appendChild(presets);const edit=document.createElement("div");edit.className="btn gh";edit.textContent="条件スロット編集（任意）";tapEl(edit,()=>{S.settings.automationEditor=!S.settings.automationEditor;save();after();});b.appendChild(edit);if(S.settings.automationEditor){const note=document.createElement("div");note.className="st";note.textContent="6スロットを上から評価。利用可能な語彙: "+AUTOMATION_CONDITIONS.join(" / ");b.appendChild(note);}
+  /* 操作キーの左右。利き手も持ち方も人によるので、3つを別々に選ばせる。 */
+  const mirHead=document.createElement("h3");mirHead.textContent="操作キーの左右";b.appendChild(mirHead);
+  const mirNote=document.createElement("div");mirNote.className="setNote";
+  mirNote.textContent="それぞれ独立に入れ替えられます。3つとも入れ替えると、画面全体が左右逆の配置になります。";b.appendChild(mirNote);
+  {const mg=document.createElement("div");mg.className="compactGrid";
+   for(const [k,lbl] of MIRRORS){const d=document.createElement("div");
+     d.className="btn toggle"+(S.settings[k]?" on":"");
+     d.innerHTML=`${lbl}<em>${S.settings[k]?"左":"右"}</em>`;
+     tapEl(d,()=>{S.settings[k]=S.settings[k]?0:1;applyMirror();save();after();});
+     mg.appendChild(d);}
+   b.appendChild(mg);}
+
+  /* 端末やブラウザを変えても続けられるように、セーブを持ち出せる形にする。 */
+  const tHead=document.createElement("h3");tHead.textContent="データ引き継ぎ";b.appendChild(tHead);
+  const tNote=document.createElement("div");tNote.className="setNote";
+  tNote.textContent="進行・装備・通貨・仲間まで、保存されている内容をすべて1つに書き出します。機種変更や、ブラウザのデータを消す前に取っておいてください。";
+  b.appendChild(tNote);
+  {const tg=document.createElement("div");tg.className="compactGrid";
+   const mk=(label,fn)=>{const d=document.createElement("div");d.className="btn gh";d.textContent=label;tapEl(d,fn);tg.appendChild(d);};
+   mk("ファイルに保存",()=>saveTransferFile());
+   mk("ファイルから復元",()=>pickTransferFile(after));
+   mk("引き継ぎコードを見る",()=>showTransferCode(after));
+   mk("コードから復元",()=>openTransferInput(after));
+   b.appendChild(tg);}
+  if(hasTransferBackup()){const u=document.createElement("div");u.className="btn gh";
+    u.textContent="復元する前のデータに戻す";
+    tapEl(u,()=>ask("復元前に戻す","いま入っているデータは消えて、引き継ぎを行う直前の状態に戻ります。",()=>undoTransfer()));
+    b.appendChild(u);}
+
   const mh=document.createElement("h3");mh.textContent="記録・管理";b.appendChild(mh);
   {const misc=document.createElement("div");misc.className="compactGrid";const rec=document.createElement("div");rec.className="btn gh";rec.textContent="プレイ記録を見る";tapEl(rec,()=>openRecords(after));misc.appendChild(rec);const reset=document.createElement("div");reset.className="btn gh";reset.textContent="初期化";tapEl(reset,()=>ask("ゲームをリセット","すべての進行・装備・通貨が消えます。",()=>{localStorage.removeItem(KEY);location.reload();}));misc.appendChild(reset);b.appendChild(misc);}
   // ラベルの無い空欄が置いてあるだけで、何を入れる所なのか画面から分からなかった。
@@ -4243,6 +4287,66 @@ function renderSettings(b,after,inDungeon){
   const opts=[...AFF,{id:"agiF",n:"素早さ"},{id:"mpF",n:"MP"},{id:"lukF",n:"運"}],seen=new Set();for(const a of opts){if(seen.has(a.id))continue;seen.add(a.id);const d=document.createElement("div");d.className="btn gh";d.textContent=`${a.n} ${S.adminOpts[a.id]||0}${a.p?"%":""}`;tapEl(d,()=>number(a.n,S.adminOpts[a.id]||0,v=>S.adminOpts[a.id]=v));og.appendChild(d);}
 }
 
+/* ---------- データ引き継ぎの画面 ---------- */
+/* ファイルに落とす。93KBにもなるので、貼り付けよりこちらを主にする。 */
+async function saveTransferFile(){
+  let code;try{code=await makeTransferCode();}catch(e){return toast(e.message,"ng");}
+  const d=new Date(),z=n=>String(n).padStart(2,"0");
+  const name=`descent-${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}.txt`;
+  const url=URL.createObjectURL(new Blob([code],{type:"text/plain"}));
+  const a=document.createElement("a");a.href=url;a.download=name;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+  toast("引き継ぎファイルを保存しました","ok");}
+/* ファイルから読む。中身を見せてから確認する。 */
+function pickTransferFile(after){
+  const inp=document.createElement("input");inp.type="file";
+  inp.accept="text/plain,application/json,.txt,.json";
+  inp.style.display="none";document.body.appendChild(inp);
+  inp.addEventListener("change",async()=>{
+    const f=inp.files&&inp.files[0];inp.remove();if(!f)return;
+    let got;try{got=await readTransferCode(await f.text());}catch(e){return toast(e.message,"ng");}
+    confirmTransfer(got);});
+  inp.click();}
+/* コードを出す。全文を選べる形で置き、あわせて写しも取る。 */
+async function showTransferCode(after){
+  let code;try{code=await makeTransferCode();}catch(e){return toast(e.message,"ng");}
+  invMenu("引き継ぎコード",c=>{
+    const n=document.createElement("div");n.className="st";
+    n.innerHTML=`このコードだけで、いまの進行をそのまま別の端末へ移せます（${code.length.toLocaleString()}文字）。`
+      +`<br><b style="color:var(--gold)">他人に渡さないでください。</b>渡した相手が同じデータで遊べてしまいます。`;
+    c.appendChild(n);
+    const ta=document.createElement("textarea");ta.readOnly=true;ta.value=code;
+    ta.style.cssText="width:100%;height:120px;margin-top:9px;background:#0a0810;border:1px solid var(--line);color:var(--ink2);font-size:11px;word-break:break-all";
+    c.appendChild(ta);
+    const cp=document.createElement("div");cp.className="btn gold";cp.textContent="コードを写す";
+    tapEl(cp,async()=>{
+      try{await navigator.clipboard.writeText(code);toast("コードを写しました","ok");}
+      catch(e){ta.select();toast("長押しして選び、写してください","ng");}});
+    c.appendChild(cp);
+    const f=document.createElement("div");f.className="btn gh";f.textContent="ファイルに保存";
+    tapEl(f,()=>saveTransferFile());c.appendChild(f);},after);}
+/* コードを貼って読む。 */
+function openTransferInput(after){
+  invMenu("コードから復元",c=>{
+    const n=document.createElement("div");n.className="st";
+    n.textContent="引き継ぎコードを貼り付けてください。読み込む前に中身を確かめられます。";c.appendChild(n);
+    const ta=document.createElement("textarea");ta.placeholder="DESCENT1:...";
+    ta.style.cssText="width:100%;height:120px;margin-top:9px;background:#0a0810;border:1px solid var(--line);color:var(--ink);font-size:11px;word-break:break-all";
+    c.appendChild(ta);
+    const ok=document.createElement("div");ok.className="btn gold";ok.textContent="中身を確かめる";
+    tapEl(ok,async()=>{
+      let got;try{got=await readTransferCode(ta.value);}catch(e){return toast(e.message,"ng");}
+      $("itPop").classList.remove("on");confirmTransfer(got);});
+    c.appendChild(ok);},after);}
+/* 押す前に、何が入ってくるのかと、何が消えるのかを両方出す。 */
+function confirmTransfer(got){
+  const now=(()=>{try{return JSON.parse(localStorage.getItem(KEY)||"null");}catch(e){return null;}})();
+  ask("このデータを読み込む",
+    `読み込む内容\n${transferSummary(got.data)}\n\n`
+    +(now?`いまのデータ\n${transferSummary(now)}\n\nいまのデータは上書きされます（1つ前だけは「復元する前のデータに戻す」で戻せます）。`
+        :"いまのデータはありません。"),
+    ()=>applyTransfer(got.json));}
 function openRecords(after=openTown){const r=S.log.runs;invMenu("記録",c=>{
   const d=document.createElement("div");d.className="card";d.innerHTML=`
     <div class="stat"><span>最深到達</span><b>${S.deepest}</b></div><div class="stat"><span>潜行回数</span><b>${r.length}</b></div>
@@ -5057,7 +5161,75 @@ function beginRun(fl){
   enterFloor(fl);updBuffs();updHUD();}
 
 /* ---------- 保存 ---------- */
-const KEY="descent_v5";
+const KEY="descent_v5",BAK_KEY="descent_v5_before_restore";
+
+/* ---------- データ引き継ぎ ----------
+   端末やブラウザを変える／作り直すたびに1から、では続けられない。
+   セーブそのものを1本の文字列に畳んで、書き出しと読み込みの両方を用意する。
+   保存先は localStorage しかなく、これは出所（URL）ごとに別物なので、
+   URLが変われば中身は引き継げない。持ち出せる形にしておくのが唯一の対策になる。
+
+   形式:  DESCENT1:G:<base64>   G=gzip圧縮あり / P=そのまま
+   圧縮は CompressionStream（ブラウザ標準）だけを使う。外部ライブラリは入れない。 */
+const TRANSFER_TAG="DESCENT1:";
+const b64enc=bytes=>{let s="";const CH=0x8000;
+  for(let i=0;i<bytes.length;i+=CH)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+CH));
+  return btoa(s);};                       // 一気に spread するとスタックが溢れる
+const b64dec=str=>{const bin=atob(str),out=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)out[i]=bin.charCodeAt(i);return out;};
+async function squeeze(bytes,mode){
+  const Ctor=mode==="in"?self.CompressionStream:self.DecompressionStream;
+  if(!Ctor)return null;
+  const st=new Ctor("gzip");
+  /* 壊れたコードを渡すと writable 側も落ちる。受けておかないと
+     ページ全体の未処理エラーとして表に出てしまう（呼び出し側で捕まえている）。 */
+  const w=st.writable.getWriter();
+  w.write(bytes).catch(()=>{});w.close().catch(()=>{});
+  const chunks=[];const r=st.readable.getReader();
+  for(;;){const {value,done}=await r.read();if(done)break;chunks.push(value);}
+  let n=0;for(const c of chunks)n+=c.length;
+  const out=new Uint8Array(n);let o=0;for(const c of chunks){out.set(c,o);o+=c.length;}
+  return out;}
+async function makeTransferCode(){
+  save();                                  // 書き出す前に今の状態を確定させる
+  const raw=localStorage.getItem(KEY)||"";
+  if(!raw)throw new Error("保存されたデータがありません");
+  const bytes=new TextEncoder().encode(raw);
+  const gz=await squeeze(bytes,"in");
+  return TRANSFER_TAG+(gz?"G:"+b64enc(gz):"P:"+b64enc(bytes));}
+async function readTransferCode(code){
+  const t=(code||"").replace(/\s+/g,"");
+  if(!t.startsWith(TRANSFER_TAG))throw new Error("引き継ぎコードではありません");
+  const body=t.slice(TRANSFER_TAG.length),mark=body[0],data=body.slice(2);
+  if(body[1]!==":"||(mark!=="G"&&mark!=="P"))throw new Error("コードの形式が違います");
+  let bytes;try{bytes=b64dec(data);}catch(e){throw new Error("コードが途中で切れています");}
+  if(mark==="G"){
+    let un;
+    /* 展開の失敗はブラウザの英語のまま出てしまう。貼り付けが途中で切れた時に
+       いちばん起きるので、何をすればよいかが分かる文言に置き換える。 */
+    try{un=await squeeze(bytes,"out");}catch(e){throw new Error("コードが途中で切れています。全文を貼り付けてください");}
+    if(!un)throw new Error("この端末では圧縮された引き継ぎコードを読めません");
+    bytes=un;}
+  const json=new TextDecoder().decode(bytes);
+  let d;try{d=JSON.parse(json);}catch(e){throw new Error("コードが壊れています");}
+  /* このゲームのセーブかどうかを見る。別のゲームの文字列で上書きさせない。 */
+  if(!d||typeof d!=="object"||!("base" in d)||!("deepest" in d))
+    throw new Error("このゲームのデータではありません");
+  return {json,data:d};}
+/* 引き継ぎ前のデータは1つだけ取っておく。読み込むコードを間違えても戻せる。 */
+function applyTransfer(json){
+  const now=localStorage.getItem(KEY);
+  if(now)try{localStorage.setItem(BAK_KEY,now);}catch(e){}
+  localStorage.setItem(KEY,json);
+  location.reload();}
+const hasTransferBackup=()=>!!localStorage.getItem(BAK_KEY);
+function undoTransfer(){const bak=localStorage.getItem(BAK_KEY);if(!bak)return false;
+  localStorage.setItem(KEY,bak);localStorage.removeItem(BAK_KEY);location.reload();return true;}
+/* コードの中身を、押す前に確かめられる形にする。 */
+const transferSummary=d=>{
+  const chars=(d.unlockedCharacters||[]).length,stash=(d.stash||[]).length;
+  return `深度${d.deepest||1} / Lv${(d.base||{}).lv||1} / ${(d.gold||0).toLocaleString()}G`
+    +` / ジェム${d.premium||0} / 仲間${chars||1}人 / 倉庫${stash}個`;};
 function save(){storeActiveCharacter();try{localStorage.setItem(KEY,JSON.stringify({cls:S.cls,deepest:S.deepest,
   gold:S.gold,stash:S.stash,gear:S.gear,base:S.base,log:S.log,mats:S.mats,stock:S.stock,consumables:S.consumables,loadout:S.loadout,consumableVersion:1,
   matTierVersion:2,
@@ -5105,7 +5277,7 @@ function load(){try{
   {const OLD={heal:"mend1",healG:"mend3",power:"edge1",hard:"ward1",focus:"clear1",gale:"swift1",
     sonic:"quake1",shockTrap:"bind1",weaken:"rot1",torch:"lamp1",incense:"scry1",returnScroll:"recall1"};
    S.loadout=S.loadout.map(k=>!k?null:CONSUMABLES[k]?k:(OLD[k]||null));}while(S.loadout.length<loadoutCapacity())S.loadout.push(null);S.runItems=[0,0,0,0];S.log=d.log||{runs:[]};
-  S.settings=Object.assign({map:1,dmg:1,shake:1,dps:1,loot:1,timer:1,stick:1,eco:0,controlMode:"manual",autoPreset:"aggressive",automationEditor:0},d.settings||{});
+  S.settings=Object.assign({map:1,dmg:1,shake:1,dps:1,timer:1,stick:1,eco:0,mirStick:0,mirSkill:0,mirItem:0,controlMode:"manual",autoPreset:"aggressive",automationEditor:0},d.settings||{});
   S.admin=!!d.admin;S.debug=!!d.debug;S.debugFloor=numAt(d.debugFloor,1,1);S.adminOpts=d.adminOpts||{};S.chars=d.chars||{};S.characterStates=d.characterStates||{};S.avatars=d.avatars||{};S.breakthroughs=d.breakthroughs||{};S.breakthroughProgress=d.breakthroughProgress||{};S.weeklyCore=d.weeklyCore||{week:"",bought:0};S.beginnerClaimed=!!d.beginnerClaimed;S.prepMissionsOpen=!!d.prepMissionsOpen;S.invLegendOpen=!!d.invLegendOpen;S.playerName=typeof d.playerName==="string"?d.playerName:"";S.invSub=d.invSub||"gear";S.skillLoadout=d.skillLoadout||{};
   S.craftOpen=d.craftOpen||{};S.seenHints=d.seenHints||{};
   /* 旧セーブは職ごとに1つだけ持っていた。その職の先頭キャラクターの設定として引き継ぐ。 */
@@ -5178,14 +5350,25 @@ for(let i=0;i<4;i++)holdBtn($("s"+i),i);
    アイテムは1タップで使える（長押しの扇は廃止）。枠が5つ以上のときは少し小さくして、
    縦に伸びすぎて上部HUDへ食い込まないようにする。 */
 const CONTROL_MODES=[["manual","手動"],["onehand","片手"],["auto","オート"]];
-function autoAllowed(){return S.floor<S.deepest;}   // 未到達の深度ではオートを使わせない
+function autoAllowed(){return S.floor<S.deepest;}   // 未到達の深度は自力で越えてほしい
+/* 切替は 手動 → 片手 → オート の3つを必ず一巡する。
+   以前は未到達の深度でオートを黙って飛ばしていたので、
+   最深で潜っている間は2択にしか見えず「オートが無い」と読めた。
+   飛ばすのをやめて、代わりに理由を出す。 */
+/* 左右反転を body の class へ写す。CSS 側で left/right を入れ替える。 */
+const MIRRORS=[["mirStick","移動キー"],["mirSkill","技"],["mirItem","道具"]];
+function applyMirror(){
+  for(const [k] of MIRRORS)document.body.classList.toggle(k,!!S.settings[k]);}
 function cycleControlMode(){
   const order=CONTROL_MODES.map(x=>x[0]);let i=order.indexOf(S.settings.controlMode||"manual");
-  for(let n=0;n<order.length;n++){i=(i+1)%order.length;
-    if(order[i]!=="auto"||autoAllowed())break;}
+  i=(i+1)%order.length;
   S.settings.controlMode=order[i];save();
   const label=(CONTROL_MODES.find(x=>x[0]===order[i])||[])[1];
-  toast("操作: "+label);IN.dx=IN.dy=0;renderRail();updHUD();}
+  const cut=order[i]==="onehand"?CFG.ONEHAND_DMG:order[i]==="auto"?CFG.AUTO_DMG:1;
+  toast("操作: "+label+(cut<1?`（与ダメージ ${Math.round((1-cut)*100)}%減）`:"")
+    +(order[i]==="auto"&&!autoAllowed()?" — 未到達の深度です":""),
+    order[i]==="auto"&&!autoAllowed()?"ng":"ok");
+  IN.dx=IN.dy=0;renderRail();updHUD();}
 function renderRail(){
   const rail=$("railR");if(!rail)return;
   /* 一辺は44px。40pxで作ると全体規則の min-height:44px に引き伸ばされ、
@@ -5245,6 +5428,7 @@ for(const t of document.querySelectorAll("#scPause .tab"))tapEl(t,()=>{S.ptab=t.
    練習中の再開は、もう一度練習部屋の頭から始める。 */
 const TRAINING_PHASES=["training_intro","training_cleave","training_dash","training_slam","training_potion","training_return"];
 const freshStart=!load();
+applyMirror();   // 反転設定は起動した時点で効かせる（潜るまで待たせない）
 if(freshStart){S.cls="warrior";S.avatars.warrior="gai";S.formation=["warrior:gai"];S.profileAvatar="warrior:gai";S.gear={};for(const k of SLOTK)S.gear[k]=null;S.p=newPlayer();save();beginTraining();}
 else{if(!S.formation.length)S.formation=["warrior:gai"];S.p=newPlayer();
   if(TRAINING_PHASES.includes((S.tutorial||{}).phase)){S.tutorial={phase:"training_intro",gearIndex:0};beginTraining();}

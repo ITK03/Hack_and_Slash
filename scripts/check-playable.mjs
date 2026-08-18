@@ -551,7 +551,8 @@ await page.goto(base); await page.waitForTimeout(500);
   notes.push(`  地図: 開始 ${hud.roomsSeen}/${hud.roomsTotal}部屋（床の${Math.round(hud.seenAtStart / hud.floorTiles * 100)}%）→ 入室で ${hud.roomsSeenAfter}部屋 / 押すと ${hud.small}→${hud.big}px`);
 }
 
-/* 2p3. 片手操作は手動より与ダメージが低いこと。 */
+/* 2p3. 操作を任せるほど与ダメージが下がること。手動 ＞ 片手 ＞ オート。
+   切替は3つを必ず一巡すること（最深で潜っている間もオートに手が届く）。 */
 {
   const modes = await page.evaluate(() => {
     beginRun(20); S.paused = false;
@@ -561,13 +562,97 @@ await page.goto(base); await page.waitForTimeout(500);
       const before = e.hp; hurtE(e, 1000, false, 0, 0, true);
       return Math.round(before - e.hp);
     };
-    return { manual: hit('manual'), onehand: hit('onehand'), auto: hit('auto') };
+    const dmg = { manual: hit('manual'), onehand: hit('onehand'), auto: hit('auto') };
+    /* 未到達の深度でも、押していけばオートまで回ること */
+    S.floor = S.deepest = 20; S.settings.controlMode = 'manual';
+    const cycle = []; for (let i = 0; i < 3; i++) { cycleControlMode(); cycle.push(S.settings.controlMode); }
+    return { dmg, cycle, cfg: { one: CFG.ONEHAND_DMG, auto: CFG.AUTO_DMG } };
   });
-  const want = Math.round(1000 * 0.67 / 1000 * 100) / 100;
-  const ratio = modes.onehand / modes.manual;
-  if (!(ratio > .6 && ratio < .74)) problems.push(`片手の与ダメージが手動の ${(ratio * 100).toFixed(0)}%（${Math.round(want * 100)}%前後のはず）`);
-  if (modes.auto !== modes.manual) problems.push(`オートの与ダメージが手動と違う（${modes.auto} / ${modes.manual}）`);
-  notes.push(`与ダメージ: 手動${modes.manual} / 片手${modes.onehand}（${(ratio * 100).toFixed(0)}%）/ オート${modes.auto}`);
+  const d = modes.dmg;
+  const r1 = d.onehand / d.manual, r2 = d.auto / d.manual;
+  const near = (got, want) => Math.abs(got - want) < .02;
+  if (!near(r1, modes.cfg.one)) problems.push(`片手の与ダメージが手動の ${(r1 * 100).toFixed(0)}%（${Math.round(modes.cfg.one * 100)}%のはず）`);
+  if (!near(r2, modes.cfg.auto)) problems.push(`オートの与ダメージが手動の ${(r2 * 100).toFixed(0)}%（${Math.round(modes.cfg.auto * 100)}%のはず）`);
+  if (!(d.manual > d.onehand && d.onehand > d.auto)) problems.push(`手動 ＞ 片手 ＞ オート になっていない（${d.manual}/${d.onehand}/${d.auto}）`);
+  if (modes.cycle.join() !== 'onehand,auto,manual') problems.push(`切替が3つを一巡しない（${modes.cycle.join(' → ')}）`);
+  notes.push(`与ダメージ: 手動${d.manual} / 片手${d.onehand}（${(r1 * 100).toFixed(0)}%）/ オート${d.auto}（${(r2 * 100).toFixed(0)}%）— 切替 手動→${modes.cycle.join('→')}`);
+}
+
+/* 2p4. 操作キーの左右反転。3つを別々に入れ替えられること。 */
+{
+  const mir = await page.evaluate(() => {
+    beginRun(20); S.paused = false;
+    /* 端ではなく中心で見る。移動キーの当たり判定は画面半分の幅があり、
+       左端だけを見ると入れ替えても「まだ左寄り」に見える。 */
+    const box = id => { const r = document.getElementById(id).getBoundingClientRect(); return Math.round(r.left + r.width / 2); };
+    const read = () => ({ stick: box('stickZone'), skill: box('s0'), item: box('railR') });
+    for (const [k] of MIRRORS) S.settings[k] = 0;
+    applyMirror(); const right = read();
+    const each = {};
+    for (const [k] of MIRRORS) {
+      for (const [j] of MIRRORS) S.settings[j] = 0;
+      S.settings[k] = 1; applyMirror(); each[k] = read();
+    }
+    for (const [k] of MIRRORS) S.settings[k] = 1;
+    applyMirror(); const all = read();
+    for (const [k] of MIRRORS) S.settings[k] = 0;
+    applyMirror();
+    return { right, each, all, mid: innerWidth / 2 };
+  });
+  /* 移動キーは既定が左、技と道具は既定が右。入れ替えたら反対側へ渡ること。 */
+  const partOf = { mirStick: 'stick', mirSkill: 'skill', mirItem: 'item' };
+  const side = (x, part) => (part === 'stick' ? x < mir.mid : x > mir.mid);   // 既定の側にいるか（中心で判定）
+  for (const [key, part] of Object.entries(partOf)) {
+    const moved = mir.each[key];
+    if (side(moved[part], part)) problems.push(`${key} を入れ替えても ${part} が反対側へ行かない（${mir.right[part]} → ${moved[part]}）`);
+    for (const [k2, p2] of Object.entries(partOf)) {
+      if (k2 === key) continue;
+      if (moved[p2] !== mir.right[p2]) problems.push(`${key} を入れ替えると ${p2} まで動く`);
+    }
+  }
+  for (const [key, part] of Object.entries(partOf))
+    if (side(mir.all[part], part)) problems.push(`3つとも入れ替えても ${part} が動かない`);
+  notes.push(`操作キーの左右: 移動キー/技/道具を別々に反転（中心 既定 ${Object.values(mir.right).join('/')} → 全反転 ${Object.values(mir.all).join('/')}）`);
+}
+
+/* 2p5. データ引き継ぎ。書き出したコードから、同じ内容が戻ること。 */
+{
+  const xfer = await page.evaluate(async () => {
+    S.deepest = 137; S.gold = 987654; S.premium = 4321;
+    S.base = { lv: 88, xp: 12, pts: 7, str: 300, mag: 5, def: 120, agi: 90, spi: 4, luk: 3, xpCurveV2: true };
+    S.unlockedCharacters = allRoster().map(x => x.k + ':' + x.ch.id);
+    S.stash = []; for (let i = 0; i < 120; i++) S.stash.push(makeItem(60 + i, 0, 0, 3));
+    S.settings.mirStick = 1;
+    save();
+    const before = localStorage.getItem(KEY);
+    const code = await makeTransferCode();
+    const got = await readTransferCode(code);
+    const bad = async t => { try { await readTransferCode(t); return null; } catch (e) { return e.message; } };
+    return {
+      rawLen: before.length, codeLen: code.length,
+      compressed: code.startsWith('DESCENT1:G:'),
+      same: got.json === before,
+      summary: transferSummary(got.data),
+      /* 貼り付け事故に強いこと・別物を弾くこと */
+      whitespaceOk: (await readTransferCode(code.slice(0, 40) + '\n \n' + code.slice(40))).json === before,
+      rejects: {
+        空: await bad(''), 別物: await bad('hello'),
+        切れ: await bad(code.slice(0, code.length - 500)),
+        別ゲーム: await bad('DESCENT1:P:' + btoa('{"foo":1}')),
+      },
+    };
+  });
+  if (!xfer.same) problems.push('引き継ぎコードから元と同じデータが戻らない');
+  if (!xfer.compressed) problems.push('引き継ぎコードが圧縮されていない');
+  if (!xfer.whitespaceOk) problems.push('改行が混じった引き継ぎコードを読めない');
+  if (!(xfer.codeLen < xfer.rawLen / 2)) problems.push(`引き継ぎコードが縮んでいない（${xfer.rawLen}→${xfer.codeLen}）`);
+  for (const [k, msg] of Object.entries(xfer.rejects)) {
+    if (!msg) problems.push(`引き継ぎコードの検査が「${k}」を素通しする`);
+    else if (/[A-Za-z]{6}/.test(msg)) problems.push(`「${k}」の断り書きが英語のまま: ${msg}`);
+  }
+  if (!/深度137/.test(xfer.summary)) problems.push(`読み込む前の中身が出ない（${xfer.summary}）`);
+  notes.push(`引き継ぎ: ${xfer.rawLen.toLocaleString()}字 → ${xfer.codeLen.toLocaleString()}字（圧縮）→ 完全一致`);
+  notes.push(`  読み込み前の中身: ${xfer.summary} / 空・別物・切れ・別ゲームは日本語で断る`);
 }
 
 /* 2p. 戦闘力。装備を替えると増減し、強い物ほど大きいこと。
@@ -591,8 +676,13 @@ await page.goto(base); await page.waitForTimeout(500);
       }
       return null;
     };
-    const weak = pick(20, 0, 'atk'), strong = pick(300, 4, 'atk'), staff = pick(300, 4, 'matk');
+    const weak = pick(20, 0, 'atk'), strong = pick(300, 4, 'atk');
     const withWeak = powerWith('weapon', weak), withStrong = powerWith('weapon', strong);
+    /* 主ステータスだけを差し替えた同じ武器と比べる。別々に引いた2本だと、
+       付いたオプションの当たり外れの方が主ステータスより大きく出て、
+       「魔力の杖の方が強い」がふつうに起きる（同じ罠を2度踏んだ）。
+       mainV は main.id を見ないので、id だけ替えれば他は完全に同じになる。 */
+    const staff = { ...strong, main: { ...strong.main, id: 'matk' } };
     const withStaff = powerWith('weapon', staff);
     // 一括着用で戦闘力が上がること
     S.stash = []; for (let i = 0; i < 30; i++) S.stash.push(makeItem(150 + i * 4, 0, 0, 3));
@@ -602,10 +692,10 @@ await page.goto(base); await page.waitForTimeout(500);
   if (!(cp.bare > 0)) problems.push('素手の戦闘力が0');
   if (!(cp.withWeak > cp.bare)) problems.push('装備しても戦闘力が上がらない');
   if (!(cp.withStrong > cp.withWeak)) problems.push('強い装備のほうが戦闘力が低い');
-  if (!(cp.withStaff < cp.withStrong)) problems.push('魔力0の戦士に魔力武器が攻撃武器と同等以上に出る');
+  if (!(cp.withStaff < cp.withStrong)) problems.push(`魔力0の戦士に、主ステータスを魔力へ替えただけの武器が同等以上に出る（${cp.withStaff} / ${cp.withStrong}）`);
   if (!(cp.after > cp.before)) problems.push(`おすすめ着用で戦闘力が上がらない（${cp.before}→${cp.after}）`);
   notes.push(`戦闘力: 素手${cp.bare} / 並装備${cp.withWeak} / 伝説${cp.withStrong} — 一括着用 ${cp.before}→${cp.after}`);
-  notes.push(`  戦士(魔力0)に伝説の魔力武器: ${cp.withStaff}（伝説の攻撃武器 ${cp.withStrong} より低い）`);
+  notes.push(`  同じ伝説武器の主ステータスを攻撃→魔力に替えると: ${cp.withStrong} → ${cp.withStaff}（魔力0の戦士では効かない）`);
 }
 
 /* 3. 帰還して拠点へ戻れること */
