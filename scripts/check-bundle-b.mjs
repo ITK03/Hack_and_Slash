@@ -92,12 +92,17 @@ const report = game.run(() => {
       S.p.x = target.x - Math.cos(angle) * 1.15; S.p.y = target.y - Math.sin(angle) * 1.15; S.p.face = angle;
       if (mode === 'manual') for (let i = 0; i < 3; i++) if (S.p.cds[i] <= 0 && S.p.mp >= activeSkills()[i].c) useSkill(i);
       if (S.p.itemCd <= 0) {
-        const usable = S.loadout.findIndex((key, index) => S.runItems[index] && (
-          (key === 'mend1' && S.p.hp < S.p.max * .7) ||
-          (CONSUMABLES[key].buff && !S.p.itemBuffs[CONSUMABLES[key].buff]) ||
-          (key === 'quake1' && S.enemies.length >= 2) ||
-          ['bind1', 'rot1', 'scry1'].includes(key)
-        ));
+        /* 品目のIDではなく効果で判断する。'mend1' と書いていたため、上位段の
+           mend3 を持たせても一度も飲まず、上位段を不当に低く測っていた
+           （quake1 も同じで quake2 が使われていなかった）。 */
+        const usable = S.loadout.findIndex((key, index) => {
+          if (!S.runItems[index]) return false;
+          const def = CONSUMABLES[key];
+          if (def.heal) return S.p.hp < S.p.max * .7;
+          if (def.buff) return !S.p.itemBuffs[def.buff];
+          if (def.stun) return S.enemies.length >= 2;
+          return def.trap || def.weaken || def.reveal;
+        });
         if (usable >= 0) useItem(usable);
       }
       update(.05);
@@ -153,10 +158,12 @@ const report = game.run(() => {
   /* 到達深度の引き算は段差が粗く、死亡率が10ポイント動いても境界が動かないことがある。
      同じ深度での死亡率を直接比べる（消耗品検査と同じ理由・同じ方法）。 */
   const atDepth = tacticalNone.depth;
+  /* 試行数を増やす。64回だと死亡率1つの揺れが±6ptあり、判定している差の
+     幅（+1〜+15pt）と同じ大きさのノイズを乗せたまま合否を出すことになる。 */
   const sameDepth = { depth: atDepth,
-    none: cycleDeathRate(atDepth, 'manual', 'none', 64),
-    low: cycleDeathRate(atDepth, 'manual', 'full', 64),
-    high: cycleDeathRate(atDepth, 'manual', 'fullHigh', 64) };
+    none: cycleDeathRate(atDepth, 'manual', 'none', 192),
+    low: cycleDeathRate(atDepth, 'manual', 'full', 192),
+    high: cycleDeathRate(atDepth, 'manual', 'fullHigh', 192) };
   sameDepth.lowGain = sameDepth.none - sameDepth.low;
   sameDepth.highGain = sameDepth.none - sameDepth.high;
   const contributionKeys = ['quake1', 'bind1', 'rot1', 'lamp1', 'scry1', 'recall1', 'exploration'];
@@ -192,9 +199,14 @@ for (const [mode, label] of [['auto', '完全オート'], ['onehand', '片手']]
 if (report.operation.auto.stillSeconds > 20) throw new Error(`完全オートの静止 ${report.operation.auto.stillSeconds}秒が20秒を超えている`);
 { const sd = report.tactical.sameDepth, pt = x => (x * 100).toFixed(1);
   console.log(`深度${sd.depth}での死亡率 なし${pt(sd.none)}% / 1段目${pt(sd.low)}%(-${pt(sd.lowGain)}pt) / 上位段${pt(sd.high)}%(-${pt(sd.highGain)}pt)`);
-  // 1段目は結晶だけで作れるので寄与を小さく抑える。上位段は固有素材を要求する代わりにはっきり効く。
-  if (sd.lowGain < .01 || sd.lowGain > .15) throw new Error(`1段目の戦術込み死亡率改善 ${pt(sd.lowGain)}pt は+1〜+15ptでない`);
+  /* 1段目は結晶だけで作れるので寄与を抑える。上位段は固有素材を要求する代わりにはっきり効く。
+     1段目の上限は絶対値（旧: 15pt）ではなく上位段との比で見る。守りたいのは
+     「上位品を作る動機が残ること」であって、pt の絶対値ではない。敵の攻撃力を
+     1.8倍にすると、同じ軽減率でも防げる量が増えて絶対値は自然に大きくなり、
+     絶対値の上限は難易度を動かすたびに意味を失う。 */
+  if (sd.lowGain < .01) throw new Error(`1段目の戦術込み死亡率改善 ${pt(sd.lowGain)}pt が小さすぎる（持ち込む意味が無い）`);
   if (sd.highGain < .06 || sd.highGain > .40) throw new Error(`上位段の戦術込み死亡率改善 ${pt(sd.highGain)}pt は+6〜+40ptでない`);
+  if (sd.lowGain > sd.highGain * .70) throw new Error(`1段目が上位段の ${(sd.lowGain / sd.highGain * 100).toFixed(0)}% の効き（70%以下であること。上位品を作る動機が消える）`);
   if (sd.highGain - sd.lowGain < .03) throw new Error(`上位段と1段目の差 ${pt(sd.highGain - sd.lowGain)}pt が小さい（上位品を作る動機にならない）`); }
 // 守るべき設計不変条件は「手動が最も強い」こと。片手と完全オートは戦闘部分が
 // 同じ自動化なので、両者のあいだに厳密な大小を要求すると調整が恣意的になる。

@@ -172,6 +172,15 @@ const regressionSnippets = [
   'function toggleMap',
   'function revealAround',          // 部屋に入ってから地図に出る
   'ONEHAND_DMG:',                  // 片手は与ダメージを落とす
+  'function gearDepth',            // 階層に見合わない装備では通らない
+  'function gearReach',
+  'function gearOutMul',
+  'function gearInMul',
+  'function gearFitText',          // 追いつき具合を隠さない
+  '.diveFit{',
+  'const bossRageMul=',            // ボスは長引くほど強くなる
+  'BOSS_ENRAGE_REGEN:',
+  'ENEMY_DMG_MUL:',
   'id="hurtVig"',
   'min-height:44px',
   'const charFace=',               // キャラは「●」ではなく職業の姿

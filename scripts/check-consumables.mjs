@@ -23,7 +23,10 @@ const result=game.run(()=>{
     そこで同一深度での死亡率を直接比べる。属性検査と同じ理由で同じ方法を採る。 */
  const depths=[none-5,none,none+5].filter(d=>d>=5);
  const at=depths.map(depth=>{
-   const a=rate(depth,null,64),b=rate(depth,'low',64),c=rate(depth,'high',64);
+   /* 試行数は多めに取る。64回だと1つの死亡率の揺れが±6ptほどあり、
+      その差である「段階差」は±9ptも揺れる。判定の閾値(8pt)と同じ大きさの
+      ノイズを乗せたまま合否を出していた。192回にすれば揺れは半分以下になる。 */
+   const a=rate(depth,null,192),b=rate(depth,'low',192),c=rate(depth,'high',192);
    return {depth,無し:a,一段目:b,三段目:c,一段目差:a-b,三段目差:a-c,段階差:b-c};});
  const avg=k=>at.reduce((x,r)=>x+r[k],0)/at.length;
  return {crystals,heals:crystals/CONSUMABLES.mend1.craft.crystal,none,at,

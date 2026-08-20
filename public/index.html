@@ -348,10 +348,15 @@ body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
 /* 出撃バー。潜るボタンは拠点タブの最下段にあり、日替わり任務・限界突破・編成・
    持ち込み・開始階層を全部スクロールしないと届かなかった。タブバーの上に常駐させ、
    編成や持ち込みをいじった直後でもそのまま出撃できるようにする。 */
-#diveBar{display:none;flex:0 0 auto;align-items:center;gap:9px;
+#diveBar{display:none;flex:0 0 auto;align-items:center;gap:9px;flex-wrap:wrap;
   padding:9px 12px calc(env(safe-area-inset-bottom) * .35 + 9px);
   background:var(--bg2);border-top:1px solid var(--line)}
 #diveBar.on{display:flex}
+/* 装備がその深度に追いついているか。潜る前にここで分かるようにする。
+   隠れた倍率のままだと「なぜ通らないのか」が読めず、装備を替えるという
+   答えに辿り着けない。行はボタンの上に置く（order:-1）。 */
+.diveFit{flex:1 0 100%;order:-1;font-size:11px;font-weight:800;line-height:1.3;
+  margin-bottom:1px;letter-spacing:.01em}
 #diveBar .step{display:flex;align-items:center;gap:4px;flex:0 0 auto}
 #diveBar .step .btn{margin:0;padding:9px 0;width:34px;text-align:center;font-size:15px;font-weight:900}
 #diveBar .fl{min-width:74px;min-height:44px;display:flex;flex-direction:column;
@@ -863,6 +868,32 @@ const CFG={
   /* 操作を任せたぶんだけ与ダメージを落とす。手動 ＞ 片手 ＞ オート の順に強い。
      片手は狙いを、オートは狙いと移動の両方を任せている。 */
   ONEHAND_DMG:.67, AUTO_DMG:.50,
+  /* 装備の深度と潜っている深度の差。装備が階層に追いついていないほど、
+     与ダメージが落ち、被ダメージが増える。
+     これが無いと、レベルさえ上げれば深度20の拾い物のまま50階のボスに勝ててしまう
+     （実測: Lv60・深度20・3段目の道具で勝率92%）。装備で潜るゲームにならない。 */
+  /* 深度20の装備と深度50の装備で、50階ボスを削り切る時間が 53秒 対 22秒 しか
+     違わなかった。2.4倍では「粘れば勝てる」を潰せない。差そのものを広げる。 */
+  GEAR_GAP_MIN:.15,      // 装備が全く追いついていない時に残る与ダメージ
+  GEAR_GAP_POW:1.6,      // 追いつき具合の効き。1で線形、大きいほど厳しい
+  GEAR_GAP_FREE:8,       // この深度までは差を見ない（序盤は装備が揃わない）
+  /* 全体の手ごたえを1か所で動かすつまみ。上げるのは攻撃力だけにする。
+     HPだけ増やしても戦いが長引くだけで「時間をかければ勝てる」は変わらない。
+     さらに、敵HPを1.15倍にしたら属性を合わせる価値が落ちた（実測: 有利帯を
+     合わせたビルドで片付ける速さが 無属性の1.50倍 → 1.25倍）。一撃で倒せていた
+     相手が倒せなくなり、共鳴の4.5倍が「もう一振り」に吸われるため。
+     攻撃力だけを上げれば属性の価値は 1.50倍のまま動かない（実測で確認）。 */
+  ENEMY_HP_MUL:1.00, ENEMY_DMG_MUL:1.80,
+  /* ボスの激昂。一定時間を過ぎると与ダメージが上がり続ける。
+     これが無いと、当たらないように立ち回るだけで、どんな装備でも
+     時間をかければ必ず削り切れる（実測: 無傷なら深度20の装備でも
+     50階ボスを45秒で88%削れた）。長引かせる選択そのものを潰す。 */
+  BOSS_ENRAGE_AT:45, BOSS_ENRAGE_RATE:.035,
+  /* 激昂したボスは傷が塞がり始める。攻撃力を上げるだけでは、被弾しない
+     立ち回りができる人には何の歯止めにもならない（実測: 無傷なら深度20の
+     装備でも87秒で倒し切れた）。回復が上回れば、火力が足りない装備では
+     何時間かけても倒せない。避ける腕ではなく装備が関門になる。 */
+  BOSS_ENRAGE_REGEN:.019,
 };
 
 const TAU=Math.PI*2;
@@ -1859,6 +1890,32 @@ function derive(){
     mpMax:Math.round((C.mp+t.mpF)*manaPw*(ch.mp||1)),
     mpReg:(CFG.MP_REGEN+spi*.075)*(1+t.mreg/100)*manaPw*(C.mpRegMul||1)};
 }
+/* ---------- 装備の深度差 ----------
+   「その階層に見合った装備で潜っているか」を1つの比で表す。
+   空きスロットは深度0として数える。7部位のうち1つでも欠ければ、その分だけ追いつけない。 */
+function gearDepth(gear){
+  const g=gear||S.gear;let sum=0;
+  for(const k of SLOTK){const it=g&&g[k];sum+=it?Math.max(1,it.ilvl||1):0;}
+  return sum/SLOTK.length;}
+/* 追いつき具合。1.0 = 階層と同じ深度の装備がそろっている。 */
+function gearReach(floor,gear){
+  const fl=Math.max(1,floor==null?S.floor:floor);
+  if(fl<=CFG.GEAR_GAP_FREE)return 1;                 // 序盤は装備が揃わないので見ない
+  return clamp(gearDepth(gear)/fl,0,1);}
+/* 与ダメージの倍率。追いついていれば1.0、全く追いついていなければ GEAR_GAP_MIN。 */
+function gearOutMul(floor,gear){
+  const r=gearReach(floor,gear);
+  return CFG.GEAR_GAP_MIN+(1-CFG.GEAR_GAP_MIN)*Math.pow(r,CFG.GEAR_GAP_POW);}
+/* 被ダメージの倍率。与ダメージの裏返しにして、殴り合いの長さを二重に効かせる。 */
+function gearInMul(floor,gear){return 1/gearOutMul(floor,gear);}
+/* 追いつき具合を言葉と色にする。隠れた倍率のままにしない。
+   「なぜ通らないのか」が読めないと、装備を替えるという答えに辿り着けない。 */
+function gearFitText(floor,gear){
+  const r=gearReach(floor,gear),out=Math.round(gearOutMul(floor,gear)*100),inn=Math.round(gearInMul(floor,gear)*100);
+  const t=r>=1?{n:"適正",c:"#7ad04e"}:r>=.85?{n:"やや不足",c:"#c8d04e"}
+    :r>=.65?{n:"不足",c:"#e0a53c"}:r>=.45?{n:"大幅に不足",c:"#e07a3c"}:{n:"歯が立たない",c:"#d64550"};
+  return {...t,reach:r,out,inn,
+    line:`装備 ${t.n}（与ダメージ ${out}% / 被ダメージ ${inn}%）`};}
 /* 回避: 自分と階層の力量差で決まる。格上相手にはほとんど効かない。 */
 function dodgeRate(){const d=S.p.d;
   const gap=(S.base.lv*.5+4)-S.floor;
@@ -1942,12 +1999,15 @@ function curve(fl,points){
   const[a,av]=points[points.length-2],[b,bv]=points[points.length-1];
   return bv+(fl-b)*(bv-av)/(b-a);}
 // 深度100までの曲線は維持し、それ以降は後から開始層を動かせる共通係数で加速する。
+/* 激昂の倍率。制限時間ではなく、過ぎたぶんだけ際限なく重くなる作りにする。
+   「あと少しで時間切れ」ではなく「長引くほど自分が不利」を体で分からせるため。 */
+const bossRageMul=t=>1+Math.max(0,(t||0)-CFG.BOSS_ENRAGE_AT)*CFG.BOSS_ENRAGE_RATE;
 const enemyAcceleration=fl=>Math.pow(CFG.ENEMY_ACCEL_GROWTH,Math.max(0,fl-CFG.ENEMY_ACCEL_START));
-const enemyHPScale=fl=>curve(fl,[[1,2.2],[5,3],[10,4],[20,9],[35,18],[60,38],[80,65],[100,148]])*enemyAcceleration(fl);
-const enemyDMGScale=fl=>curve(fl,[[1,.18],[5,.30],[10,.55],[20,1.35],[35,2.8],[60,6.8],[80,12],[100,29]])*enemyAcceleration(fl);
+const enemyHPScale=fl=>CFG.ENEMY_HP_MUL*curve(fl,[[1,2.2],[5,3],[10,4],[20,9],[35,18],[60,38],[80,65],[100,148]])*enemyAcceleration(fl);
+const enemyDMGScale=fl=>CFG.ENEMY_DMG_MUL*curve(fl,[[1,.18],[5,.30],[10,.55],[20,1.35],[35,2.8],[60,6.8],[80,12],[100,29]])*enemyAcceleration(fl);
 // 各階層ボスは通常進行曲線に対して HP 2倍、攻撃力 1.5倍。
-const bossHPScale=fl=>2*curve(fl,[[5,.40],[10,.80],[20,1.8],[35,4.2],[60,9.5],[80,16],[100,37]])*enemyAcceleration(fl);
-const bossDMGScale=fl=>1.5*curve(fl,[[5,.25],[10,.45],[20,.9],[35,1.9],[60,4.5],[80,8],[100,20]])*enemyAcceleration(fl);
+const bossHPScale=fl=>2*CFG.ENEMY_HP_MUL*curve(fl,[[5,.40],[10,.80],[20,1.8],[35,4.2],[60,9.5],[80,16],[100,37]])*enemyAcceleration(fl);
+const bossDMGScale=fl=>1.5*CFG.ENEMY_DMG_MUL*curve(fl,[[5,.25],[10,.45],[20,.9],[35,1.9],[60,4.5],[80,8],[100,20]])*enemyAcceleration(fl);
 function spawnE(k,x,y,fl,elite){
   const t=ET[k],hs=enemyHPScale(fl),ds=enemyDMGScale(fl);
   const e={k,n:t.n,x,y,r:t.r,sp:t.sp,aR:t.aR,cd:t.cd,cdT:rr(0,t.cd),xp:t.xp,col:t.col,sz:t.sz,
@@ -1979,7 +2039,9 @@ function spawnBoss(fl){
     flash:0,kbx:0,kby:0,agro:false,frz:0,stun:0,elite:null,shield:0,regen:0,dot:0,dotT:0,
     wind:0,tel:0,telK:null,telX:0,telY:0,telA:0,phase:1,sumT:8,
     /* 挙動ごとの作業用。角度・消失・守りの向きなどをここに持つ */
-    orbit:rnd()*TAU,orbitDir:rnd()<.5?1:-1,vanish:0,facing:0,ringR:0,volley:0,trailT:0};
+    orbit:rnd()*TAU,orbitDir:rnd()<.5?1:-1,vanish:0,facing:0,ringR:0,volley:0,trailT:0,
+    /* 激昂。dmg0 は素の攻撃力。rageT は戦いが始まってからの秒数。 */
+    dmg0:b.dmg*ds,rageT:0};
   S.enemies.push(e);S.boss=e;
   $("bossN").textContent=b.n;$("bossBar").style.display="block";
   SFX.boss();buzz([0,80,60,80]);toast("★ "+b.n);
@@ -2128,6 +2190,8 @@ function hurtE(e,dmg,crit,kx,ky,quiet){
      自動に任せている。手動がいちばん強くなければ、丁寧に動かす意味が無くなる。 */
   const md=S.settings.controlMode;
   if(md==="onehand")dmg*=CFG.ONEHAND_DMG;else if(md==="auto")dmg*=CFG.AUTO_DMG;
+  /* 階層に見合わない装備では、そもそも通らない。 */
+  dmg*=gearOutMul();
   const resonanceNow=resonance(),match=elementMultiplier(resonanceNow.element,e.element),weak=match>1;
   dmg*=resonanceDamageMultiplier(resonanceNow,e.element,S.floor)*(e.boss?1:(e.eleRes&&e.eleRes[resonanceNow.element]||1));
   if(e.weaken>0)dmg/=(1-(e.weakenAmt||.25)); // 蝕み: 落とした防御分だけ被ダメージへ反映
@@ -2269,7 +2333,8 @@ function hurtP(dm,cause,force,attackerElement="neutral"){const p=S.p;if(S.traini
     S.nums.push({x:p.x,y:p.y,v:0,txt:"回避",t:0,c:"#8ad8ff"});
     tone(900,.06,"sine",.06,1300);return;}
   const incoming=attackerElement,r=resonance(),elementGuard=resonanceIncomingMultiplier(r,incoming);
-  const d=dm*elementGuard*(1-Math.min(.8,p.d.dr+p.mDr+p.sDr+p.buffDr+buffVal("ward","dr",0)+p.guardS*.2*pwMul("guard")));
+  /* 装備が階層に追いついていないほど、まともに食らう。 */
+  const d=dm*elementGuard*gearInMul()*(1-Math.min(.8,p.d.dr+p.mDr+p.sDr+p.buffDr+buffVal("ward","dr",0)+p.guardS*.2*pwMul("guard")));
   p.hp-=d;p.lastHit=0;if(p.returnCast>0){p.returnCast=0;p.returnSlot=-1;toast("帰還詠唱が中断された","ng");}p.hurtT=.42;S.flash=.18;shk(CFG.SHAKE_HURT);SFX.hurt();buzz(38);
   dnum(p.x,p.y,d,"#ff6060");
   if(hasPw("guard")){p.guardS=Math.min(3,p.guardS+1);p.guardT=2;}
@@ -2485,6 +2550,13 @@ function update(dt){
   if(S.hitstop>0){S.hitstop-=dt;return;}
   const p=S.p,moveX0=S.p.x,moveY0=S.p.y,skillMoving=p.dashT>0;
   S.runT+=dt;
+  /* ボスの激昂。戦いが長引くほど一撃が重くなる。
+     時間を味方にできる限り、装備を整える理由も、間合いを詰める理由も無くなる。 */
+  if(S.boss&&S.boss.hp>0&&S.boss.agro){
+    const b=S.boss;b.rageT+=dt;
+    const m=bossRageMul(b.rageT);
+    b.dmg=b.dmg0*m;
+    if(m>1)b.hp=Math.min(b.max,b.hp+b.max*CFG.BOSS_ENRAGE_REGEN*(m-1)*dt);}
   if(S.shakeT>0){S.shakeT-=dt;if(S.shakeT<=0)S.shake=0;}
   if(S.flash>0)S.flash-=dt;
   if(p.hurtT>0)p.hurtT-=dt;p.lastHit=(p.lastHit||0)+dt;
@@ -3439,7 +3511,10 @@ function updHUD(){
   $("xpF").style.width=(b.xp/xpNeed(b.lv)*100)+"%";
   $("lvT").textContent="Lv"+b.lv;
   const dg=dangerOf(S.floor);
-  $("flT").innerHTML=S.floor+' <span style="color:'+dg.c+';font-size:11px">'+dg.n+'</span>';
+  /* 潜っている間も装備の追いつきは階を下るごとに落ちる。深度の隣に出す。 */
+  const fit=gearFitText(S.floor);
+  $("flT").innerHTML=S.floor+' <span style="color:'+dg.c+';font-size:11px">'+dg.n+'</span>'
+    +(fit.reach<1?' <span style="color:'+fit.c+';font-size:11px">装備'+fit.n+'</span>':"");
   // 潜行中は所持金の総額より「今回いくら拾ったか」の方が意味がある。
   $("goldT").textContent="+"+S.runGold+" G";
   $("dpsT").style.display=S.settings.dps?"block":"none";
@@ -3474,7 +3549,14 @@ function updHUD(){
   if(S.combo>=4){cb.classList.add("on");cb.innerHTML=S.combo+'<small>COMBO</small>';
     cb.style.fontSize=Math.min(46,24+S.combo*.6)+"px";}
   else cb.classList.remove("on");
-  if(S.boss)$("bossF").style.width=(S.boss.hp/S.boss.max*100)+"%";}
+  if(S.boss){$("bossF").style.width=(S.boss.hp/S.boss.max*100)+"%";
+    /* 激昂は隠さない。何が起きているか分からないまま殺されると、
+       「長引かせない」という正しい答えに辿り着けない。 */
+    const m=bossRageMul(S.boss.rageT),n=$("bossN");
+    if(n){const left=Math.ceil(CFG.BOSS_ENRAGE_AT-(S.boss.rageT||0));
+      n.innerHTML=S.boss.n+(m>1
+        ?` <span style="color:#ff6a4a">激昂 ×${m.toFixed(1)} — 傷が塞がる</span>`
+        :(S.boss.agro&&left<=20?` <span style="color:#e0a53c">激昂まで ${left}秒</span>`:""));}}}
 function updBuffs(){const p=S.p,c=$("buffs");c.innerHTML="";
   if(p&&p.shrine){const d=document.createElement("div");d.className="buff";
     d.style.borderLeftColor=p.shrineGood?"#65db78":"#e0525b";
@@ -4067,7 +4149,7 @@ function renderDiveBar(onChange){
   const label=document.createElement("div");label.className="fl";
   const paint=()=>{const el=dominantElement(S.diveFloor);
     label.innerHTML=`<b>${S.diveFloor}F</b><small style="color:${ELEMENTS[el].col}">${elementName(el)}属性</small>`;};
-  const changed=()=>{paint();if(onChange)onChange();};
+  const changed=()=>{paint();if(S.__paintFit)S.__paintFit();if(onChange)onChange();};
   const setFloor=v=>{setDiveFloor(v);changed();};
   const minus=document.createElement("div");minus.className="btn gh";minus.textContent="−";tapEl(minus,()=>setFloor(S.diveFloor-CFG.SKIP_STEP));
   const plus=document.createElement("div");plus.className="btn gh";plus.textContent="＋";tapEl(plus,()=>setFloor(S.diveFloor+CFG.SKIP_STEP));
@@ -4076,6 +4158,12 @@ function renderDiveBar(onChange){
   paint();step.append(minus,label,plus);bar.appendChild(step);
   const go=document.createElement("div");go.className="btn pri go";go.textContent="潜　る";
   tapEl(go,()=>confirmDive(S.diveFloor));bar.appendChild(go);
+  /* 装備が階層に追いついているか。潜ってから気付かせない。 */
+  const fit=document.createElement("div");fit.className="diveFit";
+  const paintFit=()=>{const f=gearFitText(S.diveFloor);
+    fit.style.color=f.c;fit.textContent=f.line;};
+  paintFit();bar.appendChild(fit);
+  S.__paintFit=paintFit;      // ±で深度が動いたら描き直す
 }
 /* 拠点タブは「誰で潜るか」を最初に見せる。
    日替わり任務を先頭に積むと、編成と潜るボタンが画面2枚分下に押しやられて
@@ -5104,8 +5192,11 @@ function openClass(){
   $("scClass").classList.add("on");}
 function confirmDive(fl){
   if(!S.formation||!S.formation.length){toast("キャラクターを1人以上編成してください","ng");return;}
+  const fit=gearFitText(fl);
   ask("ダンジョンに潜る",
-    "深度 "+fl+" から開始します。\n危険度: "+dangerOf(fl).n+"\n未鑑定品は帰還するまで確定しません。",
+    "深度 "+fl+" から開始します。\n危険度: "+dangerOf(fl).n
+    +"\n"+fit.line+(fit.reach<1?"\n深度 "+fl+" 相当の装備にするほど通りやすくなります。":"")
+    +"\n未鑑定品は帰還するまで確定しません。",
     ()=>beginRun(fl));}
 function startDive(){
   // 階層が数百/数千になっても、ページ切り替えで開始地点を選ぶ

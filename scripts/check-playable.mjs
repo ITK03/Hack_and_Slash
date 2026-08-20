@@ -578,6 +578,85 @@ await page.goto(base); await page.waitForTimeout(500);
   notes.push(`与ダメージ: 手動${d.manual} / 片手${d.onehand}（${(r1 * 100).toFixed(0)}%）/ オート${d.auto}（${(r2 * 100).toFixed(0)}%）— 切替 手動→${modes.cycle.join('→')}`);
 }
 
+/* 2p3b. 装備の深度差。階層に見合わない装備では通らないこと。
+   実測で「Lv60・深度20の拾い物・3段目の道具」が50階のボスに92%勝てていた。
+   レベルと消耗品だけで勝ててしまい、装備で潜るゲームになっていなかった。 */
+{
+  const gap = await page.evaluate(() => {
+    const mk = (floor, depth) => {
+      const gear = {}; for (const k of SLOTK) gear[k] = depth == null ? null : { ilvl: depth };
+      return { reach: +gearReach(floor, gear).toFixed(2), out: +gearOutMul(floor, gear).toFixed(2), fit: gearFitText(floor, gear).n };
+    };
+    return {
+      同深度: mk(50, 50), やや下: mk(50, 45), 半分: mk(50, 25), 大幅下: mk(50, 20), 素手: mk(50, null),
+      深すぎ: mk(50, 90),                       // 過剰装備でも1.0止まり
+      序盤: mk(5, 1),                            // GEAR_GAP_FREE 以下は見ない
+      /* 実際にボスと戦って、深度20の装備では勝てないこと */
+      boss: (() => {
+        S.cls = 'warrior'; S.formation = ['warrior:gai']; S.deepest = 999;
+        const slots = SLOTK;
+        /* 「時間をかけて慎重にやれば勝てる」を模した、これ以上ない甘い条件。
+           被弾を完全に無視して（returnInvulnerable）5分間ひたすら殴り続ける。
+           それでも倒せないなら、腕でも粘りでも埋められない差だと言える。
+           注意: HPを毎フレーム満タンに戻すやり方では駄目だった。1回の update の
+           中で殺され endRun が S.paused を立てるので、残りの時間が丸ごと空回りし、
+           「回復に阻まれた」と「死んだ」を取り違える。 */
+        const fight = depth => {
+          S.base = { lv: 60, xp: 0, pts: 0, str: 180, mag: 0, def: 60, agi: 60, spi: 0, luk: 0, xpCurveV2: true };
+          S.gear = Object.fromEntries(slots.map(k => [k, null]));
+          for (const k of slots) { let it, n = 0; do it = makeItem(depth, 0, 0, 2); while (++n < 900 && (it.slot !== k || (it.ac && it.ac !== 'warrior') || (it.wt && WCLS[it.wt] !== 'warrior'))); if (it.slot === k) S.gear[k] = it; }
+          S.p = newPlayer(); S.scene = 'dungeon'; S.paused = false; S.training = false; S.returnInvulnerable = true;
+          enterFloor(50);
+          const boss = S.enemies.find(e => e.boss); if (!boss) return null;
+          S.enemies.length = 0; S.enemies.push(boss); S.boss = boss;
+          const max = boss.max; let low = 1;
+          HELD.fill(true);
+          let t = 0;
+          for (; t < 200 && boss.hp > 0; t += .05) {
+            const a = Math.atan2(boss.y - S.p.y, boss.x - S.p.x);
+            S.p.x = boss.x - Math.cos(a) * 1.15; S.p.y = boss.y - Math.sin(a) * 1.15; S.p.face = a;
+            for (let i = 0; i < 3; i++) if (S.p.cds[i] <= 0 && S.p.mp >= activeSkills()[i].c) useSkill(i);
+            update(.05);
+            low = Math.min(low, Math.max(0, boss.hp) / max);
+          }
+          HELD.fill(false);
+          S.returnInvulnerable = false;
+          return { 秒: boss.hp <= 0 ? Math.round(t) : 0, 最大削り: Math.round((1 - low) * 100),
+            激昂: +bossRageMul(boss.rageT).toFixed(1) };
+        };
+        /* 装備のロールで結果が振れるので、深度ごとに何度か引いて均す。
+           1回だけだと当たりロールが関門を越えてしまい、判定が安定しない。 */
+        const many = depth => {
+          const runs = [];
+          for (let i = 0; i < 3; i++) { _s = (depth * 2654435761 + i * 1013904223) >>> 0; runs.push(fight(depth)); }
+          return { 撃破: runs.filter(r => r.秒).length, 回数: runs.length,
+            最大削り: Math.max(...runs.map(r => r.最大削り)),
+            秒: Math.round(runs.filter(r => r.秒).reduce((a, r) => a + r.秒, 0) / Math.max(1, runs.filter(r => r.秒).length)) || 0,
+            激昂: Math.max(...runs.map(r => r.激昂)) };
+        };
+        return { 深度20: many(20), 深度25: many(25), 深度35: many(35), 深度50: many(50) };
+      })(),
+    };
+  });
+  if (gap.同深度.reach !== 1 || gap.同深度.out !== 1) problems.push(`階層どおりの装備に減衰がかかっている（${JSON.stringify(gap.同深度)}）`);
+  if (gap.深すぎ.out !== 1) problems.push('階層より深い装備で1.0を超える倍率が出る');
+  if (gap.序盤.out !== 1) problems.push('序盤（GEAR_GAP_FREE以下）でも深度差が効いている');
+  if (!(gap.大幅下.out < .65)) problems.push(`深度20の装備で50階の与ダメージが ${Math.round(gap.大幅下.out * 100)}%（65%未満のはず）`);
+  if (!(gap.素手.out < gap.大幅下.out)) problems.push('素手が深度20の装備より弱くない');
+  if (!(gap.やや下.out > .85)) problems.push(`少し下の装備まで厳しすぎる（深度45で ${Math.round(gap.やや下.out * 100)}%）`);
+  /* 被弾を無視して5分殴っても、階層に合わない装備では倒せないこと。
+     ここが「倒せる」なら、粘りが装備の代わりになってしまう。 */
+  const B = gap.boss;
+  if (B.深度20.撃破) problems.push(`被弾を無視して殴り続ければ深度20の装備でも50階ボスを倒せる（${B.深度20.撃破}/${B.深度20.回数}）`);
+  if (B.深度25.撃破) problems.push(`被弾を無視して殴り続ければ深度25の装備でも50階ボスを倒せる（${B.深度25.撃破}/${B.深度25.回数}）`);
+  if (!(B.深度20.激昂 > 2)) problems.push(`火力が足りないのにボスが激昂しない（×${B.深度20.激昂}）`);
+  /* 逆に厳しすぎないこと。階層の7割の深度があれば通せる余地を残す。 */
+  if (B.深度35.撃破 < B.深度35.回数) problems.push(`階層の7割（深度35）の装備で50階ボスを倒せない回がある（${B.深度35.撃破}/${B.深度35.回数}、最大${B.深度35.最大削り}%）— 厳しすぎる`);
+  if (B.深度50.撃破 < B.深度50.回数) problems.push(`階層どおりの装備で50階ボスを倒せない回がある（${B.深度50.撃破}/${B.深度50.回数}）`);
+  notes.push(`装備の深度差(50階): 同深度100% / 45→${Math.round(gap.やや下.out * 100)}% / 25→${Math.round(gap.半分.out * 100)}% / 20→${Math.round(gap.大幅下.out * 100)}%（${gap.大幅下.fit}）/ 素手${Math.round(gap.素手.out * 100)}%`);
+  notes.push(`  被弾を無視して殴り続けた50階ボス: 深度20→${B.深度20.撃破}/${B.深度20.回数}(最大${B.深度20.最大削り}%・激昂×${B.深度20.激昂}) / 深度25→${B.深度25.撃破}/${B.深度25.回数}(最大${B.深度25.最大削り}%) / 深度35→${B.深度35.撃破}/${B.深度35.回数}(${B.深度35.秒}秒) / 深度50→${B.深度50.撃破}/${B.深度50.回数}(${B.深度50.秒}秒)`);
+}
+
 /* 2p4. 操作キーの左右反転。3つを別々に入れ替えられること。 */
 {
   const mir = await page.evaluate(() => {
