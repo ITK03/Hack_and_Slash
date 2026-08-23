@@ -731,11 +731,10 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
       <div class="profileIcon" id="profileIcon">●<i class="clsMark" id="profileCls"></i></div>
       <div class="whoami">
         <div class="uname" id="townName">冒険者</div>
-        <div class="hdrLv"><b id="hdrLv">Lv1</b><span class="xpBar"><i id="hdrXp"></i></span></div>
+        <div class="hdrLv"><b id="hdrLv">ランク1</b><span class="xpBar"><i id="hdrXp"></i></span></div>
         <div class="hdrCp"><small>戦闘力</small><span id="hdrCp">0</span></div>
       </div>
       <div class="wallet">
-        <div class="currency stam"><i class="stamI">⚡</i><span id="hdrStam">3/3</span></div>
         <div class="currency"><i class="gem">◆</i><span id="premiumT">0</span></div>
         <div class="currency gold"><i class="coin">●</i><span id="townG">0</span></div></div>
     </div>
@@ -808,7 +807,7 @@ const CFG={
   LIGHT_R:1.05,LIGHT_STRETCH:1.45,DARKNESS:.86,CAM_Y:.42,CAM_LERP:.30,
 
   P_SPEED:3.5, ATK_CD:.40, P_RADIUS:.30,
-  ATK_MUL:.34,          // 通常攻撃の倍率。スキルを主役にするため大きく下げてある
+  ATK_MUL:.68,          // 通常攻撃を基準に、技倍率もこの値から導く
 
   HITSTOP:.03,HITSTOP_CRIT:.07,HITSTOP_KILL:.045,
   SHAKE_HIT:1.6,SHAKE_CRIT:5,SHAKE_KILL:2.6,SHAKE_HURT:8,
@@ -849,7 +848,6 @@ const CFG={
   XP_HIGH_GROWTH:1.217,  // Lv100以降。将来の進行緩和はこの定数だけを下げる
   ENEMY_ACCEL_START:100,ENEMY_ACCEL_GROWTH:1.06,
   CORE_DAILY_CAP:3,CORE_HOLD_CAP:16,CORE_WEEKLY_PURCHASE_CAP:6,
-  BREAKTHROUGH_CORE_COST:[0,80,90,100,110,120],
   SKIP_STEP:5,        // 何層ごとにスキップ開始地点を選べるか
   CRAFT_STOCK_CAP:99, // 消耗品1種あたりの保有上限（調合はここで頭打ちになる）
   HEAL_RUN_CAP:6,     // 回復薬は潜行中だけ多めに持てる（持ち込み上限とは別）
@@ -1050,39 +1048,39 @@ function editPlayerName(){
    id はセーブに残るので、既存の3つは初期装備と同じ id を使い続ける。 */
 const SKILL_POOL={
   warrior:[
-    {id:"cleave", n:"薙ぎ払い",dep:0, tag:"扇・連射",  c:12,cd:.55,k:"cleave",dmg:[69,99],r:3.4,arc:1.55,
-      d:"正面の扇を薙ぐ。安く速く、通常攻撃の代わりに撃ち続けられる。"},
-    {id:"dash",   n:"突進斬り",dep:0, tag:"移動・突撃",c:22,cd:2.2,k:"dash",dmg:[80,116],w:1.15,len:4.4,
-      d:"直線に踏み込みながら斬る。距離を詰める手にも、抜ける手にもなる。"},
-    {id:"slam",   n:"大地砕き",dep:0, tag:"全周・気絶",c:34,cd:5.0,k:"slam",dmg:[75,108],r:4.6,stun:1.4,
-      d:"自分を中心に叩きつけ、当たった敵を怯ませる。囲まれた時の解除役。"},
-    {id:"whirl",  n:"旋風",    dep:15,tag:"全周・連射",c:20,cd:.9,k:"cleave",dmg:[58,84],r:3.0,arc:3.15,
-      d:"全周を薙ぐ。1発は軽いが向きを問わない。囲まれ続ける深度で効く。"},
-    {id:"charge", n:"疾駆",    dep:25,tag:"移動・長距離",c:18,cd:1.4,k:"dash",dmg:[62,90],w:1.45,len:6.6,
-      d:"突進斬りより遠く、太く、軽い。火力は落ちるが移動技として回る。"},
-    {id:"verdict",n:"断罪",    dep:40,tag:"単体・大打撃",c:52,cd:7.0,k:"slam",dmg:[190,265],r:2.6,stun:2.8,
-      d:"足元だけを砕く代わりに一撃が重い。ボスに張り付いて撃つ技。"},
-    {id:"cry",    n:"鬨の声",  dep:20,tag:"自己強化",    c:30,cd:16,k:"cry",dmg:[0,0],atk:1.28,dr:.14,dur:12,heal:.06,
-      d:"12秒間、攻撃力+28%と被ダメ-14%。少し回復もする。ボス戦の開幕に置く技。"},
-    {id:"bulwark",n:"不動",    dep:35,tag:"自己強化・防御",c:26,cd:22,k:"cry",dmg:[0,0],atk:1.05,dr:.34,dur:9,heal:.14,col:"#7ad0ff",
-      d:"9秒間、被ダメ-34%と大きめの回復。火力は伸びない、耐えるための技。"}],
+    {id:"cleave", n:"薙ぎ払い",dep:0, tag:"扇・連射",  c:12,cd:.55,k:"cleave",mul:1.3,r:3.4,arc:1.55,
+      d:"正面の扇を薙ぐ"},
+    {id:"dash",   n:"突進斬り",dep:0, tag:"移動・突撃",c:22,cd:2.2,k:"dash",mul:1.5,w:1.15,len:4.4,
+      d:"直線に踏み込みながら斬る"},
+    {id:"slam",   n:"大地砕き",dep:0, tag:"全周・気絶",c:34,cd:5.0,k:"slam",mul:1.7,r:4.6,stun:1.4,
+      d:"周囲を叩きつけて怯ませる"},
+    {id:"whirl",  n:"旋風",    dep:15,tag:"全周・連射",c:20,cd:.9,k:"cleave",mul:6.15,r:3.0,arc:3.15,
+      d:"全周を薙ぐ"},
+    {id:"charge", n:"疾駆",    dep:25,tag:"移動・長距離",c:18,cd:1.4,k:"dash",mul:7.70,w:1.45,len:6.6,
+      d:"長距離を太く駆け抜ける"},
+    {id:"verdict",n:"断罪",    dep:40,tag:"単体・大打撃",c:52,cd:7.0,k:"slam",mul:19.68,r:2.6,stun:2.8,
+      d:"足元を砕いて長く怯ませる"},
+    {id:"cry",    n:"鬨の声",  dep:20,tag:"自己強化",    c:30,cd:16,k:"cry",mul:0,atk:1.28,dr:.14,dur:12,heal:.06,
+      d:"12秒間攻防を強化して回復する"},
+    {id:"bulwark",n:"不動",    dep:35,tag:"自己強化・防御",c:26,cd:22,k:"cry",mul:0,atk:1.05,dr:.34,dur:9,heal:.14,col:"#7ad0ff",
+      d:"9秒間被害を減らして回復する"}],
   mage:[
-    {id:"ball",  n:"火球",    dep:0, tag:"遠距離・連射",c:24,cd:.7,k:"ball",dmg:[37,53],sp:11,r:2.2,col:"#ff8a3a",
-      d:"炸裂する火の玉を飛ばす。距離を保ったまま削り続けられる。"},
-    {id:"nova",  n:"氷結新星",dep:0, tag:"全周・凍結",  c:32,cd:3.0,k:"nova",dmg:[54,78],r:3.4,freeze:2.2,blink:4.4,col:"#8ad8ff",
-      d:"前方へ跳んでから凍てつく波を放つ。逃げながら足止めできる。"},
-    {id:"chain", n:"連鎖雷撃",dep:0, tag:"多数・連鎖",  c:70,cd:2.6,k:"chain",dmg:[70,100],jumps:6,range:4.6,
-      d:"敵から敵へ飛び移る雷。数がいるほど総火力が伸びる。"},
-    {id:"lance", n:"貫通氷槍",dep:15,tag:"遠距離・低燃費",c:14,cd:.5,k:"ball",dmg:[30,43],sp:16,r:1.3,col:"#8ad8ff",
-      d:"速くて安い氷の槍。爆風は小さいが、MPが尽きにくい。"},
-    {id:"inferno",n:"業火の渦",dep:25,tag:"全周・大範囲",c:46,cd:4.2,k:"nova",dmg:[96,138],r:5.6,col:"#ff7a3a",
-      d:"足止めを捨てて範囲と威力を取った渦。凍結も跳躍も無い。"},
-    {id:"emperor",n:"雷帝",   dep:40,tag:"多数・遠連鎖",c:96,cd:3.4,k:"chain",dmg:[104,150],jumps:10,range:6.4,
-      d:"連鎖雷撃の上位。跳ぶ数も届く距離も伸びるが、MPを深く食う。"},
-    {id:"spear", n:"貫きの矢",dep:20,tag:"直線・貫通",  c:34,cd:1.6,k:"pierce",dmg:[86,124],sp:19,pierce:5,col:"#c8a0ff",
-      d:"直線上の敵を最大5体まで貫く。通路で並んだ相手をまとめて刺す。"},
-    {id:"ruin",  n:"滅びの光",dep:35,tag:"直線・大貫通",c:64,cd:3.2,k:"pierce",dmg:[170,242],sp:24,pierce:9,col:"#ff6ad0",
-      d:"止まらない光の線。数がいるほど伸びるが、外すと丸ごと無駄になる。"}],
+    {id:"ball",  n:"火球",    dep:0, tag:"遠距離・連射",c:24,cd:.7,k:"ball",mul:4.56,sp:11,r:2.2,col:"#ff8a3a",
+      d:"炸裂する火球を飛ばす"},
+    {id:"nova",  n:"氷結新星",dep:0, tag:"全周・凍結",  c:32,cd:3.0,k:"nova",mul:6.69,r:3.4,freeze:2.2,blink:4.4,col:"#8ad8ff",
+      d:"前方へ跳び周囲を凍らせる"},
+    {id:"chain", n:"連鎖雷撃",dep:0, tag:"多数・連鎖",  c:70,cd:2.6,k:"chain",mul:8.62,jumps:6,range:4.6,
+      d:"雷が最大6体へ連鎖する"},
+    {id:"lance", n:"貫通氷槍",dep:15,tag:"遠距離・低燃費",c:14,cd:.5,k:"ball",mul:3.70,sp:16,r:1.3,col:"#8ad8ff",
+      d:"小さな爆風の氷槍を飛ばす"},
+    {id:"inferno",n:"業火の渦",dep:25,tag:"全周・大範囲",c:46,cd:4.2,k:"nova",mul:11.86,r:5.6,col:"#ff7a3a",
+      d:"広い周囲を炎で焼く"},
+    {id:"emperor",n:"雷帝",   dep:40,tag:"多数・遠連鎖",c:96,cd:3.4,k:"chain",mul:12.88,jumps:10,range:6.4,
+      d:"雷が最大10体へ遠く連鎖する"},
+    {id:"spear", n:"貫きの矢",dep:20,tag:"直線・貫通",  c:34,cd:1.6,k:"pierce",mul:10.64,sp:19,pierce:5,col:"#c8a0ff",
+      d:"直線上の敵を最大5体貫く"},
+    {id:"ruin",  n:"滅びの光",dep:35,tag:"直線・大貫通",c:64,cd:3.2,k:"pierce",mul:20.89,sp:24,pierce:9,col:"#ff6ad0",
+      d:"光線が直線上の敵を最大9体貫く"}],
 };
 const DEFAULT_SKILLS={warrior:["cleave","dash","slam"],mage:["ball","nova","chain"]};
 /* 技の候補 = その職の共通プール + 今のキャラクターの固有技。
@@ -1132,41 +1130,41 @@ const TIER_ORDER=["N","R","SR","SSR"];
 const CHARACTERS={
   warrior:[
     {id:"gai",n:"ガイ",tier:"N",trait:"堅実",d:"最大HP +3%",hp:1.03,col:"#d9824b",
-     uniq:{id:"u_gai",n:"守りの構え",tag:"固有・自己強化",c:24,cd:18,k:"cry",dmg:[0,0],atk:1.06,dr:.12,dur:8,heal:.05,col:"#d9824b",
+     uniq:{id:"u_gai",n:"守りの構え",tag:"固有・自己強化",c:24,cd:18,k:"cry",mul:0,atk:1.06,dr:.12,dur:8,heal:.05,col:"#d9824b",
        d:"8秒間、被ダメ-12%と少しの回復。堅いだけで、火力は伸びない。"}},
     {id:"luca",n:"ルカ",tier:"R",trait:"軽装",d:"移動速度 +4%",ms:1.04,col:"#e0b05b",
-     uniq:{id:"u_luca",n:"疾風の一閃",tag:"固有・移動",c:20,cd:1.5,k:"dash",dmg:[92,132],w:1.3,len:6.0,
+     uniq:{id:"u_luca",n:"疾風の一閃",tag:"固有・移動",c:20,cd:1.5,k:"dash",mul:9.69,w:1.3,len:6.0,
        d:"長く踏み込んで斬り抜ける。突進斬りより遠く、軽い。"}},
     {id:"baldo",n:"バルド",tier:"R",trait:"集中",d:"クリティカル率 +3%",crit:.03,col:"#bb6655",
-     uniq:{id:"u_baldo",n:"一点突き",tag:"固有・単体",c:30,cd:4.0,k:"slam",dmg:[150,210],r:2.2,stun:1.6,
+     uniq:{id:"u_baldo",n:"一点突き",tag:"固有・単体",c:30,cd:4.0,k:"slam",mul:15.57,r:2.2,stun:1.6,
        d:"足元だけを貫く重い一撃。範囲は狭いが単体に刺さる。"}},
     {id:"gerd",n:"ゲルト",tier:"SR",trait:"重装",d:"最大HP +8% / 被ダメ -4%",hp:1.08,dr:.04,col:"#8a7a5a",
-     uniq:{id:"u_gerd",n:"不落の盾",tag:"固有・防御",c:28,cd:15,k:"cry",dmg:[0,0],atk:1.10,dr:.30,dur:11,heal:.12,col:"#8a9ab0",
+     uniq:{id:"u_gerd",n:"不落の盾",tag:"固有・防御",c:28,cd:15,k:"cry",mul:0,atk:1.10,dr:.30,dur:11,heal:.12,col:"#8a9ab0",
        d:"11秒間、被ダメ-30%と回復。深部で殴り合うための構え。"}},
     {id:"verna",n:"ヴェルナ",tier:"SR",trait:"猛攻",d:"攻撃力 +6% / 攻撃速度 +5%",atk:1.06,as:1.05,col:"#d05a4a",
-     uniq:{id:"u_verna",n:"連斬",tag:"固有・扇・連射",c:16,cd:.45,k:"cleave",dmg:[76,110],r:3.6,arc:1.9,
+     uniq:{id:"u_verna",n:"連斬",tag:"固有・扇・連射",c:16,cd:.45,k:"cleave",mul:8.04,r:3.6,arc:1.9,
        d:"薙ぎ払いより広く速い扇。MPが続く限り振り続けられる。"}},
     {id:"leon",n:"レオンハルト",tier:"SSR",trait:"覇断",d:"攻撃力 +14% / クリ率 +5% / 被ダメ -6%",atk:1.14,crit:.05,dr:.06,col:"#ffb347",
-     uniq:{id:"u_leon",n:"覇王断",tag:"固有・全周・大打撃",c:48,cd:5.5,k:"slam",dmg:[235,330],r:4.2,stun:2.4,
+     uniq:{id:"u_leon",n:"覇王断",tag:"固有・全周・大打撃",c:48,cd:5.5,k:"slam",mul:24.44,r:4.2,stun:2.4,
        d:"広い全周を叩き潰して長く怯ませる。範囲も威力も断罪を上回る。"}}],
   mage:[
     {id:"mira",n:"ミラ",tier:"N",trait:"泉の心得",d:"最大MP +3%",mp:1.03,col:"#729cf2",
-     uniq:{id:"u_mira",n:"水鏡",tag:"固有・遠距離",c:20,cd:.8,k:"ball",dmg:[40,57],sp:12,r:2.0,col:"#729cf2",
+     uniq:{id:"u_mira",n:"水鏡",tag:"固有・遠距離",c:20,cd:.8,k:"ball",mul:4.92,sp:12,r:2.0,col:"#729cf2",
        d:"火球よりわずかに安いだけの水の弾。堅実だが伸びしろは無い。"}},
     {id:"noa",n:"ノア",tier:"R",trait:"足運び",d:"移動速度 +4%",ms:1.04,col:"#86b8e8",
-     uniq:{id:"u_noa",n:"退き風",tag:"固有・全周・離脱",c:26,cd:2.6,k:"nova",dmg:[62,90],r:3.6,freeze:1.6,blink:5.4,col:"#86b8e8",
+     uniq:{id:"u_noa",n:"退き風",tag:"固有・全周・離脱",c:26,cd:2.6,k:"nova",mul:7.70,r:3.6,freeze:1.6,blink:5.4,col:"#86b8e8",
        d:"大きく跳んでから凍らせる。氷結新星より遠くへ逃げられる。"}},
     {id:"iris",n:"イリス",tier:"R",trait:"幸運",d:"運 +6",luk:6,col:"#a78be8",
-     uniq:{id:"u_iris",n:"星屑",tag:"固有・多数・連鎖",c:58,cd:2.2,k:"chain",dmg:[74,106],jumps:8,range:5.2,
+     uniq:{id:"u_iris",n:"星屑",tag:"固有・多数・連鎖",c:58,cd:2.2,k:"chain",mul:9.13,jumps:8,range:5.2,
        d:"連鎖雷撃より安く、よく跳ぶ。数がいる場所で回る。"}},
     {id:"sera",n:"セラ",tier:"SR",trait:"深泉",d:"最大MP +12% / クールダウン -4%",mp:1.12,cdr:.04,col:"#4ac8d0",
-     uniq:{id:"u_sera",n:"氷牙",tag:"固有・直線・貫通",c:30,cd:1.2,k:"pierce",dmg:[96,138],sp:21,pierce:6,col:"#4ac8d0",
+     uniq:{id:"u_sera",n:"氷牙",tag:"固有・直線・貫通",c:30,cd:1.2,k:"pierce",mul:11.86,sp:21,pierce:6,col:"#4ac8d0",
        d:"貫きの矢より安く速い氷の牙。通路で真価が出る。"}},
     {id:"faust",n:"ファウスト",tier:"SR",trait:"焦土",d:"攻撃力 +7% / クリ倍率 +20%",atk:1.07,cdmg:.20,col:"#c05ad0",
-     uniq:{id:"u_faust",n:"焦土",tag:"固有・全周・大範囲",c:52,cd:3.8,k:"nova",dmg:[112,160],r:6.0,col:"#c05ad0",
+     uniq:{id:"u_faust",n:"焦土",tag:"固有・全周・大範囲",c:52,cd:3.8,k:"nova",mul:13.79,r:6.0,col:"#c05ad0",
        d:"業火の渦より広く重い。足止めは無く、当てる位置取りが要る。"}},
     {id:"arte",n:"アルテミシア",tier:"SSR",trait:"殲滅",d:"攻撃力 +14% / 最大MP +10% / CD -7%",atk:1.14,mp:1.10,cdr:.07,col:"#ff8ad0",
-     uniq:{id:"u_arte",n:"終焉の光",tag:"固有・直線・大貫通",c:70,cd:2.6,k:"pierce",dmg:[210,300],sp:26,pierce:12,col:"#ff8ad0",
+     uniq:{id:"u_arte",n:"終焉の光",tag:"固有・直線・大貫通",c:70,cd:2.6,k:"pierce",mul:25.86,sp:26,pierce:12,col:"#ff8ad0",
        d:"12体まで貫く光。滅びの光より安く、速く、よく届く。"}}],
 };
 const charTier=ch=>CTIER[(ch&&ch.tier)||"N"];
@@ -1175,7 +1173,6 @@ const currentCharacter=()=>{
   return list.find(x=>x.id===id)||list[0];};
 const breakthroughLevel=key=>clamp((S.breakthroughs&&S.breakthroughs[key])||0,0,5);
 const breakthroughStatMul=level=>[1,1.06,1.06,1.12,1.12,1.20][clamp(level|0,0,5)];
-function breakthroughWithCore(key){const lv=breakthroughLevel(key);if(lv>=5)return false;S.breakthroughProgress=S.breakthroughProgress||{};const need=CFG.BREAKTHROUGH_CORE_COST[lv+1],paid=S.breakthroughProgress[key]||0,use=Math.min(materialCount("core"),need-paid);if(use<=0)return false;spendAny("core",use);if(paid+use>=need){S.breakthroughs[key]=lv+1;S.breakthroughProgress[key]=0;}else S.breakthroughProgress[key]=paid+use;save();return true;}
 function awardCharacter(key){const lv=breakthroughLevel(key);if(!S.unlockedCharacters.includes(key)){S.unlockedCharacters.push(key);return{kind:"unlock",level:0};}if(lv<5){S.breakthroughs[key]=lv+1;return{kind:"breakthrough",level:lv+1};}const converted=addMat("core",materialTier(S.deepest),3);return{kind:"core",cores:converted};}
 /* 控えに置いたとき、その属性の共鳴を後押しする。5属性が偏らないよう散らす。 */
 const SUPPORT_ELEMENTS={"warrior:gai":"fire","warrior:luca":"wood","warrior:baldo":"dark",
@@ -1358,7 +1355,11 @@ const ET={
   splitter:{n:"分かれ身",hp:44,sp:2.6,dmg:24,r:.36,aR:1.0,cd:1.8,xp:38,col:"#7ac850",sz:1.1,ai:"chase",
           splits:1,touch:.55,res:{brn:1.2,frz:1,par:1,psn:.6}},
 };
-const EKEYS=Object.keys(ET);
+/* 希少敵は通常抽選へ混ぜず、別枠の0.5%判定だけで出す。 */
+ET.metal={n:"燦めく軟泥",hp:10,sp:2.8,dmg:1,r:.3,aR:.7,cd:2,xp:0,col:"#f5f7ff",sz:.9,ai:"weave",metal:1,touch:0,res:{brn:1,frz:1,par:1,psn:1}};
+const EKEYS=Object.keys(ET).filter(k=>k!=="metal");
+const metalHP=fl=>Math.min(30,10+Math.floor(Math.sqrt(Math.max(0,fl-1))*2));
+function normalEnemyXP(fl){const keys=EKEYS.filter(k=>k!=="brander");return Math.round(keys.reduce((n,k)=>n+ET[k].xp,0)/keys.length)+fl*2;}
 /* 状態異常。自分にも敵にも乗る。防御が高いほど自分は入りにくい。 */
 /* ---------- 素材 ----------
    結晶と核は「どこでも出る汎用材」。それとは別に、特定の敵からしか落ちない
@@ -1708,6 +1709,9 @@ const sellV=it=>Math.max(1,Math.round((8+it.ilvl*4)*[1,2,5,14,60][it.rar]/CFG.SE
    立てないと load() の旧カーブ移行が新規キャラにも走り、Lv50を超えていると
    そのぶんレベルが水増しされる（Lv80なら101）。移行は v2 以前のセーブ専用。 */
 const newBase=()=>({lv:1,xp:0,pts:0,str:0,mag:0,def:0,agi:0,spi:0,luk:0,xpCurveV2:true});
+const rankNeed=lv=>100+Math.max(0,lv-1)*40;
+function gainRankXP(v){S.rank.xp+=Math.max(0,Math.floor(v));while(S.rank.xp>=rankNeed(S.rank.lv)){S.rank.xp-=rankNeed(S.rank.lv);S.rank.lv++;}}
+const returnRankXP=fl=>Math.max(1,Math.floor(Math.pow(Math.max(1,fl),1.4)*12));
 const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   enemies:[],drops:[],bullets:[],parts:[],nums:[],props:[],fx:[],corpses:[],
   portal:null,stairs:null,boss:null,
@@ -1722,7 +1726,7 @@ const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   runPick:{crystal:0,core:0,parts:{},pots:0},
   daily:null,dailyMatMul:1,
   unlockedCharacters:["warrior:gai"],tutorial:{phase:"training_intro",gearIndex:0},training:false,returnInvulnerable:false,
-  base:newBase()};
+  rank:{lv:1,xp:0},base:newBase()};
 
 Object.assign(S.settings,{controlMode:"manual",autoPreset:"aggressive",automationEditor:0});
 
@@ -2015,7 +2019,7 @@ function spawnE(k,x,y,fl,elite){
     hp:t.hp*hs,max:t.hp*hs,dmg:t.dmg*ds,hopT:rr(0,1),st:{},touch:t.touch||0,touchT:0,
     homing:!!t.homing,fuse:t.fuse||0,stKind:t.st||null,
     /* 挙動を決める印。ここで写し忘れると ET に書いても効かない。 */
-    front:!!t.front,drain:!!t.drain,splits:t.splits||0,seek:!!t.seek,sight:t.sight||0,faceA:null,
+    front:!!t.front,drain:!!t.drain,splits:t.splits||0,metal:!!t.metal,seek:!!t.seek,sight:t.sight||0,faceA:null,
     element:(rnd()<.65?dominantElement(fl):pick(ELEMENT_KEYS.filter(x=>x!==dominantElement(fl)))),
     eleRes:{fire:1,water:1,wood:1,light:1,dark:1},
     flash:0,kbx:0,kby:0,agro:false,frz:0,stun:0,elite:null,shield:0,regen:0,dot:0,dotT:0,wind:0};
@@ -2025,6 +2029,7 @@ function spawnE(k,x,y,fl,elite){
     if(a.id==="fast")e.sp*=1.5;
     if(a.id==="shield")e.shield=e.max*.35;
     if(a.id==="regen")e.regen=e.max*.012;}
+  if(e.metal){e.hp=e.max=metalHP(fl);e.xp=normalEnemyXP(fl)*50;e.col="#ffffff";S.fx.push({t:"ring",x,y,tm:0,R:2.4,col:"#fff6a0"});}
   S.enemies.push(e);return e;}
 function spawnBoss(fl){
   const {def:b,element}=bossOf(fl);
@@ -2114,6 +2119,8 @@ function enterFloor(fl){S.tactical.trap=null;S.tactical.reveal=false;
         const px2=x+rr(-2,2),py2=y+rr(-2,2);
         if(walk(px2,py2,.4))spawnE(pick(bag),px2,py2,fl,false);}}
   }
+  /* 管理者の forceMetal は希少敵を決定的に検査する入口。通常時は各フロア0.5%。 */
+  if((S.admin&&S.adminOpts.forceMetal)||rnd()<.005){const rm=rooms[ri(1,rooms.length-1)];spawnE("metal",rm.cx+.5,rm.cy+.5,fl,false);}
   if(isBoss)spawnBoss(fl);
   /* 烙印は深度に応じて必ず一定数出す。抽選任せだと深部でも0〜1体しか出ず、
      「離れて時間をかければ削られない」という戦法の抑止にならなかった。
@@ -2213,6 +2220,7 @@ function hurtE(e,dmg,crit,kx,ky,quiet){
       if(rnd()<.35)hurtP(dmg*.10,e.n+"の反射",false,e.element);}}
   if(e.shield>0){const a=Math.min(e.shield,dmg);e.shield-=a;dmg-=a;
     dnum(e.x,e.y,a,"#d8d040");if(dmg<=0){e.flash=CFG.FLASH_T;return;}}
+  if(e.metal)dmg=Math.min(1,Math.max(0,dmg));
   e.hp-=dmg;e.flash=CFG.FLASH_T;e.agro=true;
   S.dmgLog.push({t:S.runT,v:dmg});
   if(!e.boss&&!e.heavy){e.kbx+=(kx||0)*CFG.KNOCKBACK;e.kby+=(ky||0)*CFG.KNOCKBACK;}
@@ -2414,7 +2422,7 @@ function useSkill(i){
   else{let b=null,bd=1e9;for(const e of S.enemies){const d=d2(p.x,p.y,e.x,e.y);if(d<bd){bd=d;b=e;}}
     if(b)a=Math.atan2(b.y-p.y,b.x-p.x);}
   p.face=a;
-  const dmg=()=>{const c=rnd()<(p.d.crit+p.mCrit);let v=pDmg(sk.dmg)*(S.autoSkillCasting?.62:1);
+  const dmg=()=>{const c=rnd()<(p.d.crit+p.mCrit);let v=pDmg(C.atk,CFG.ATK_MUL*(sk.mul||0))*(S.autoSkillCasting?.62:1);
     if(c)v*=(p.d.cdmg+p.mCdmg);return[v,c];};
   switch(sk.k){
   case "cleave":{
@@ -2430,7 +2438,7 @@ function useSkill(i){
         vx:Math.cos(ang)*4,vy:Math.sin(ang)*4,t:0,life:.16,col:"#ffd9a0",sz:3});}
     h+=hitPotsCone(p.x,p.y,a,R,sk.arc)?1:0;SFX.cast(300);if(h)shk(3.2);break;}
   case "dash":{
-    p.dashT=.30;const spd=sk.len/.30;
+    p.dashT=.30;p.invulT=Math.max(p.invulT,p.dashT);const spd=sk.len/.30;
     p.dashX=Math.cos(a)*spd;p.dashY=Math.sin(a)*spd;
     const hs=new Set();
     p.dashHit=()=>{for(const e of S.enemies.slice()){if(hs.has(e))continue;
@@ -2738,13 +2746,13 @@ function update(dt){
   for(let i=S.fx.length-1;i>=0;i--){
     const f=S.fx[i];if(!f)continue;const first=f.tm===0;f.tm+=dt;
     if(f.t==="boom"){
-      if(first){burst(f.x,f.y,f.col,18,2);
+      const armed=f.tm>=(f.delay||0),firstHit=armed&&!f.hitDone;if(firstHit){f.hitDone=true;burst(f.x,f.y,f.col,18,2);
         if(f.en){if(d2(f.x,f.y,p.x,p.y)<f.R*f.R)hurtP(f.dmg,"爆発",false,f.element);}
         else {hitPotsCircle(f.x,f.y,f.R);for(const e of S.enemies.slice()){
           if(f.hit&&f.hit.has(e))continue;
           if(d2(f.x,f.y,e.x,e.y)<Math.pow(f.R+e.r,2)){if(f.hit)f.hit.add(e);
             hurtE(e,f.dmg,false,0,0,true);}}}}
-      if(f.tm>.34)S.fx.splice(i,1);}
+      if(f.tm>(f.delay||0)+.34)S.fx.splice(i,1);}
     else if(f.t==="pool"){f.tick-=dt;
       if(f.tick<=0){f.tick=.4;if(d2(f.x,f.y,p.x,p.y)<f.R*f.R){
         const st=f.st||"brn";
@@ -2823,10 +2831,10 @@ function bossRelease(e,d,dt){
     const tx=p.x+Math.cos(a)*1.1,ty=p.y+Math.sin(a)*1.1;
     if(walk(tx,ty,e.r)){e.x=tx;e.y=ty;}
     e.vanish=0;
-    S.fx.push({t:"boom",x:p.x,y:p.y,tm:0,R:2.2,col:e.col,dmg:e.dmg*1.5,en:1,element:e.element});
+    S.fx.push({t:"boom",x:e.x,y:e.y,tm:0,delay:.45,R:2.2,col:e.col,dmg:e.dmg*1.5,en:1,element:e.element});
     burst(e.x,e.y,e.col,20,2);shk(8);}
   else if(e.telK==="pools"){
-    for(let i=0;i<(e.phase===2?5:3);i++){const a=rnd()*TAU,r=rr(1.5,4.5);
+    for(let i=0;i<(e.phase===2?5:3);i++){const a=rnd()*TAU,r=i===0?0:rr(1.5,4.5);
       S.fx.push({t:"pool",x:p.x+Math.cos(a)*r,y:p.y+Math.sin(a)*r,tm:0,dur:7,R:1.5,
         col:e.col,dmg:e.dmg*.5,en:1,tick:0,element:e.element,st:"psn"});}
     tone(180,.2,"triangle",.08,120);}}
@@ -3479,7 +3487,7 @@ function drawMM(force){
   if(known(S.stairs)||S.tactical.reveal)dot(S.stairs,"#e08830",3.5);
   if(known(S.portal))dot(S.portal,"#5aa0ff",3.5);
   for(const e of S.enemies)if((e.agro||e.elite||e.boss)&&known(e))
-    dot(e,e.boss?"#ff3030":e.elite?e.elite.col:"#a04040",e.boss?4:2.2);
+    dot(e,e.metal?"#ffffff":e.boss?"#ff3030":e.elite?e.elite.col:"#a04040",e.metal?3.4:e.boss?4:2.2);
   for(const q of S.props)if(S.tactical.reveal&&(q.t==="chest"||q.t==="shrine"))dot(q,"#ffd24a",3);
   for(const d of S.drops){
     if(!known(d))continue;
@@ -3613,7 +3621,7 @@ function endRun(alive,cause){
   // boss_message は深度5ボス撃破時に設定され、そこから先へ進む経路が無かった。
   // 帰還した時点で装備・商店・編成の案内へ繋ぐ（無料ガチャ2回もこの枝にある）。
   if(alive&&["return","boss_message"].includes((S.tutorial||{}).phase)){S.tutorial.phase="equip_tab";hideTutorial();}
-  if(alive){S.stash.push(...got);SFX.extract();}else SFX.death();
+  if(alive){S.stash.push(...got);gainRankXP(returnRankXP(S.floor));SFX.extract();}else SFX.death();
   S.log.runs.push({t:Math.round(S.runT),floor:S.floor,start:S.startFloor,alive,
     items:got.length,kills:S.p.kills,lv:S.base.lv,gold:S.gold,ups:S.p.ups.slice()});
   save();
@@ -3668,16 +3676,15 @@ function openTown(){
   $("scTown").classList.add("on");$("pauseB").classList.remove("show");
   $("townG").textContent=S.gold;
   $("premiumT").textContent=S.premium||0;
-  /* Lv・経験値・スタミナ・戦闘力。「いまどれだけ遊べて、どれだけ強いか」を常駐させる。 */
-  {const need=xpNeed(S.base.lv),cur=S.base.xp||0;
-   $("hdrLv").textContent="Lv"+S.base.lv;
+  /* アカウント共通ランクと戦闘力を常駐させる。キャラLvは仲間・装備画面に残す。 */
+  {const need=rankNeed(S.rank.lv),cur=S.rank.xp||0;
+   $("hdrLv").textContent="ランク"+S.rank.lv;
    $("hdrXp").style.width=Math.max(0,Math.min(100,need>0?cur/need*100:100))+"%";
-   $("hdrStam").textContent=(S.stamina==null?3:S.stamina)+"/3";
    /* 何の数字か分からないと意味がないので、押したら説明を出す。
       1行ずつでは高さが20pxしかなく指で狙えないので、3行まとめて受ける。 */
-   const w=$("hdrStam").closest(".wallet");
+   const w=$("premiumT").closest(".wallet");
    if(w&&!w.dataset.wired){w.dataset.wired="1";w.style.cursor="pointer";
-     tapEl(w,()=>toast("⚡スタミナ=報酬2倍で潜れる残り回数（1日3回・4:00回復） ／ ◆ジェム ／ ●ゴールド","ok"));}
+     tapEl(w,()=>toast("◆ジェム ／ ●ゴールド","ok"));}
    $("hdrCp").textContent=combatPower(derive()).toLocaleString();}
   const profile=allRoster().find(x=>x.k+":"+x.ch.id===S.profileAvatar)||{k:S.cls,ch:currentCharacter()};
   const tier=charTier(profile.ch);
@@ -3718,7 +3725,7 @@ function gearGrid(host,inDungeon){
     d.innerHTML=`<div class="slotTop"><span class="up">${up?"▲":""}</span>`
       +`<span class="enh">${it&&(it.lv||1)>1?"+"+((it.lv||1)-1):""}</span></div>`
       +`<div class="ic ${it?RC[it.rar]:"e"}" style="${it?`color:${ELEMENTS[it.element||"neutral"].col}`:""}">${icon(it?iconKey(it):s.k,22)}</div>`
-      +`<div class="sl">${s.n}</div>`
+      +`<div class="sl">${it?"":s.n}</div>`
       +`<div class="si ${it?RC[it.rar]:""}" title="${it?it.name:""}">${it?it.base:"—"}</div>`
       +`<div class="sd">${it?`深度${it.ilvl}`:""}</div>`;
     tapEl(d,()=>{const t=S.tutorial||{};if(!inDungeon&&t.phase==="equip"&&TUTORIAL_SLOTS[t.gearIndex]===s.k){
@@ -3869,7 +3876,7 @@ function renderSkillTab(host,inDungeon,after){
   const row=document.createElement("div");row.className="skillSlots";
   for(let i=0;i<3;i++){const sk=equipped[i],d=document.createElement("div");
     d.className="skillSlot"+(slot===i?" on":"");
-    d.innerHTML=`<div class="pos">技${i+1}</div><div class="nm">${sk.n}</div><div class="ty">${sk.tag} / ${sk.c} MP</div>`;
+    d.innerHTML=`<div class="pos">技${i+1}</div><div class="nm">${sk.n}</div><div class="ty">${sk.mul?sk.mul.toFixed(1)+"倍":"強化"} / ${sk.c} MP</div>`;
     if(!inDungeon)tapEl(d,()=>{S.skillPick=i;after();});
     row.appendChild(d);}
   host.appendChild(row);
@@ -3881,7 +3888,7 @@ function renderSkillTab(host,inDungeon,after){
     if(sk.uniq)d.classList.add("uniqSkill");
     d.innerHTML=`<div class="row"><div class="nm">${sk.uniq?`<b style="color:var(--gold)">固有</b> `:""}${sk.n}</div>
         <span class="tag">${lock?`深度${sk.dep}Fで解放`:on?"この枠に装備中":used>=0?`技${used+1}に装備中`:`${sk.c} MP`}</span></div>
-      <div class="ty">${sk.tag} / 消費 ${sk.c} MP / 再使用 ${sk.cd.toFixed(1)}秒</div>
+      <div class="ty">${sk.mul?"通常攻撃の "+sk.mul.toFixed(1)+"倍":"自己強化"} / 消費 ${sk.c} MP / 再使用 ${sk.cd.toFixed(1)}秒</div>
       <div class="st">${sk.d}</div>`;
     if(!lock)tapEl(d,()=>{setSkillSlot(S.cls,slot,sk.id);toast(`技${slot+1}：${sk.n}`,"ok");after();});
     host.appendChild(d);}
@@ -4209,7 +4216,7 @@ function renderMissionSection(b){
   else{const all=document.createElement("div");all.className="qbonus";
     all.innerHTML=`<span>全達成ボーナス</span><span style="color:var(--ink2)">${daily.allClaimed?"受取済み":`3任務すべて達成で 階梯${tier}核1個`}</span>`;b.appendChild(all);}
   if(!S.beginnerClaimed){const beginner=document.createElement("div");beginner.className="btn gold";beginner.textContent=`初心者ミッション報酬（基準 ${beginnerTarget()}F）`;tapEl(beginner,()=>{if(claimBeginnerMission())openTown();});b.appendChild(beginner);}
-  {const key=activeCharacterKey(),lv=breakthroughLevel(key),need=lv<5?CFG.BREAKTHROUGH_CORE_COST[lv+1]:0,paid=(S.breakthroughProgress||{})[key]||0,d=document.createElement("div");d.className="card";d.innerHTML=`<div class="nm">${currentCharacter().n} ${lv}凸 / 5凸</div><div class="st">${lv<5?`次段階：核 ${paid}/${need}`:"最大突破"}</div>`;if(lv<5){const x=document.createElement("div");x.className="btn "+(materialCount("core")?"gold":"no");x.textContent="核を投入";tapEl(x,()=>{breakthroughWithCore(key);openTown();});d.appendChild(x);}b.appendChild(d);}
+  {const key=activeCharacterKey(),lv=breakthroughLevel(key),d=document.createElement("div");d.className="card";d.innerHTML=`<div class="nm">${currentCharacter().n} ${lv}凸 / 5凸</div><div class="st">${lv<5?"次段階：同じ仲間 0/1":"最大突破"}</div>`;b.appendChild(d);}
 }
 /* いま片付いていないこと。タブのバッジと拠点の推奨カードが同じ根拠を使う。 */
 function pendingCounts(){
@@ -5322,16 +5329,16 @@ const transferSummary=d=>{
   return `深度${d.deepest||1} / Lv${(d.base||{}).lv||1} / ${(d.gold||0).toLocaleString()}G`
     +` / ジェム${d.premium||0} / 仲間${chars||1}人 / 倉庫${stash}個`;};
 function save(){storeActiveCharacter();try{localStorage.setItem(KEY,JSON.stringify({cls:S.cls,deepest:S.deepest,
-  gold:S.gold,stash:S.stash,gear:S.gear,base:S.base,log:S.log,mats:S.mats,stock:S.stock,consumables:S.consumables,loadout:S.loadout,consumableVersion:1,
+  rank:S.rank,gold:S.gold,stash:S.stash,gear:S.gear,base:S.base,log:S.log,mats:S.mats,stock:S.stock,consumables:S.consumables,loadout:S.loadout,consumableVersion:1,
   matTierVersion:2,
-  settings:S.settings,admin:S.admin,debug:S.debug,debugFloor:S.debugFloor,adminOpts:S.adminOpts,chars:S.chars,characterStates:S.characterStates,avatars:S.avatars,formation:S.formation,diveFloor:S.diveFloor,stamina:S.stamina,daily:S.daily,premium:S.premium,paidInventory:S.paidInventory,profileAvatar:S.profileAvatar,shopSub:S.shopSub,gearSub:S.gearSub,unlockedCharacters:S.unlockedCharacters,craftOpen:S.craftOpen,seenHints:S.seenHints,tutorial:S.tutorial,returnInvulnerable:S.returnInvulnerable,breakthroughs:S.breakthroughs,breakthroughProgress:S.breakthroughProgress,weeklyCore:S.weeklyCore,beginnerClaimed:S.beginnerClaimed,prepMissionsOpen:S.prepMissionsOpen,invLegendOpen:S.invLegendOpen,skillLoadout:S.skillLoadout,playerName:S.playerName,invSub:S.invSub}));}catch(e){}}
+  settings:S.settings,admin:S.admin,debug:S.debug,debugFloor:S.debugFloor,adminOpts:S.adminOpts,chars:S.chars,characterStates:S.characterStates,avatars:S.avatars,formation:S.formation,diveFloor:S.diveFloor,stamina:S.stamina,daily:S.daily,premium:S.premium,paidInventory:S.paidInventory,profileAvatar:S.profileAvatar,shopSub:S.shopSub,gearSub:S.gearSub,unlockedCharacters:S.unlockedCharacters,craftOpen:S.craftOpen,seenHints:S.seenHints,tutorial:S.tutorial,returnInvulnerable:S.returnInvulnerable,breakthroughs:S.breakthroughs,weeklyCore:S.weeklyCore,beginnerClaimed:S.beginnerClaimed,prepMissionsOpen:S.prepMissionsOpen,invLegendOpen:S.invLegendOpen,skillLoadout:S.skillLoadout,playerName:S.playerName,invSub:S.invSub}));}catch(e){}}
 /* セーブの数値は必ず有限な数へ均す。文字列や負値がそのまま入ると
    S.gold+=500 が文字列連結になったり、深度が負のまま階梯計算へ流れる。 */
 const numAt=(v,fallback,min)=>{const n=Number(v);return Number.isFinite(n)?(min==null?n:Math.max(min,n)):fallback;};
 function load(){try{
   const d=JSON.parse(localStorage.getItem(KEY)||"null");
   if(!d||!d.cls||!CLASSES[d.cls])return false;
-  S.cls=d.cls;S.deepest=numAt(d.deepest,1,1);S.gold=numAt(d.gold,0,0);S.stash=Array.isArray(d.stash)?d.stash:[];
+  S.cls=d.cls;S.rank=Object.assign({lv:1,xp:0},d.rank||{});S.deepest=numAt(d.deepest,1,1);S.gold=numAt(d.gold,0,0);S.stash=Array.isArray(d.stash)?d.stash:[];
   S.mats={crystal:Object.assign({},d.mats&&d.mats.crystal||{}),core:Object.assign({},d.mats&&d.mats.core||{})};
   if((d.matTierVersion||1)<2)for(const kind of ["crystal","core"]){const old=S.mats[kind],moved={};for(const [tier,n] of Object.entries(old))moved[Math.max(1,(+tier||1)-1)]=(moved[Math.max(1,(+tier||1)-1)]||0)+n;S.mats[kind]=moved;}
   const fix=it=>{
@@ -5369,7 +5376,8 @@ function load(){try{
     sonic:"quake1",shockTrap:"bind1",weaken:"rot1",torch:"lamp1",incense:"scry1",returnScroll:"recall1"};
    S.loadout=S.loadout.map(k=>!k?null:CONSUMABLES[k]?k:(OLD[k]||null));}while(S.loadout.length<loadoutCapacity())S.loadout.push(null);S.runItems=[0,0,0,0];S.log=d.log||{runs:[]};
   S.settings=Object.assign({map:1,dmg:1,shake:1,dps:1,timer:1,stick:1,eco:0,mirStick:0,mirSkill:0,mirItem:0,controlMode:"manual",autoPreset:"aggressive",automationEditor:0},d.settings||{});
-  S.admin=!!d.admin;S.debug=!!d.debug;S.debugFloor=numAt(d.debugFloor,1,1);S.adminOpts=d.adminOpts||{};S.chars=d.chars||{};S.characterStates=d.characterStates||{};S.avatars=d.avatars||{};S.breakthroughs=d.breakthroughs||{};S.breakthroughProgress=d.breakthroughProgress||{};S.weeklyCore=d.weeklyCore||{week:"",bought:0};S.beginnerClaimed=!!d.beginnerClaimed;S.prepMissionsOpen=!!d.prepMissionsOpen;S.invLegendOpen=!!d.invLegendOpen;S.playerName=typeof d.playerName==="string"?d.playerName:"";S.invSub=d.invSub||"gear";S.skillLoadout=d.skillLoadout||{};
+  S.admin=!!d.admin;S.debug=!!d.debug;S.debugFloor=numAt(d.debugFloor,1,1);S.adminOpts=d.adminOpts||{};S.chars=d.chars||{};S.characterStates=d.characterStates||{};S.avatars=d.avatars||{};S.breakthroughs=d.breakthroughs||{};/* 旧積立核は消費済み資産なので現階梯の核へ全額払い戻す。 */
+  for(const n of Object.values(d.breakthroughProgress||{}))if(Number(n)>0)addMat("core",materialTier(S.deepest),Number(n));S.weeklyCore=d.weeklyCore||{week:"",bought:0};S.beginnerClaimed=!!d.beginnerClaimed;S.prepMissionsOpen=!!d.prepMissionsOpen;S.invLegendOpen=!!d.invLegendOpen;S.playerName=typeof d.playerName==="string"?d.playerName:"";S.invSub=d.invSub||"gear";S.skillLoadout=d.skillLoadout||{};
   S.craftOpen=d.craftOpen||{};S.seenHints=d.seenHints||{};
   /* 旧セーブは職ごとに1つだけ持っていた。その職の先頭キャラクターの設定として引き継ぐ。 */
   for(const k of CKEYS)if(S.skillLoadout[k]){

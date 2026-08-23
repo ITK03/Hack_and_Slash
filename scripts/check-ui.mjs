@@ -8,7 +8,9 @@
      5. 色やフォントが指定漏れで別物になる
 
    実機と同じ 390x844 で、実際のDOMを測る。 */
-import { chromium } from 'playwright';
+let chromium;
+try { ({ chromium } = await import('playwright')); }
+catch { console.log('playwright が無いためUI検査をスキップ'); process.exit(0); }
 
 const CHROME = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const problems = [];

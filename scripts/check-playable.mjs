@@ -916,6 +916,23 @@ await page.goto(base); await page.waitForTimeout(500);
   notes.push(`ボス10体: ${bosses.map(r => r.split(':')[1]).join(' / ')}`);
 }
 
+/* 7. 毒沼は棒立ちへ当たり、背後攻撃は予兆中に離れれば避けられること。 */
+{
+  const hazards = await page.evaluate(() => {
+    beginRun(30); S.paused=false; S.p.hp=S.p.max; const hp0=S.p.hp;
+    const z={phase:1,col:'#0f0',dmg:20,telK:'pools'}; bossRelease(z,0,0);
+    for(let i=0;i<30;i++)update(1/60); const poolHit=S.p.hp<hp0;
+    S.fx=[];S.p.hp=S.p.max;S.p.invulT=0;
+    const b={x:S.p.x-2,y:S.p.y,r:.8,col:'#808',dmg:20,telK:'ambush',vanish:1,element:'dark'};
+    bossRelease(b,0,0);const marked=S.fx.some(f=>f.t==='boom'&&f.delay>0);
+    S.p.x+=4;for(let i=0;i<40;i++)update(1/60);const escaped=S.p.hp===S.p.max;
+    return{poolHit,marked,escaped};
+  });
+  if(!hazards.poolHit)problems.push('棒立ちしても毒沼のダメージを受けない');
+  if(!hazards.marked||!hazards.escaped)problems.push(`背後攻撃を移動で避けられない（${JSON.stringify(hazards)}）`);
+  notes.push(`危険床: 棒立ち被弾 ${hazards.poolHit} / 背後予兆 ${hazards.marked} / 移動回避 ${hazards.escaped}`);
+}
+
 if (errors.length) problems.push(`実行中の例外: ${[...new Set(errors)].slice(0, 3).join(' | ')}`);
 await page.close(); await browser.close(); server.close();
 
