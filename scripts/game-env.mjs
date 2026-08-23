@@ -42,7 +42,7 @@ function makeElement(document, tag = 'div') {
   const element = {
     tagName: String(tag || 'div').toUpperCase(),
     children: [], dataset: {}, style: makeStyle(),
-    textContent: '', innerHTML: '', value: '', className: '', id: '', type: '', autocomplete: '',
+    textContent: '', _innerHTML: '', value: '', className: '', id: '', type: '', autocomplete: '',
     readOnly: false, checked: false, min: 0, max: 0, parentNode: null,
     classList: {
       set: new Set(),
@@ -88,6 +88,13 @@ function makeElement(document, tag = 'div') {
     closest: () => null,
     getContext: () => document.context2d,
   };
+  /* 実DOMでは innerHTML の代入時に既存の子要素が破棄される。
+   結果画面を数千回開く長時間検査でスタブだけが子を蓄積し続けないよう挙動を合わせる。 */
+  Object.defineProperty(element, 'innerHTML', {
+    get() { return element._innerHTML; },
+    set(value) { element._innerHTML = String(value); element.children = []; },
+    enumerable: true,
+  });
   return element;
 }
 
