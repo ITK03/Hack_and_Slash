@@ -630,6 +630,7 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
 .skillSlot .nm{font-size:12px;font-weight:900;margin-top:3px;line-height:1.2;overflow-wrap:anywhere}
 .skillSlot .ty{font-size:11px;margin-top:2px}
 .skillCard.on{border-color:var(--gold)}
+.skillCard .st{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* 固有技は一覧の先頭に置き、左端に金の帯を出して共通の技と区別する */
 .skillCard.uniqSkill{border-left:3px solid var(--gold)}
 .skillCard.no{opacity:.45}
@@ -828,7 +829,7 @@ const CFG={
 
   /* --- ドロップ --- */
   DROP_CHANCE:.048,      // 旧 .24 の 2割
-  GOLD_CHANCE:.42, POTION_DROP:.070,
+  GOLD_CHANCE:.42, POTION_DROP:.070, METAL_CHANCE:.0045,
   CHEST_CHANCE:.035,     // 旧 .34 の 1割
   RARITY:[
     ["並",  1000,-26,"#c8c4bc"],
@@ -1213,7 +1214,11 @@ function resonanceDamageMultiplier(r,defender,fl){if(r.element==="neutral")retur
    光闇は互いに与ダメージも被ダメージも上がる、高リスク高リターンの組み合わせとして扱う。 */
 const LIGHT_DARK=new Set(["light","dark"]);
 function resonanceIncomingMultiplier(r,attacker){if(r.element==="neutral")return 1;
-  if(LIGHT_DARK.has(r.element)&&LIGHT_DARK.has(attacker)&&r.element!==attacker)return r.danger;
+  if(LIGHT_DARK.has(r.element)){
+    if(LIGHT_DARK.has(attacker)&&r.element!==attacker)return r.danger;
+    /* 光闇は有利帯が少ない代わりに固定運用で弱点帯も少ない。三すくみ属性からの
+       被害を少し増やし、希少属性を着けっぱなしにすることが最適解にならないようにする。 */
+    if(!LIGHT_DARK.has(attacker))return 1.15;}
   const affinity=elementMultiplier(r.element,attacker);return affinity>1?r.guard:affinity<1?r.danger:1;}
 const ACLS=["warrior","mage"];
 const BASEN={weapon:null,
@@ -1489,9 +1494,12 @@ function tickST(t,dt,isPlayer){
     if(t.st[k]<=0)continue;
     t.st[k]-=dt;
     const d=ST[k];
-    if(d.dps){t.hp-=t.max*d.dps*dt;
-      if(isPlayer){if(t.hp<=0){t.hp=0;endRun(false,d.n+"による継続ダメージ");return;}}
-      else if(t.hp<=0){killE(t);return;}}}}
+    if(d.dps){
+      if(!isPlayer&&t.metal){t.metalSTClock=t.metalSTClock||{};t.metalSTClock[k]=(t.metalSTClock[k]||0)+dt;
+        while(t.metalSTClock[k]>=1&&t.hp>0){t.metalSTClock[k]-=1;hurtE(t,t.max*d.dps,false,0,0,true);}}
+      else{t.hp-=t.max*d.dps*dt;
+        if(isPlayer){if(t.hp<=0){t.hp=0;endRun(false,d.n+"による継続ダメージ");return;}}
+        else if(t.hp<=0){killE(t);return;}}}}}
 const stActive=(t,k)=>t.st&&t.st[k]>0;
 const EAFF=[{id:"frost",n:"氷結",col:"#7ad0ff"},{id:"fire",n:"業火",col:"#ff7a3a"},
   {id:"shield",n:"守護",col:"#d8d040"},{id:"split",n:"分裂",col:"#a04ad0"},
@@ -2007,7 +2015,7 @@ function curve(fl,points){
    「あと少しで時間切れ」ではなく「長引くほど自分が不利」を体で分からせるため。 */
 const bossRageMul=t=>1+Math.max(0,(t||0)-CFG.BOSS_ENRAGE_AT)*CFG.BOSS_ENRAGE_RATE;
 const enemyAcceleration=fl=>Math.pow(CFG.ENEMY_ACCEL_GROWTH,Math.max(0,fl-CFG.ENEMY_ACCEL_START));
-const enemyHPScale=fl=>CFG.ENEMY_HP_MUL*curve(fl,[[1,2.2],[5,3],[10,4],[20,9],[35,18],[60,38],[80,65],[100,148]])*enemyAcceleration(fl);
+const enemyHPScale=fl=>CFG.ENEMY_HP_MUL*curve(fl,[[1,2.2],[5,3],[10,4],[20,9],[35,34],[60,80],[80,100],[100,170]])*enemyAcceleration(fl);
 const enemyDMGScale=fl=>CFG.ENEMY_DMG_MUL*curve(fl,[[1,.18],[5,.30],[10,.55],[20,1.35],[35,2.8],[60,6.8],[80,12],[100,29]])*enemyAcceleration(fl);
 // 各階層ボスは通常進行曲線に対して HP 2倍、攻撃力 1.5倍。
 const bossHPScale=fl=>2*CFG.ENEMY_HP_MUL*curve(fl,[[5,.40],[10,.80],[20,1.8],[35,4.2],[60,9.5],[80,16],[100,37]])*enemyAcceleration(fl);
@@ -2120,7 +2128,7 @@ function enterFloor(fl){S.tactical.trap=null;S.tactical.reveal=false;
         if(walk(px2,py2,.4))spawnE(pick(bag),px2,py2,fl,false);}}
   }
   /* 管理者の forceMetal は希少敵を決定的に検査する入口。通常時は各フロア0.5%。 */
-  if((S.admin&&S.adminOpts.forceMetal)||rnd()<.005){const rm=rooms[ri(1,rooms.length-1)];spawnE("metal",rm.cx+.5,rm.cy+.5,fl,false);}
+  if((S.admin&&S.adminOpts.forceMetal)||rnd()<CFG.METAL_CHANCE){const rm=rooms[ri(1,rooms.length-1)];spawnE("metal",rm.cx+.5,rm.cy+.5,fl,false);}
   if(isBoss)spawnBoss(fl);
   /* 烙印は深度に応じて必ず一定数出す。抽選任せだと深部でも0〜1体しか出ず、
      「離れて時間をかければ削られない」という戦法の抑止にならなかった。
@@ -2220,7 +2228,7 @@ function hurtE(e,dmg,crit,kx,ky,quiet){
       if(rnd()<.35)hurtP(dmg*.10,e.n+"の反射",false,e.element);}}
   if(e.shield>0){const a=Math.min(e.shield,dmg);e.shield-=a;dmg-=a;
     dnum(e.x,e.y,a,"#d8d040");if(dmg<=0){e.flash=CFG.FLASH_T;return;}}
-  if(e.metal)dmg=Math.min(1,Math.max(0,dmg));
+  if(e.metal)dmg=dmg>0?1:0;
   e.hp-=dmg;e.flash=CFG.FLASH_T;e.agro=true;
   S.dmgLog.push({t:S.runT,v:dmg});
   if(!e.boss&&!e.heavy){e.kbx+=(kx||0)*CFG.KNOCKBACK;e.kby+=(ky||0)*CFG.KNOCKBACK;}
@@ -2611,7 +2619,11 @@ function update(dt){
   const evasion=Math.min(.75,Math.max(0,(S.floor-8)/160));
   for(const e of S.enemies){
     if(e.flash>0)e.flash-=dt;
-    if(e.dotT>0){e.dotT-=dt;e.hp-=e.dot*dt;if(e.hp<=0){killE(e);continue;}}
+    if(e.dotT>0){e.dotT-=dt;
+      /* 希少敵は燃焼・毒も1回1ダメージ。フレームごとに1へ丸めると逆に毎秒60ダメージになるため、
+         継続時間を1秒ずつためて hurtE の最終減衰へ通す。 */
+      if(e.metal){e.metalDotClock=(e.metalDotClock||0)+dt;while(e.metalDotClock>=1&&e.hp>0){e.metalDotClock-=1;hurtE(e,e.dot,false,0,0,true);}}
+      else{e.hp-=e.dot*dt;if(e.hp<=0){killE(e);continue;}}}
     tickST(e,dt,false);if(e.hp<=0)continue;
     if(e.frz>0||stActive(e,"frz")){e.frz=Math.max(0,e.frz-dt);continue;}
     if(e.stun>0){e.stun-=dt;continue;}
@@ -3725,8 +3737,7 @@ function gearGrid(host,inDungeon){
     d.innerHTML=`<div class="slotTop"><span class="up">${up?"▲":""}</span>`
       +`<span class="enh">${it&&(it.lv||1)>1?"+"+((it.lv||1)-1):""}</span></div>`
       +`<div class="ic ${it?RC[it.rar]:"e"}" style="${it?`color:${ELEMENTS[it.element||"neutral"].col}`:""}">${icon(it?iconKey(it):s.k,22)}</div>`
-      +`<div class="sl">${it?"":s.n}</div>`
-      +`<div class="si ${it?RC[it.rar]:""}" title="${it?it.name:""}">${it?it.base:"—"}</div>`
+            +`<div class="si ${it?RC[it.rar]:""}" title="${it?it.name:""}">${it?it.base:"—"}</div>`
       +`<div class="sd">${it?`深度${it.ilvl}`:""}</div>`;
     tapEl(d,()=>{const t=S.tutorial||{};if(!inDungeon&&t.phase==="equip"&&TUTORIAL_SLOTS[t.gearIndex]===s.k){
       const training=S.stash.find(x=>x.tutorial&&x.slot===s.k);if(training){equip(training);t.gearIndex++;if(t.gearIndex>=TUTORIAL_SLOTS.length){t.phase="shop";S.tab="gear";}save();openTown();return;}}
@@ -3889,7 +3900,7 @@ function renderSkillTab(host,inDungeon,after){
     d.innerHTML=`<div class="row"><div class="nm">${sk.uniq?`<b style="color:var(--gold)">固有</b> `:""}${sk.n}</div>
         <span class="tag">${lock?`深度${sk.dep}Fで解放`:on?"この枠に装備中":used>=0?`技${used+1}に装備中`:`${sk.c} MP`}</span></div>
       <div class="ty">${sk.mul?"通常攻撃の "+sk.mul.toFixed(1)+"倍":"自己強化"} / 消費 ${sk.c} MP / 再使用 ${sk.cd.toFixed(1)}秒</div>
-      <div class="st">${sk.d}</div>`;
+      <div class="st" title="${sk.d}">${sk.d}</div>`;
     if(!lock)tapEl(d,()=>{setSkillSlot(S.cls,slot,sk.id);toast(`技${slot+1}：${sk.n}`,"ok");after();});
     host.appendChild(d);}
 }
