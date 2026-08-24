@@ -189,6 +189,7 @@ body.mirItem #railR{right:auto;left:6px}
 #scPause .shead,#scPause .sfoot,#scPause>.tabs{background:rgba(10,8,16,.9)}
 .shead{padding:calc(env(safe-area-inset-top) + 14px) 15px 10px;flex:0 0 auto;
   background:linear-gradient(180deg,var(--bg2),var(--bg));border-bottom:1px solid var(--line)}
+#scTown>.shead{padding:calc(env(safe-area-inset-top) + 9px) 15px 7px}
 .screen>.tabs{flex:0 0 auto;margin:0;padding:8px 15px calc(env(safe-area-inset-bottom) + 8px);background:var(--bg2);border-top:1px solid var(--line)}
 .sbody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:14px 15px 20px}
 .sbody.fit{overflow:hidden;padding-top:8px;padding-bottom:8px}
@@ -291,7 +292,7 @@ h3{font-size:11px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 .plus.no{opacity:.2}
 #townBody .alloc,#pauseBody .alloc{padding:4px 0}#townBody .alloc .ad,#pauseBody .alloc .ad{display:block;font-size:11px;margin-top:1px}#townBody .alloc .plus,#pauseBody .alloc .plus{width:34px;height:34px}
 #townBody>h3{margin:10px 0 6px}
-.profile{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:10px;align-items:center;margin-top:8px}
+.profile{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:10px;align-items:center;margin-top:3px}
 .profileIcon{width:52px;height:52px;border:2px solid var(--line2);background:#171321;border-radius:50%;
   display:grid;place-items:center;font-size:27px;position:relative}
 /* 枠の色はキャラクターの等級。倉庫の装備と同じ「枠の色＝レア度」の読み方を揃える */
@@ -299,6 +300,8 @@ h3{font-size:11px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
   border:1px solid var(--line2);background:#0d0b14;display:grid;place-items:center;
   font-size:11px;font-style:normal;font-weight:900;line-height:1}
 .whoami{min-width:0}
+.nameCp{display:flex;align-items:center;gap:8px;min-width:0}.nameCp .uname{flex:1;min-width:0}
+.nameCp .hdrCp{flex:0 0 auto;margin:0;white-space:nowrap}.nameCp .hdrCp small{font-size:10px}.nameCp .hdrCp span{font-size:15px}
 /* 省略記号のため overflow:hidden が要るので、疑似要素では当たり判定を広げられない。
    上下の padding を負の margin で打ち消し、見た目の位置はそのままに枠だけ44pxにする。 */
 .uname{font-size:13px;font-weight:900;color:var(--ink);line-height:1.2;
@@ -651,6 +654,12 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
 .missionButton em{font-size:11px;font-style:normal;color:var(--ink2)}
 .missionTabs{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:8px 0}.missionTabs .btn{margin:0;padding:0 3px}
 .reachRow{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px}.reachRow.claimed{opacity:.72}.reachRow.locked{opacity:.62}
+.gearWorkspace{display:flex;flex-direction:column;gap:7px}.gearWorkTop{display:grid;grid-template-columns:minmax(0,1fr) minmax(120px,.8fr);gap:7px}
+.gearCurrent{margin:0!important;min-width:0}.gearCurrentHead{display:grid;grid-template-columns:44px minmax(0,1fr);gap:7px;align-items:center}.gearCurrentHead .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gearActions{display:grid;grid-template-columns:1fr 1fr;gap:5px;align-content:start}.gearActions .btn{margin:0;padding:0 4px;font-size:11px}.gearActions .wide{grid-column:1/-1}
+.gearFilters{display:grid;grid-template-columns:1fr 1fr;gap:5px}.gearFilters .btn{margin:0}
+.gearCandidates{display:grid;grid-template-columns:repeat(5,minmax(44px,1fr));gap:6px}.gearCandidate{position:relative;min-width:44px;min-height:58px;border:1px solid var(--line);display:grid;place-items:center;background:#100d18}.gearCandidate small{position:absolute;right:2px;bottom:1px;font-size:10px}
+.gearComparePage .compareHead{margin-top:4px}.gearCompareCp{text-align:center;font-size:12px;color:var(--ink2);margin:3px 0}.gearCompareCp b.up{color:#70e878}.gearCompareCp b.dn{color:#ff6f72}.gearCompareActions{display:grid;grid-template-columns:1fr 1fr;gap:7px}.gearCompareActions .btn{margin:0}
 .gachaCard{position:relative}
 .gachaBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .gachaBtns .btn{margin:0;padding:11px 4px;line-height:1.2}
@@ -747,9 +756,8 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
     <div class="profile">
       <div class="profileIcon" id="profileIcon">●<i class="clsMark" id="profileCls"></i></div>
       <div class="whoami">
-        <div class="uname" id="townName">冒険者</div>
+        <div class="nameCp"><div class="uname" id="townName">冒険者</div><div class="hdrCp"><small>戦闘力</small><span id="hdrCp">0</span></div></div>
         <div class="hdrLv"><b id="hdrLv">ランク1</b><span class="xpBar"><i id="hdrXp"></i></span></div>
-        <div class="hdrCp"><small>戦闘力</small><span id="hdrCp">0</span></div>
       </div>
       <div class="wallet">
         <div class="currency"><i class="gem">◆</i><span id="premiumT">0</span></div>
@@ -1753,7 +1761,7 @@ const S={scene:"class",cls:null,p:null,floor:1,deepest:1,gold:0,
   portal:null,stairs:null,boss:null,
   bag:[],stash:[],gear:{},
   runT:0,hitstop:0,shake:0,shakeT:0,flash:0,paused:true,
-  log:{runs:[]},tab:"prep",gearSub:"equip",skillPick:null,ptab:"drops",lvlQ:0,
+  log:{runs:[]},tab:"prep",gearSub:"equip",gearSlot:null,gearCompareChoice:null,gearCandidateRare:false,gearCandidateSort:"score",skillPick:null,ptab:"drops",lvlQ:0,
   settings:{map:1,dmg:1,shake:1,dps:1,timer:1,stick:1,eco:0,mirStick:0,mirSkill:0,mirItem:0},admin:false,debug:false,debugFloor:1,adminOpts:{},chars:{},characterStates:{},avatars:{},
   combo:0,comboT:0,dmgLog:[],dps:0,startFloor:1,runGold:0,mapBig:false,
   inv:{filters:[],sort:"score",sellSel:[],sellRar:1},mats:{crystal:{},core:{}},stock:{},consumables:{},loadout:["mend1",null,null,null],runItems:[0,0,0,0],itemSlot:0,
@@ -3781,7 +3789,7 @@ function gearGrid(host,inDungeon){
       +`<div class="sd">${it?`深度${it.ilvl}`:""}</div>`;
     tapEl(d,()=>{const t=S.tutorial||{};if(!inDungeon&&t.phase==="equip"&&TUTORIAL_SLOTS[t.gearIndex]===s.k){
       const training=S.stash.find(x=>x.tutorial&&x.slot===s.k);if(training){equip(training);t.gearIndex++;if(t.gearIndex>=TUTORIAL_SLOTS.length){t.phase="shop";S.tab="gear";}save();openTown();return;}}
-      openGearDetail(s.k,inDungeon);});gg.appendChild(d);}
+      if(!inDungeon){S.gearSlot=s.k;S.gearCompareChoice=null;openTown();}else openGearDetail(s.k,true);});gg.appendChild(d);}
   host.appendChild(gg);}
 function openCharacterPick(){const c=$("itC");c.classList.remove("gearCompare");
   c.innerHTML='<div style="font-size:15px;font-weight:800;margin-bottom:10px">職業を選択</div>';
@@ -3833,27 +3841,6 @@ function statBlock(host){
         +`<div class="st">${P.d}</div>`;
       host.appendChild(e);}}}
 function renderGearTab(host,inDungeon){
-  /* 戦闘力と一括着用を装備の一番上に置く。「何をすれば強くなるか」への答えをここで返す。 */
-  const cp=combatPower(derive());
-  const head=document.createElement("div");head.className="cpBar";
-  head.innerHTML=`<div><small>戦闘力</small><b>${cp.toLocaleString()}</b></div>`;
-  if(!inDungeon){
-    const best=document.createElement("div");best.className="btn gold";best.textContent="おすすめを着せる";
-    tapEl(best,()=>{
-      /* 何がどれだけ変わるかを見せてから実行する。勝手に着替えさせない。 */
-      const before=combatPower();let n=0,gain=0;
-      const plan=[];
-      const bak={};for(const k of SLOTK)bak[k]=S.gear[k];
-      for(const slot of SLOTK){let b2=null,cp2=combatPower();
-        for(const x of S.stash){if(x.slot!==slot)continue;const c2=powerWith(slot,x);if(c2>cp2){cp2=c2;b2=x;}}
-        if(b2){S.gear[slot]=b2;plan.push(`${SLOTN(slot)}: ${b2.name}`);n++;}}
-      gain=combatPower()-before;
-      for(const k of SLOTK)S.gear[k]=bak[k];
-      if(!n)return toast("いま着けている物が最良です","ok");
-      ask("おすすめを着せる",`${n}部位を交換します。\n戦闘力 ${before.toLocaleString()} → ${(before+gain).toLocaleString()}（+${gain.toLocaleString()}）\n\n`+plan.join("\n"),
-        ()=>autoEquipBest(()=>openTown()));});
-    head.appendChild(best);}
-  host.appendChild(head);
   const panel=document.createElement("div");panel.className="gearPanel";
   const left=document.createElement("div"),right=document.createElement("div");
   left.innerHTML="<h3>装備</h3>";right.innerHTML="<h3>能力値</h3>";
@@ -4028,7 +4015,11 @@ function renderTown(){
   b.classList.remove("fit");
   $("diveBar").classList.remove("on");   // 拠点タブ以外では出撃バーを出さない
   if(S.tab==="prep")renderPrepTab(b);
-  if(S.tab==="gear")renderCombinedGear(b,false,openTown);
+  if(S.tab==="gear"){
+    if(S.gearCompareChoice&&S.gearSlot)renderGearComparePage(b,S.gearSlot,S.gearCompareChoice);
+    else if(S.gearSlot)renderGearWorkspace(b,S.gearSlot);
+    else renderCombinedGear(b,false,openTown);
+  }
   if(S.tab==="inv")renderInv(b);
   if(S.tab==="shop"){
     const st=document.createElement("div");st.className="shopTabs";for(const [k,n] of [["gacha","ガチャ"],["gem","ジェム"],["store","ゴールド"]]){const d=document.createElement("div");d.className="btn "+(S.shopSub===k?"gold":"gh");d.textContent=n;tapEl(d,()=>{if(advanceTour("shop",k))return;S.shopSub=k;openTown();});st.appendChild(d);}b.appendChild(st);
@@ -5062,7 +5053,58 @@ function openInherit(it){
     tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);
     $("itPop").classList.add("on");};
   draw();}
-/* 装備枠を押したときの画面。以前は「枠→装備変更→一覧→選ぶ→決定」で5タップかかっていた。
+/* 装備枠から開く部位専用画面。グローバルのプロフィールと下部タブを残すため、
+   ポップアップではなく townBody の内容だけを切り替える。 */
+function gearCandidateAllowed(it,slotK){
+  if(!it||it.slot!==slotK||isEquipped(it))return false;
+  if(it.wt&&WCLS[it.wt]!==S.cls)return false;
+  if(it.ac&&it.ac!==S.cls)return false;
+  return true;
+}
+function gearWorkspaceBack(){S.gearSlot=null;S.gearCompareChoice=null;openTown();}
+function disposeCurrentGear(it,kind){
+  if(!it||S.gear[it.slot]!==it)return;
+  const reward=kind==="sell"?`${sellV(it)} G`:`階梯${materialTier(it.ilvl)}結晶 ${crystalQty(it)}`;
+  ask(kind==="sell"?"装備中の品を売却":"装備中の品を分解",`${it.name} を外して${kind==="sell"?"売却":"分解"}します。\n獲得: ${reward}`,()=>{
+    S.gear[it.slot]=null;
+    if(kind==="sell"){S.gold+=sellV(it);SFX.gold();}
+    else{addMat("crystal",materialTier(it.ilvl),crystalQty(it));dailyProgress("dismantled",1);SFX.chest();}
+    S.p.d=derive();recalcHP(S.p);save();openTown();
+  });
+}
+function renderGearWorkspace(host,slotK){
+  const it=S.gear[slotK],wrap=document.createElement("div");wrap.className="gearWorkspace";
+  const title=document.createElement("div");title.className="row";title.innerHTML=`<div class="nm">${SLOTN(slotK)}を装備</div>`;
+  const back=document.createElement("div");back.className="btn gh";back.textContent="装備一覧へ";tapEl(back,gearWorkspaceBack);title.appendChild(back);wrap.appendChild(title);
+  const top=document.createElement("div");top.className="gearWorkTop";
+  const current=document.createElement("div");current.className="card gearCurrent";
+  current.innerHTML=it?`<div class="gearCurrentHead"><div class="${RC[it.rar]}">${icon(iconKey(it),40)}</div><div><div class="ty">いまの装備</div><div class="nm ${RC[it.rar]}">${it.name}</div></div></div><div class="st">${compareItemStats(it,null,false)}</div>`
+    :`<div class="ty">いまの装備</div><div class="st">装備されていません。</div>`;
+  const actions=document.createElement("div");actions.className="gearActions";
+  const action=(name,cls,fn,wide=false)=>{const x=document.createElement("div");x.className=`btn ${cls}${wide?" wide":""}`;x.textContent=name;tapEl(x,fn);actions.appendChild(x);};
+  if(it){action("強化","gold",()=>showItem(it,false));action("分解","gh",()=>disposeCurrentGear(it,"dismantle"));action("売却","gh",()=>disposeCurrentGear(it,"sell"));}
+  else{action("強化","no",()=>{});action("分解","no",()=>{});action("売却","no",()=>{});}
+  action("おすすめ","gold",()=>autoEquipBest(()=>{S.gearSlot=slotK;openTown();}));
+  if(it)action("引き上げ","gh",()=>openInherit(it),true);else action("引き上げ","no",()=>{},true);
+  top.append(current,actions);wrap.appendChild(top);
+  const filters=document.createElement("div");filters.className="gearFilters";
+  const filter=document.createElement("div");filter.className="btn gh";filter.textContent=S.gearCandidateRare?"絞込: 希少以上":"絞込: すべて";tapEl(filter,()=>{S.gearCandidateRare=!S.gearCandidateRare;openTown();});
+  const sort=document.createElement("div");sort.className="btn gh";sort.textContent=S.gearCandidateSort==="score"?"並替: 強さ":"並替: 深度";tapEl(sort,()=>{S.gearCandidateSort=S.gearCandidateSort==="score"?"depth":"score";openTown();});filters.append(filter,sort);wrap.appendChild(filters);
+  let list=S.stash.filter(x=>gearCandidateAllowed(x,slotK));if(S.gearCandidateRare)list=list.filter(x=>x.rar>=2);
+  list.sort((a,z)=>S.gearCandidateSort==="score"?powerWith(slotK,z)-powerWith(slotK,a):z.ilvl-a.ilvl);
+  if(!list.length){const empty=document.createElement("div");empty.className="card";empty.innerHTML='<div class="st">装備できる物がありません。</div>';wrap.appendChild(empty);}
+  else{const grid=document.createElement("div");grid.className="gearCandidates";for(const x of list){const d=document.createElement("div");d.className=`gearCandidate ${RC[x.rar]}`;d.style.borderColor=x.rar===4?"#ff8adf":CFG.RARITY[x.rar][3];d.setAttribute("aria-label",x.name);d.innerHTML=icon(iconKey(x),32)+`<small>${x.ilvl}</small>`;tapEl(d,()=>{S.gearCompareChoice=x;openTown();});grid.appendChild(d);}wrap.appendChild(grid);}
+  host.appendChild(wrap);
+}
+function renderGearComparePage(host,slotK,it){
+  if(!gearCandidateAllowed(it,slotK)){S.gearCompareChoice=null;return renderGearWorkspace(host,slotK);}
+  const old=S.gear[slotK],before=combatPower(),after=powerWith(slotK,it),delta=after-before;
+  const page=document.createElement("div");page.className="gearComparePage";
+  const box=(x,label,other,isAfter)=>`<div class="compareItem${isAfter?" after":""}"><div class="ty">${label}</div><div class="${x?RC[x.rar]:""}">${icon(x?iconKey(x):slotK,36)}</div><div class="nm ${x?RC[x.rar]:""}">${x?x.name:"装備なし"}</div><div class="st">${compareItemStats(x,other,isAfter)}</div></div>`;
+  page.innerHTML=`<div class="nm">${SLOTN(slotK)}の比較</div><div class="compareHead">${box(old,"変更前",it,false)}${box(it,"変更後",old,true)}</div><div class="gearCompareCp">戦闘力 ${before.toLocaleString()} → ${after.toLocaleString()} <b class="${delta>0?"up":delta<0?"dn":""}">(${delta>0?"+":""}${delta.toLocaleString()})</b></div>`;
+  const acts=document.createElement("div");acts.className="gearCompareActions";const equipB=document.createElement("div");equipB.className="btn pri";equipB.textContent="装備";tapEl(equipB,()=>{equipItem(it,slotK);S.gearCompareChoice=null;openTown();});const back=document.createElement("div");back.className="btn gh";back.textContent="戻る";tapEl(back,()=>{S.gearCompareChoice=null;openTown();});acts.append(equipB,back);page.appendChild(acts);host.appendChild(page);
+}
+/* 装備枠を押したときの旧ポップアップ。ダンジョン内からだけ使用する。
    候補をこの画面に直接並べ、押した瞬間に装備する（2タップ）。細かく見たい人だけ詳細へ降りる。 */
 function openGearDetail(slotK,inDungeon){
   const it=S.gear[slotK],c=$("itC");c.classList.remove("gearCompare");
@@ -5548,6 +5590,7 @@ for(const t of document.querySelectorAll("#scTown .tab"))tapEl(t,()=>{
   if(phase&&phase.startsWith("tour_")&&advanceTour(target))return;
   if(phase==="equip_tab"&&target!=="gear"||phase==="shop"&&target!=="shop"||phase==="formation"&&target!=="prep")return;
   S.tab=target;
+  if(target!=="gear"){S.gearSlot=null;S.gearCompareChoice=null;}
   if(phase==="equip_tab"&&target==="gear"){S.gearSub="equip";S.tutorial.phase="equip";}
   if(phase==="shop"&&target==="shop"){S.shopSub="gacha";S.tutorial.phase="equip_gacha";}
   if(phase==="formation"&&target==="prep")S.tutorial.phase="formation_slot";
