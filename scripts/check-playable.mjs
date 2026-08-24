@@ -387,41 +387,32 @@ await page.goto(base); await page.waitForTimeout(500);
   notes.push(`継承: 深度${inh.before.score ? 30 : 30} → ${inh.target}（素材の最浅）/ 強さ ${inh.before.score} → ${inh.after.score} / 名前と固有効果は維持`);
 }
 
-/* 2m. 誰を編集中かが装備・技・能力のどれでも分かり、1タップで切り替わること。
-   名前は地の文に流さず、枠付きの見出しとして出す（等級の色・職業・Lv・戦闘力つき）。 */
+/* 2m. 4区画を一体化した100px以下のヘッダーでキャラと区画を切り替えられること。 */
 {
   const bar = await page.evaluate(() => {
     S.unlockedCharacters = CHARACTERS.warrior.map(c => 'warrior:' + c.id).concat(CHARACTERS.mage.map(c => 'mage:' + c.id));
     S.formation = ['warrior:leon', 'mage:noa'];
     S.cls = 'warrior'; S.avatars.warrior = 'leon';
     const out = {};
-    for (const sub of ['equip', 'skill', 'ability']) {
+    for (const sub of ['equip', 'skill', 'ability', 'break']) {
       S.tab = 'gear'; S.gearSub = sub; openTown();
-      const card = document.querySelector('.editCard');
+      const card = document.querySelector('.gearHead');
       out[sub] = {
-        chips: [...document.querySelectorAll('.charBar .charChip .nm')].map(x => x.textContent),
         framed: !!card && getComputedStyle(card).borderLeftWidth !== '0px',
-        name: card ? (card.querySelector('.editNm b') || {}).textContent || '' : '',
-        tag: card ? (card.querySelector('.editTag') || {}).textContent || '' : '',
-        sub: card ? (card.querySelector('.editSub') || {}).textContent || '' : '',
-        swap: card ? (card.querySelector('.editSwap') || {}).textContent || '' : '',
+        name: card ? card.querySelector('.gearIdentity').textContent : '',
+        height: card ? card.getBoundingClientRect().height : 999,
+        tabs: card ? card.querySelectorAll('.innerTabs .btn').length : 0,
+        hero: !!(card && card.querySelector('.gearHero')),
       };
     }
-    // チップを押すだけで切り替わること
-    S.gearSub = 'skill'; openTown();
-    const chips = [...document.querySelectorAll('.charBar .charChip')];
-    const other = chips.find(c => !c.classList.contains('on'));
-    if (other) other.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    return { ...out, switched: currentCharacter().n };
+    return out;
   });
-  for (const sub of ['equip', 'skill', 'ability']) {
+  for (const sub of ['equip', 'skill', 'ability', 'break']) {
     const b = bar[sub];
-    if (!b.chips.length) problems.push(`${sub}タブにキャラ切替が出ていない`);
     if (!b.framed) problems.push(`${sub}タブの編集中の枠が付いていない`);
-    if (b.tag !== '編集中') problems.push(`${sub}タブに「編集中」の見出しが無い`);
     if (!b.name) problems.push(`${sub}タブに編集中のキャラ名が出ていない`);
-    if (!/Lv\d/.test(b.sub) || !/戦闘力/.test(b.sub)) problems.push(`${sub}タブの編集中にLvと戦闘力が出ていない（${b.sub}）`);
-    if (b.swap !== '変更') problems.push(`${sub}タブの切り替えボタンが「変更」でない（${b.swap}）`);
+    if (!/Lv\d/.test(b.name) || !/戦闘力/.test(b.name)) problems.push(`${sub}タブにLvと戦闘力が出ていない（${b.name}）`);
+    if (!b.hero || b.tabs !== 4 || b.height > 100) problems.push(`${sub}タブの統合ヘッダーが要件外（${b.height}px / ${b.tabs}区画）`);
   }
   if (bar.switched !== 'ノア') problems.push(`チップのタップで切り替わらない（${bar.switched}）`);
   notes.push(`キャラ切替: ${bar.skill.chips.join('/')} — 枠付き「${bar.skill.tag} ${bar.skill.name}」${bar.skill.sub.replace(/\s+/g, '')} ＋[${bar.skill.swap}] → タップで ${bar.switched}`);
@@ -804,9 +795,9 @@ await page.goto(base); await page.waitForTimeout(500);
     const shown = await page.evaluate(() => document.querySelector('#scTown .sbody').children.length);
     if (!shown) problems.push(`${name}タブの中身が空`);
   }
-  // 装備タブの3区画
+  // 装備タブの4区画
   await tap('#scTown .tab[data-t="gear"]'); await page.waitForTimeout(250);
-  for (const [v, label] of [['equip', '装備'], ['skill', '技'], ['ability', '能力']]) {
+  for (const [v, label] of [['equip', '装備'], ['skill', '技'], ['ability', '能力'], ['break', '限界突破']]) {
     const ok = await page.evaluate(view => {
       S.gearSub = view; openTown();
       return document.getElementById('townBody').textContent.length > 60;

@@ -146,7 +146,7 @@ const regressionSnippets = [
   'function openInherit',
   'const inheritCandidates=',
   '"sigils","継承の印"',
-  'function renderCharacterBar',   // 誰を編集中かを常に出す
+  'className="gearHead"',          // キャラ・タブ・概要を高さ100px以下の塊にする
   '.charBar{',
   '.editCard{',                    // 編集中の名前は枠付きの見出しにする
   'function renderHoldings',       // 何を何個持っているか

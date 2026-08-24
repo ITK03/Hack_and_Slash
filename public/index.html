@@ -310,9 +310,7 @@ h3{font-size:11px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 .stamina{margin-top:4px}.stamina .bar{height:7px}.stamina i{background:linear-gradient(90deg,#56b86d,#b4db65)}
 /* 区画のタブは固定する。スクロールした先で切り替えたいのに、
    毎回一番上まで戻らないと押せなかった。 */
-.innerTabs{display:flex;gap:6px;margin-top:0;position:sticky;top:0;z-index:6;
-  padding:7px 0 6px;background:var(--bg);
-  box-shadow:0 6px 10px -8px rgba(0,0,0,.9)}
+.innerTabs{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;margin:0}
 .innerTabs .btn{flex:1;margin:0;padding:8px 4px;font-size:12px}
 /* 絞込などの操作列も、タブのすぐ下に固定して同じ扱いにする。 */
 #invBar{position:sticky;top:57px;z-index:5;background:var(--bg);padding-bottom:6px}
@@ -635,6 +633,20 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
 .skillCard.uniqSkill{border-left:3px solid var(--gold)}
 .skillCard.no{opacity:.45}
 .skillCard .tag{white-space:nowrap;font-size:11px}
+.gearHead{height:94px;box-sizing:border-box;display:grid;grid-template-columns:72px 1fr;gap:8px;
+  padding:7px;margin-bottom:6px;border:1px solid var(--line);border-left:3px solid var(--line2);
+  border-radius:3px;background:linear-gradient(90deg,rgba(255,255,255,.045),var(--panel2))}
+.gearHero{display:grid;place-items:center;border:1px solid var(--line2);border-radius:4px;background:#100d18;
+  min-width:64px;min-height:76px;position:relative}.gearHero .swapMark{position:absolute;right:2px;bottom:1px;color:var(--gold);font-size:14px}
+.gearHeadMain{min-width:0;display:flex;flex-direction:column;justify-content:space-between}.gearIdentity{font-size:11px;
+  font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink2)}
+.gearIdentity b{font-size:13px;color:var(--ink)}.gearIdentity em{font-style:normal;color:var(--gold)}
+.skillChoices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-top:6px}
+.skillChoice{min-height:58px!important;padding:5px 2px!important;margin:0!important;text-align:center;display:flex;
+  flex-direction:column;justify-content:center;overflow:hidden}.skillChoice .nm{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.skillChoice .ty{font-size:11px;white-space:nowrap}.skillDetail{font-size:11px;color:var(--ink2);margin:5px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.breakSummary{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center;padding:7px 9px!important}
+.breakSteps{font-size:11px;color:var(--ink2);line-height:1.45}.breakSteps b{color:var(--gold)}
 .gachaCard{position:relative}
 .gachaBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .gachaBtns .btn{margin:0;padding:11px 4px;line-height:1.2}
@@ -1127,46 +1139,58 @@ const CTIER={
   SSR:{n:"SSR",col:"#ffb347",label:"最上",weight:8},
 };
 const TIER_ORDER=["N","R","SR","SSR"];
-/* 固有技はそのキャラクターだけが技欄に差せる。等級がそのまま技の強さになる。 */
+/* 固有技は「型の基準DPS × 再使用時間 × 等級」で作る。等級だけを変えた差は最大2割。 */
+const UNIQUE_TIER_MUL={N:1,R:1.06,SR:1.12,SSR:1.20};
+function uniqueDamage(tier,typeDps,spec){
+  return Object.assign(spec,{typeDps,tierMul:UNIQUE_TIER_MUL[tier],mul:+(typeDps*spec.cd*UNIQUE_TIER_MUL[tier]).toFixed(2)});
+}
+function uniqueBuff(tier,spec){
+  const m=UNIQUE_TIER_MUL[tier];spec.tierMul=m;
+  if(spec.baseAtk!=null)spec.atk=+(1+spec.baseAtk*m).toFixed(3);
+  if(spec.baseDr!=null)spec.dr=+(spec.baseDr*m).toFixed(3);
+  if(spec.baseHeal!=null)spec.heal=+(spec.baseHeal*m).toFixed(3);
+  return spec;
+}
+/* 固有技はそのキャラクターだけが技欄に差せる。 */
 const CHARACTERS={
   warrior:[
     {id:"gai",n:"ガイ",tier:"N",trait:"堅実",d:"最大HP +3%",hp:1.03,col:"#d9824b",
-     uniq:{id:"u_gai",n:"守りの構え",tag:"固有・自己強化",c:24,cd:18,k:"cry",mul:0,atk:1.06,dr:.12,dur:8,heal:.05,col:"#d9824b",
-       d:"8秒間、被ダメ-12%と少しの回復。堅いだけで、火力は伸びない。"}},
+     uniq:uniqueBuff("N",{id:"u_gai",n:"守りの構え",tag:"固有・自己強化",c:24,cd:18,k:"cry",mul:0,baseAtk:.05,baseDr:.16,baseHeal:.08,dur:10,col:"#d9824b",
+       d:"10秒間、被ダメ-16%と少しの回復。堅いだけで、火力は伸びない。"})},
     {id:"luca",n:"ルカ",tier:"R",trait:"軽装",d:"移動速度 +4%",ms:1.04,col:"#e0b05b",
-     uniq:{id:"u_luca",n:"疾風の一閃",tag:"固有・移動",c:20,cd:1.5,k:"dash",mul:9.69,w:1.3,len:6.0,
-       d:"長く踏み込んで斬り抜ける。突進斬りより遠く、軽い。"}},
+     uniq:uniqueDamage("R",6.1,{id:"u_luca",n:"疾風の一閃",tag:"固有・移動",c:20,cd:1.5,k:"dash",w:1.3,len:6.0,
+       d:"長く踏み込んで斬り抜ける。突進斬りより遠く、軽い。"})},
     {id:"baldo",n:"バルド",tier:"R",trait:"集中",d:"クリティカル率 +3%",crit:.03,col:"#bb6655",
-     uniq:{id:"u_baldo",n:"一点突き",tag:"固有・単体",c:30,cd:4.0,k:"slam",mul:15.57,r:2.2,stun:1.6,
-       d:"足元だけを貫く重い一撃。範囲は狭いが単体に刺さる。"}},
+     uniq:uniqueDamage("R",3.7,{id:"u_baldo",n:"一点突き",tag:"固有・単体",c:30,cd:4.0,k:"slam",r:2.2,stun:1.6,
+       d:"足元だけを貫く重い一撃。範囲は狭いが単体に刺さる。"})},
     {id:"gerd",n:"ゲルト",tier:"SR",trait:"重装",d:"最大HP +8% / 被ダメ -4%",hp:1.08,dr:.04,col:"#8a7a5a",
-     uniq:{id:"u_gerd",n:"不落の盾",tag:"固有・防御",c:28,cd:15,k:"cry",mul:0,atk:1.10,dr:.30,dur:11,heal:.12,col:"#8a9ab0",
-       d:"11秒間、被ダメ-30%と回復。深部で殴り合うための構え。"}},
+     uniq:uniqueBuff("SR",{id:"u_gerd",n:"不落の盾",tag:"固有・防御",c:28,cd:15,k:"cry",mul:0,baseAtk:.05,baseDr:.18,baseHeal:.09,dur:11,col:"#8a9ab0",
+       d:"11秒間、被ダメ-20%と回復。深部で殴り合うための構え。"})},
     {id:"verna",n:"ヴェルナ",tier:"SR",trait:"猛攻",d:"攻撃力 +6% / 攻撃速度 +5%",atk:1.06,as:1.05,col:"#d05a4a",
-     uniq:{id:"u_verna",n:"連斬",tag:"固有・扇・連射",c:16,cd:.45,k:"cleave",mul:8.04,r:3.6,arc:1.9,
-       d:"薙ぎ払いより広く速い扇。MPが続く限り振り続けられる。"}},
+     uniq:uniqueDamage("SR",6.5,{id:"u_verna",n:"連斬",tag:"固有・扇・連射",c:16,cd:.45,k:"cleave",r:3.6,arc:1.9,
+       d:"薙ぎ払いより広く速い扇。MPが続く限り振り続けられる。"})},
     {id:"leon",n:"レオンハルト",tier:"SSR",trait:"覇断",d:"攻撃力 +14% / クリ率 +5% / 被ダメ -6%",atk:1.14,crit:.05,dr:.06,col:"#ffb347",
-     uniq:{id:"u_leon",n:"覇王断",tag:"固有・全周・大打撃",c:48,cd:5.5,k:"slam",mul:24.44,r:4.2,stun:2.4,
-       d:"広い全周を叩き潰して長く怯ませる。範囲も威力も断罪を上回る。"}}],
+     uniq:uniqueDamage("SSR",3.4,{id:"u_leon",n:"覇王断",tag:"固有・全周・大打撃",c:48,cd:5.5,k:"slam",r:4.2,stun:2.4,
+       d:"広い全周を叩き潰して長く怯ませる。範囲も威力も断罪を上回る。"})}],
   mage:[
     {id:"mira",n:"ミラ",tier:"N",trait:"泉の心得",d:"最大MP +3%",mp:1.03,col:"#729cf2",
-     uniq:{id:"u_mira",n:"水鏡",tag:"固有・遠距離",c:20,cd:.8,k:"ball",mul:4.92,sp:12,r:2.0,col:"#729cf2",
-       d:"火球よりわずかに安いだけの水の弾。堅実だが伸びしろは無い。"}},
+     uniq:uniqueDamage("N",6.15,{id:"u_mira",n:"水鏡",tag:"固有・遠距離",c:20,cd:.8,k:"ball",sp:12,r:2.0,col:"#729cf2",
+       d:"火球よりわずかに安いだけの水の弾。堅実だが伸びしろは無い。"})},
     {id:"noa",n:"ノア",tier:"R",trait:"足運び",d:"移動速度 +4%",ms:1.04,col:"#86b8e8",
-     uniq:{id:"u_noa",n:"退き風",tag:"固有・全周・離脱",c:26,cd:2.6,k:"nova",mul:7.70,r:3.6,freeze:1.6,blink:5.4,col:"#86b8e8",
-       d:"大きく跳んでから凍らせる。氷結新星より遠くへ逃げられる。"}},
+     uniq:uniqueDamage("R",2.8,{id:"u_noa",n:"退き風",tag:"固有・全周・離脱",c:26,cd:2.6,k:"nova",r:3.6,freeze:1.6,blink:5.4,col:"#86b8e8",
+       d:"大きく跳んでから凍らせる。氷結新星より遠くへ逃げられる。"})},
     {id:"iris",n:"イリス",tier:"R",trait:"幸運",d:"運 +6",luk:6,col:"#a78be8",
-     uniq:{id:"u_iris",n:"星屑",tag:"固有・多数・連鎖",c:58,cd:2.2,k:"chain",mul:9.13,jumps:8,range:5.2,
-       d:"連鎖雷撃より安く、よく跳ぶ。数がいる場所で回る。"}},
+     uniq:uniqueDamage("R",3.9,{id:"u_iris",n:"星屑",tag:"固有・多数・連鎖",c:58,cd:2.2,k:"chain",jumps:8,range:5.2,
+       d:"連鎖雷撃より安く、よく跳ぶ。数がいる場所で回る。"})},
     {id:"sera",n:"セラ",tier:"SR",trait:"深泉",d:"最大MP +12% / クールダウン -4%",mp:1.12,cdr:.04,col:"#4ac8d0",
-     uniq:{id:"u_sera",n:"氷牙",tag:"固有・直線・貫通",c:30,cd:1.2,k:"pierce",mul:11.86,sp:21,pierce:6,col:"#4ac8d0",
-       d:"貫きの矢より安く速い氷の牙。通路で真価が出る。"}},
+     uniq:uniqueDamage("SR",8.8,{id:"u_sera",n:"氷牙",tag:"固有・直線・貫通",c:30,cd:1.2,k:"pierce",sp:21,pierce:6,col:"#4ac8d0",
+       d:"貫きの矢より安く速い氷の牙。通路で真価が出る。"})},
     {id:"faust",n:"ファウスト",tier:"SR",trait:"焦土",d:"攻撃力 +7% / クリ倍率 +20%",atk:1.07,cdmg:.20,col:"#c05ad0",
-     uniq:{id:"u_faust",n:"焦土",tag:"固有・全周・大範囲",c:52,cd:3.8,k:"nova",mul:13.79,r:6.0,col:"#c05ad0",
-       d:"業火の渦より広く重い。足止めは無く、当てる位置取りが要る。"}},
+     uniq:uniqueDamage("SR",3.25,{id:"u_faust",n:"焦土",tag:"固有・全周・大範囲",c:52,cd:3.8,k:"nova",r:6.0,col:"#c05ad0",
+       d:"業火の渦より広く重い。足止めは無く、当てる位置取りが要る。"})},
     {id:"arte",n:"アルテミシア",tier:"SSR",trait:"殲滅",d:"攻撃力 +14% / 最大MP +10% / CD -7%",atk:1.14,mp:1.10,cdr:.07,col:"#ff8ad0",
-     uniq:{id:"u_arte",n:"終焉の光",tag:"固有・直線・大貫通",c:70,cd:2.6,k:"pierce",mul:25.86,sp:26,pierce:12,col:"#ff8ad0",
-       d:"12体まで貫く光。滅びの光より安く、速く、よく届く。"}}],
+     uniq:uniqueDamage("SSR",8.3,{id:"u_arte",n:"終焉の光",tag:"固有・直線・大貫通",c:70,cd:2.6,k:"pierce",sp:26,pierce:12,col:"#ff8ad0",
+       d:"12体まで貫く光。滅びの光より安く、速く、よく届く。"})}],
 };
 const charTier=ch=>CTIER[(ch&&ch.tier)||"N"];
 const currentCharacter=()=>{
@@ -1848,7 +1872,7 @@ function trainingSkillUsed(i){const p=(S.tutorial||{}).phase;if(S.enemies.length
 const TOWN_TOUR=[
   {k:"prep",sel:'[data-t="gear"]',msg:"拠点では編成と開始階層を決めます。次は下部の<b>装備・能力</b>を開きます。",act:["gear"]},
   {k:"gear_equip",msg:"装備・能力画面は、最初から<b>装備</b>が開いています。ここではキャラクター、装備枠、能力値を確認できます。"},
-  {k:"gear_ability",sel:'.innerTabs .btn:nth-child(2)',msg:"次に、装備・能力画面内の<b>能力</b>を開いてください。",act:["gear","ability"]},
+  {k:"gear_ability",sel:'.innerTabs .btn:nth-child(3)',msg:"次に、装備・能力画面内の<b>能力</b>を開いてください。",act:["gear","ability"]},
   {k:"gear_ability_info",sel:'[data-t="inv"]',msg:"<b>能力</b>では獲得した能力ポイントを割り振れます。次は下部の<b>倉庫</b>を開きます。",act:["inv"]},
   {k:"inv",sel:'[data-t="shop"]',msg:"<b>倉庫</b>では装備の確認、並び替え、売却ができます。次は下部の<b>商店</b>を開きます。",act:["shop"]},
   {k:"shop_gacha",msg:"商店は、最初から<b>ガチャ</b>が開いています。ここでは装備やキャラクターを獲得できます。"},
@@ -3822,53 +3846,26 @@ function renderGearTab(host,inDungeon){
    以前は「装備」タブの枠にしか出ておらず、技や能力の画面では手掛かりが無かった。
    編成の面々を横並びにして、タップだけで切り替えられるようにもする
    （旧来は 職業を選ぶ → キャラを選ぶ の2段階だった）。 */
-function renderCharacterBar(host,inDungeon,after){
-  const bar=document.createElement("div");bar.className="charBar";
-  const cur=activeCharacterKey(),roster=unlockedRoster();
-  const keys=(S.formation||[]).filter(Boolean).slice(0,formationCapacity());
-  if(!keys.includes(cur))keys.unshift(cur);          // 編成外を編集中でも自分は出す
-  for(const key of keys){
-    const entry=roster.find(x=>x.k+":"+x.ch.id===key);if(!entry)continue;
-    const on=key===cur,slot=(S.formation||[]).indexOf(key);
-    const lv=((S.characterStates[key]||{}).base||{lv:on?S.base.lv:1}).lv;
-    const d=document.createElement("div");d.className="charChip"+(on?" on":"");
-    d.style.borderColor=charTier(entry.ch).col;
-    d.innerHTML=`<i class="clsMark" style="color:${CLASSES[entry.k].col}">${CLASS_MARK[entry.k]||"?"}</i>`
-      +`<div class="face">${charFace(entry.k,entry.ch.col,22)}</div>`
-      +`<div class="nm">${entry.ch.n}</div>`
-      +`<div class="mlv">Lv${lv}${slot>=0?` / ${slot+1}番手`:""}</div>`;
-    if(!on&&!inDungeon)tapEl(d,()=>{const [k,id]=key.split(":");
-      selectCharacter(k,id,()=>{save();after();});});
-    bar.appendChild(d);}
-  host.appendChild(bar);
-  /* 誰を編集中かは、この画面でいちばん先に読まれるべき一行。
-     地の文と同じ大きさで流すと他の説明に埋もれるので、枠と等級の色を持たせて
-     見出しとして扱う。左辺だけ太くして等級の色を差すのは、装備の枠色＝レア度と
-     同じ読み方（色＝格）を人にも当てはめるため。 */
-  const now=roster.find(x=>x.k+":"+x.ch.id===cur),ch=now?now.ch:currentCharacter();
-  const tier=charTier(ch),slot=(S.formation||[]).indexOf(cur);
-  const card=document.createElement("div");card.className="editCard";
-  card.style.borderLeftColor=tier.col;
-  card.innerHTML=`<div class="face">${charFace(S.cls,ch.col,34)}</div>`
-    +`<div class="editTxt"><div class="editTag">編集中</div>`
-    +`<div class="editNm"><b style="color:${ch.col}">${ch.n}</b>`
-    +`<span class="tag" style="color:${tier.col};border-color:${tier.col}">${tier.n}</span></div>`
-    +`<div class="editSub">${CLASSES[S.cls].name} / Lv${S.base.lv}`
-    +`${slot>=0?` / ${slot+1}番手`:""} / 戦闘力 <em>${combatPower(derive()).toLocaleString()}</em></div>`
-    +(inDungeon?'<div class="editSub" style="color:var(--ink3)">潜行中は切り替えできません</div>':"")
-    +`</div>`;
-  if(!inDungeon){const more=document.createElement("div");more.className="btn gh editSwap";
-    more.textContent="変更";tapEl(more,openCharacterPick);card.appendChild(more);}
-  host.appendChild(card);}
 function renderCombinedGear(host,inDungeon,after){
-  renderCharacterBar(host,inDungeon,after);
+  const ch=currentCharacter(),tier=charTier(ch),head=document.createElement("div");head.className="gearHead";head.style.borderLeftColor=tier.col;
+  const hero=document.createElement("div");hero.className="gearHero";hero.innerHTML=charFace(S.cls,ch.col,44)+(inDungeon?"":'<i class="swapMark">▦</i>');
+  if(!inDungeon)tapEl(hero,openCharacterPick);
+  const main=document.createElement("div");main.className="gearHeadMain";
+  main.innerHTML=`<div class="gearIdentity"><b>${ch.n}</b> <span style="color:${tier.col}">${tier.n}</span> Lv${S.base.lv} ${CLASSES[S.cls].name}　戦闘力 <em>${combatPower(derive()).toLocaleString()}</em></div>`;
   const tabs=document.createElement("div");tabs.className="innerTabs";
-  for(const [k,n] of [["equip","装備"],["skill","技"],["ability","能力"]]){const d=document.createElement("div");d.className="btn "+(S.gearSub===k?"gold":"gh");d.textContent=n;
+  for(const [k,n] of [["equip","装備"],["skill","技"],["ability","能力"],["break","限界突破"]]){const d=document.createElement("div");d.className="btn "+(S.gearSub===k?"gold":"gh");d.textContent=n;
     tapEl(d,()=>{if(advanceTour("gear",k))return;S.gearSub=k;after();});tabs.appendChild(d);}
-  host.appendChild(tabs);
-  if(S.gearSub==="ability")renderAbilityTab(host,after);
+  main.appendChild(tabs);head.append(hero,main);host.appendChild(head);
+  if(S.gearSub==="break")renderBreakthroughTab(host);
+  else if(S.gearSub==="ability")renderAbilityTab(host,after);
   else if(S.gearSub==="skill")renderSkillTab(host,inDungeon,after);
   else renderGearTab(host,inDungeon);
+}
+function renderBreakthroughTab(host){
+  const lv=breakthroughLevel(activeCharacterKey()),d=document.createElement("div");d.className="card breakSummary";
+  d.innerHTML=`<div><div class="nm">${currentCharacter().n}　${lv}凸 / 5凸</div><div class="st">${lv<5?"同じ仲間 0/1":"最大突破"}</div></div>`
+    +`<div class="breakSteps"><b>1凸</b> 基礎1.06倍　<b>2凸</b> 特性強化　<b>3凸</b> 基礎1.12倍<br><b>4凸</b> 特性強化　<b>5凸</b> 基礎1.20倍＋全能力</div>`;
+  host.appendChild(d);
 }
 /* 技の編成。3枠それぞれに、解放済みの技から好きなものを差す。 */
 function renderSkillTab(host,inDungeon,after){
@@ -3876,11 +3873,6 @@ function renderSkillTab(host,inDungeon,after){
   /* 固有技はそのキャラクターの個性そのものなので一覧の先頭に置く。
      共通プールの後ろに並べると、深部の技に埋もれて存在に気付けない。 */
   const all=skillPoolFor(),pool=all.filter(x=>x.uniq).concat(all.filter(x=>!x.uniq));
-  const h=document.createElement("h3");h.textContent="技の編成（3枠）";host.appendChild(h);
-  const note=document.createElement("div");note.className="st";
-  note.textContent="";note.style.display="none";
-  hint(host,"skillTab",inDungeon?"潜行中は入れ替えできません。":"枠を選んでから、下の一覧で使う技を選びます。技は最大到達深度で解放されます。");
-  host.appendChild(note);
   /* どの枠も選ばれていない状態を作らない。選択なしだと
      「一覧を押すとどこへ入るのか」が画面から読み取れなくなる。 */
   const slot=clamp(S.skillPick|0,0,2);S.skillPick=slot;
@@ -3892,17 +3884,17 @@ function renderSkillTab(host,inDungeon,after){
     row.appendChild(d);}
   host.appendChild(row);
   if(inDungeon)return;
-  const h2=document.createElement("h3");h2.textContent=`技${slot+1}に入れる技を選ぶ`;host.appendChild(h2);
+  const detail=document.createElement("div");detail.className="skillDetail";detail.textContent=`技${slot+1}を変更：${equipped[slot].d}`;host.appendChild(detail);
+  const choices=document.createElement("div");choices.className="skillChoices";
   for(const sk of pool){
     const on=equipped[slot].id===sk.id,used=equipped.findIndex(x=>x.id===sk.id),lock=!skillUnlocked(sk);
-    const d=document.createElement("div");d.className="card skillCard"+(on?" on":"")+(lock?" no":"");
+    const d=document.createElement("div");d.className="btn gh skillCard skillChoice"+(on?" on":"")+(lock?" no":"");d.title=sk.d;
     if(sk.uniq)d.classList.add("uniqSkill");
-    d.innerHTML=`<div class="row"><div class="nm">${sk.uniq?`<b style="color:var(--gold)">固有</b> `:""}${sk.n}</div>
-        <span class="tag">${lock?`深度${sk.dep}Fで解放`:on?"この枠に装備中":used>=0?`技${used+1}に装備中`:`${sk.c} MP`}</span></div>
-      <div class="ty">${sk.mul?"通常攻撃の "+sk.mul.toFixed(1)+"倍":"自己強化"} / 消費 ${sk.c} MP / 再使用 ${sk.cd.toFixed(1)}秒</div>
-      <div class="st" title="${sk.d}">${sk.d}</div>`;
+    d.innerHTML=`<div class="nm">${sk.uniq?'<b style="color:var(--gold)">固有</b> ':""}${sk.n}</div>`
+      +`<div class="ty">${lock?`${sk.dep}F解放`:sk.mul?`${sk.mul.toFixed(1)}倍 / ${sk.c}MP`:`強化 / ${sk.c}MP`}</div>`;
     if(!lock)tapEl(d,()=>{setSkillSlot(S.cls,slot,sk.id);toast(`技${slot+1}：${sk.n}`,"ok");after();});
-    host.appendChild(d);}
+    choices.appendChild(d);}
+  host.appendChild(choices);
 }
 function renderAbilityTab(host,after){const h=document.createElement("h3");h.textContent="ステータス";host.appendChild(h);allocBlock(host,after);}
 const STATDEF=[["str","筋力","物理攻撃力が上がる"],["mag","魔力","特殊攻撃力が上がる"],
@@ -4191,7 +4183,7 @@ function renderPrepTab(b){
   renderPartySection(b);
   const fold=document.createElement("div");fold.className="fold"+(S.prepMissionsOpen?" on":"");
   const undone=[0,1,2].filter(i=>!dailyDone(i)).length;
-  fold.innerHTML=`<span>任務・育成</span><em>${undone?`未達成 ${undone}`:"日替わり達成"}</em>`;
+  fold.innerHTML=`<span>日替わり任務</span><em>${undone?`未達成 ${undone}`:"日替わり達成"}</em>`;
   const body=document.createElement("div");body.className="foldBody";
   body.style.display=S.prepMissionsOpen?"block":"none";
   tapEl(fold,()=>{S.prepMissionsOpen=!S.prepMissionsOpen;save();openTown();});
@@ -4227,7 +4219,6 @@ function renderMissionSection(b){
   else{const all=document.createElement("div");all.className="qbonus";
     all.innerHTML=`<span>全達成ボーナス</span><span style="color:var(--ink2)">${daily.allClaimed?"受取済み":`3任務すべて達成で 階梯${tier}核1個`}</span>`;b.appendChild(all);}
   if(!S.beginnerClaimed){const beginner=document.createElement("div");beginner.className="btn gold";beginner.textContent=`初心者ミッション報酬（基準 ${beginnerTarget()}F）`;tapEl(beginner,()=>{if(claimBeginnerMission())openTown();});b.appendChild(beginner);}
-  {const key=activeCharacterKey(),lv=breakthroughLevel(key),d=document.createElement("div");d.className="card";d.innerHTML=`<div class="nm">${currentCharacter().n} ${lv}凸 / 5凸</div><div class="st">${lv<5?"次段階：同じ仲間 0/1":"最大突破"}</div>`;b.appendChild(d);}
 }
 /* いま片付いていないこと。タブのバッジと拠点の推奨カードが同じ根拠を使う。 */
 function pendingCounts(){
