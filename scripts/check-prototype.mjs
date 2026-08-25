@@ -226,12 +226,23 @@ const compactReleaseUiSnippets = [
   'className="invTools"',
   'function openInvLegend',
   'card.dataset.kind=kind',
-  'className="gearStatRail"',
+  'className="card gearStats"',
+  'className="allocGrid"',
+  'ui_filter:', 'ui_sort:', 'ui_sell:', 'ui_dismantle:',
+  'className="loadSlot"+(k?"":" empty")',
   'grid"+(selecting?" withDock":"")',
 ];
 const missingCompactReleaseUi = compactReleaseUiSnippets.filter((snippet) => !index.includes(snippet));
 if (missingCompactReleaseUi.length) {
   throw new Error(`The compact release UI is incomplete: ${missingCompactReleaseUi.join(', ')}`);
+}
+const gearRenderer = index.slice(index.indexOf('function renderGearTab'), index.indexOf('function renderCombinedGear'));
+const abilityRenderer = index.slice(index.indexOf('function renderAbilityTab'), index.indexOf('const STATDEF'));
+if (!gearRenderer.includes('statBlock(panel)')) {
+  throw new Error('The full status block must remain in the Equipment tab.');
+}
+if (abilityRenderer.includes('statBlock(') || !abilityRenderer.includes('allocBlock(')) {
+  throw new Error('The Ability tab must contain allocation controls only.');
 }
 for (const forbidden of ['position:relative!important;z-index:92', '0 0 0 9999px']) {
   if (index.includes(forbidden)) {
