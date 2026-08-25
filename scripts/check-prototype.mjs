@@ -217,6 +217,22 @@ const missingTutorialRegressions = tutorialRegressionSnippets.filter((snippet) =
 if (missingTutorialRegressions.length) {
   throw new Error(`Tutorial regressions are incomplete: ${missingTutorialRegressions.join(', ')}`);
 }
+
+const compactReleaseUiSnippets = [
+  'Mobile RPG shell v2 — Compact / Ornamental',
+  'className="homeSectionHead"',
+  'className="homeUtilities"',
+  'function organizeSettingsPages',
+  'className="invTools"',
+  'function openInvLegend',
+  'card.dataset.kind=kind',
+  'className="gearStatRail"',
+  'grid"+(selecting?" withDock":"")',
+];
+const missingCompactReleaseUi = compactReleaseUiSnippets.filter((snippet) => !index.includes(snippet));
+if (missingCompactReleaseUi.length) {
+  throw new Error(`The compact release UI is incomplete: ${missingCompactReleaseUi.join(', ')}`);
+}
 for (const forbidden of ['position:relative!important;z-index:92', '0 0 0 9999px']) {
   if (index.includes(forbidden)) {
     throw new Error(`Tutorial highlighting must not move or obscure the original UI: ${forbidden}`);

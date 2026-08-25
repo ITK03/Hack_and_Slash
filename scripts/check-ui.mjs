@@ -205,6 +205,46 @@ for (const [name, open] of SCREENS) {
 }
 notes.push(`画面 ${SCREENS.length}面: 枠の大きさ・スクロール・文字のはみ出し・フォント・コントラスト・文字の下限・印の重なりを検査`);
 
+/* ---------- 毎回使う主要画面は、初期状態でスクロールを要求しないこと ----------
+   長い詳細画面はスクロールしてよい。一方、拠点・装備・召喚・表示設定は
+   「確認して次の操作をする」面なので、390x844 の1画面内に主操作を収める。 */
+const COMPACT_SCREENS = [
+  ['拠点', () => { S.tab = 'prep'; openTown(); }],
+  ['装備一覧', () => { S.tab = 'gear'; S.gearSub = 'equip'; S.gearSlot = null; openTown(); }],
+  ['ガチャ', () => { S.tab = 'shop'; S.shopSub = 'gacha'; openTown(); }],
+  ['表示設定', () => { S.tab = 'conf'; S.settingsPage = 'display'; openTown(); }],
+];
+for (const [name, open] of COMPACT_SCREENS) {
+  await page.evaluate(open);
+  await page.waitForTimeout(100);
+  const over = await page.evaluate(() => {
+    const body = document.getElementById('townBody');
+    return body ? Math.max(0, Math.round(body.scrollHeight - body.clientHeight)) : 9999;
+  });
+  if (over > 4) add(`[${name}] 日常操作画面に ${over}px の不要な縦スクロールがある`);
+}
+notes.push('拠点・装備一覧・ガチャ・表示設定: 390x844で主要操作が1画面に収まること');
+
+/* 見える枠は小さくしても、主要操作のタップ領域は44pxを割らせない。 */
+{
+  const targetScreens = [
+    [() => { S.tab = 'prep'; openTown(); }, ['.miniHelp', '#diveBar .fl', '#diveBar .go', '.homeUtilities .btn']],
+    [() => { S.tab = 'gear'; S.gearSub = 'equip'; openTown(); }, ['.gearHead .innerTabs .btn', '.gearOverview .btn']],
+    [() => { S.tab = 'inv'; S.invSub = 'gear'; openTown(); }, ['.innerTabs .btn', '.invTools .btn']],
+    [() => { S.tab = 'shop'; S.shopSub = 'gacha'; openTown(); }, ['.shopTabs .btn', '.gachaBtns .btn']],
+    [() => { S.tab = 'conf'; S.settingsPage = 'display'; openTown(); }, ['.settingsNav .btn', '.settingsPage.on .btn']],
+  ];
+  const tooSmall = [];
+  for (const [open, selectors] of targetScreens) {
+    await page.evaluate(open);
+    tooSmall.push(...await page.evaluate(selectors => selectors.flatMap(sel => [...document.querySelectorAll(sel)].filter(el => {
+      const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && (r.width < 43.5 || r.height < 43.5);
+    }).map(el => `${sel} ${Math.round(el.getBoundingClientRect().width)}x${Math.round(el.getBoundingClientRect().height)}`)), selectors));
+  }
+  if (tooSmall.length) add(`主要操作のタップ領域が44px未満: ${tooSmall.join(' / ')}`);
+  notes.push('コンパクト化した主要操作も44px以上のタップ領域を維持');
+}
+
 /* ---------- 強調ボタンが地の色に埋もれていないこと ----------
    一括の面指定で .gold や .pri を上書きすると、「潜る」が普通のボタンと
    同じ見た目になる。実際にこれで色が消えたことがあるので検査に置く。 */
@@ -231,7 +271,7 @@ notes.push(`画面 ${SCREENS.length}面: 枠の大きさ・スクロール・文
 {
   const dock = await page.evaluate(() => {
     S.tab = 'inv'; S.invSub = 'gear';
-    F.sellMode = true; F.dismantleMode = false; F.sellSel = [];
+    S.inv.sellMode = true; S.inv.dismantleMode = false; S.inv.sellSel = [];
     openTown();
     const el = document.querySelector('.sellDock');
     const tabs = document.querySelector('#scTown > .tabs');
