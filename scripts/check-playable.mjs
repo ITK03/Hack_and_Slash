@@ -107,6 +107,56 @@ await page.goto(base); await page.waitForTimeout(500);
   notes.push(`回復薬: 持ち込み${heal.start} → 道中で${heal.end}（上限${heal.cap}）`);
 }
 
+/* 2b2. 敵限定のハートが落ち、満タンでは残り、負傷時には即時回復すること */
+{
+  const heart = await page.evaluate(() => {
+    S.training = false; S.floor = 20; S.drops = [];
+    if (!S.p) S.p = newPlayer();
+    let tries = 0;
+    while (tries++ < 500 && !S.drops.some(d => d.heart)) {
+      const e = spawnE('grunt', S.p.x, S.p.y, S.floor, false);
+      killE(e);
+    }
+    const d = S.drops.find(x => x.heart); if (!d) return { dropped: false, tries };
+    S.drops = [d]; d.x = S.p.x; d.y = S.p.y; d.t = 1;
+    S.p.hp = S.p.max; update(1 / 60); const fullRemains = S.drops.includes(d);
+    S.p.hp = S.p.max * .5; const before = S.p.hp; update(1 / 60);
+    return { dropped: true, tries, fullRemains, before, after: S.p.hp, max: S.p.max,
+      picked: !S.drops.includes(d), ratio: (S.p.hp - before) / S.p.max };
+  });
+  if (!heart.dropped) problems.push(`敵を${heart.tries}体倒してもハートが落ちない`);
+  else {
+    if (!heart.fullRemains) problems.push('満タン時にハートが消費される');
+    if (!heart.picked || Math.abs(heart.ratio - .04) > 1e-9)
+      problems.push(`ハートの即時回復が最大HPの4%でない（${JSON.stringify(heart)}）`);
+  }
+  notes.push(`ハート: ${heart.tries || 0}体で出現 / 満タン時に残る ${!!heart.fullRemains} / 回復率 ${heart.ratio == null ? '-' : (heart.ratio * 100).toFixed(1) + '%'}`);
+}
+
+/* 2b3. 戦士の剣線より内側は全周・半威力で、外側の扇と二重に当たらないこと */
+{
+  const melee = await page.evaluate(() => {
+    selectCharacter('warrior', 'gai', () => {}); S.training = true; S.floor = 1; S.p = newPlayer();
+    S.p.d.crit = 0; S.p.mCrit = 0; S.p.x = 20; S.p.y = 20;
+    const hitAt = (dist, face) => {
+      S.enemies = []; S.dmgLog = []; S.p.face = face; S.p.comboT = 0; S.p.comboStep = 0;
+      const e = spawnE('grunt', S.p.x + dist, S.p.y, 1, false); e.hp = e.max = 10000;
+      const hp = e.hp; basicAttack(); return { damage: hp - e.hp, hits: S.dmgLog.length };
+    };
+    const range = S.p.d.C.range * S.p.mRange * S.p.d.rng;
+    const inner = Array.from({ length: 24 }, (_, i) => hitAt(0, i * TAU / 24));
+    const innerBehind = hitAt(range * .2, Math.PI);
+    const outer = hitAt(range * .8, 0);
+    return { inner, innerBehind, outer };
+  });
+  if (melee.inner.some(x => x.damage <= 0)) problems.push('密着した敵に当たらない向きがある');
+  if (Math.abs(melee.innerBehind.damage * 2 - melee.outer.damage) > 1e-9)
+    problems.push(`内側補完のダメージが外側の半分でない（内${melee.innerBehind.damage} / 外${melee.outer.damage}）`);
+  if (melee.inner.some(x => x.hits !== 1) || melee.innerBehind.hits !== 1 || melee.outer.hits !== 1)
+    problems.push(`通常攻撃が二重に当たる（密着${melee.inner.map(x => x.hits).join('/')} / 内${melee.innerBehind.hits} / 外${melee.outer.hits}）`);
+  notes.push(`戦士密着24方向: ${melee.inner.map(x => x.damage).join('/')} / 内側補完 ${melee.innerBehind.damage} / 外側 ${melee.outer.damage} / 各1ヒット`);
+}
+
 /* 2c. 敵の種類が深さとともに増え、序盤は弱い型だけであること */
 {
   const ladder = await page.evaluate(() => {
