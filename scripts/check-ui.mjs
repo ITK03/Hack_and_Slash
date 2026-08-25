@@ -227,6 +227,37 @@ notes.push(`画面 ${SCREENS.length}面: 枠の大きさ・スクロール・文
   notes.push('強調ボタン（潜る・おすすめ等）が通常ボタンと区別できること');
 }
 
+/* ---------- 選択処分ドックは下部タブの上に1行で収まること ---------- */
+{
+  const dock = await page.evaluate(() => {
+    S.tab = 'inv'; S.invSub = 'gear';
+    F.sellMode = true; F.dismantleMode = false; F.sellSel = [];
+    openTown();
+    const el = document.querySelector('.sellDock');
+    const tabs = document.querySelector('#scTown > .tabs');
+    if (!el || !tabs) return null;
+    const children = [...el.children].map(x => {
+      const r = x.getBoundingClientRect();
+      return { top: r.top, bottom: r.bottom, center: (r.top + r.bottom) / 2 };
+    });
+    const r = el.getBoundingClientRect(), t = tabs.getBoundingClientRect();
+    return {
+      count: children.length,
+      centerSpread: Math.max(...children.map(x => x.center)) - Math.min(...children.map(x => x.center)),
+      height: r.height,
+      tabGap: t.top - r.bottom,
+    };
+  });
+  if (!dock) add('売却選択ドックが表示されない');
+  else {
+    if (dock.count !== 3) add(`売却選択ドックの要素数が${dock.count}（合計／実行／キャンセルの3つではない）`);
+    if (dock.centerSpread > 2) add(`売却選択ドックが1行ではない（中心差 ${dock.centerSpread.toFixed(1)}px）`);
+    if (dock.height > 66) add(`売却選択ドックが高すぎる（${dock.height.toFixed(1)}px）`);
+    if (Math.abs(dock.tabGap) > 3) add(`売却選択ドックと下部タブが接していない（間隔 ${dock.tabGap.toFixed(1)}px）`);
+  }
+  notes.push('売却・分解ドック: 合計／実行／キャンセルが1行で下部タブ直上に収まること');
+}
+
 /* ---------- 3. 演出と状態が残らないこと ---------- */
 {
   const leftover = await page.evaluate(async () => {

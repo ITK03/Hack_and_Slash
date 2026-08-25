@@ -3,28 +3,30 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no,maximum-scale=1">
-<meta name="theme-color" content="#08070c">
+<meta name="theme-color" content="#070a0f">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Descent</title>
 <!-- PR #12 handoff metadata is intentionally kept in this single-file prototype to avoid split-PR conflicts. -->
 <style>
 :root{
-  --bg:#08070c;--bg2:#0d0b13;--panel:#15121f;--panel2:#100e18;
-  /* 拠点で使う「押せる面」。地(#15121f)より明るく、枠も1段強い。
+  --bg:#070a0f;--bg2:#0b0f16;--panel:#131923;--panel2:#0d121a;
+  /* 拠点で使う「押せる面」。地(#131923)より明るく、枠も1段強い。
      暗さはこのゲームの個性なので全体を明るくはしない。押せる物だけを浮かせる。 */
-  --press:#231d33;--press2:#2b2440;--pressLine:#4a3f68;
-  --line:#2a2338;--line2:#3a3050;--ink:#ded7ec;--ink2:#8e86a2;--ink3:#5b5470;
+  --press:#1b2431;--press2:#253044;--pressLine:#43516a;
+  --line:#252e3c;--line2:#3e4a5e;--ink:#f2efe8;--ink2:#b8bac3;--ink3:#858b98;
   /* 下のタブ帯の高さ。固定する物の位置合わせに使う。 */
-  --tabH:calc(48px + env(safe-area-inset-bottom) + 12px);
-  --gold:#e0a53c;--blood:#d64550;
-  --c0:#c8c4bc;--c1:#5ad06a;--c2:#5a8fe0;--c3:#e0c040;--c4:#ff8adf;
+  --tabH:calc(62px + env(safe-area-inset-bottom));
+  --gold:#dfa947;--blood:#dc5863;--info:#69baf7;--ok:#65d5af;
+  --c0:#d3d0c8;--c1:#66d88a;--c2:#6da8ff;--c3:#f0c95c;--c4:#ff91dc;
+  --r-sm:6px;--r-md:9px;--r-lg:14px;
+  --shadow-1:0 8px 24px rgba(0,0,0,.24);--shadow-2:0 18px 52px rgba(0,0,0,.52);
   --fs:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:var(--fs);
   color:var(--ink);touch-action:none;user-select:none;-webkit-user-select:none;
-  overscroll-behavior:none;font-variant-numeric:tabular-nums}
+  overscroll-behavior:none;font-variant-numeric:tabular-nums;color-scheme:dark}
 /* Canvasを覆わない軽量な背景。 */
 body::before{display:none}
 canvas#cv{display:block;width:100%;height:100%;position:absolute;inset:0}
@@ -543,9 +545,10 @@ body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
 .sellDock{position:fixed;left:0;right:0;bottom:var(--tabH);z-index:12;
   padding:9px 15px;background:var(--bg2);border-top:1px solid var(--line2);
   box-shadow:0 -10px 18px -6px rgba(0,0,0,.98);
-  display:grid;grid-template-columns:1fr 1fr;gap:7px;align-items:center}
+  display:grid;grid-template-columns:minmax(112px,1.15fr) minmax(96px,1fr) minmax(82px,.8fr);gap:7px;align-items:center}
 .sellDock .btn{margin:0;padding:9px;min-height:44px}
-.sellDock .amount{grid-column:1/-1;text-align:center;color:var(--gold);font-size:12px;font-weight:900}
+.sellDock .amount{display:flex;flex-direction:column;justify-content:center;text-align:left;line-height:1.25;min-width:0}
+.sellDock .amount span{color:var(--ink2);font-size:11px;font-weight:750}.sellDock .amount b{color:var(--gold);font-size:13px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sellSheet .sellSummary{position:sticky;top:-20px;z-index:2;background:#191424;border-bottom:1px solid var(--line2);padding-bottom:10px}.sellChoices{display:grid;grid-template-columns:1fr 1fr;gap:7px}.sellChoices .btn{margin:0}
 
 /* 倉庫: アイコン格子 + 固定バー */
@@ -715,6 +718,197 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
 @media(max-width:520px){.gearPanel{grid-template-columns:1fr}.gearPanel .g3{grid-template-columns:repeat(4,1fr)}
   .gearPanel{display:block}.gearPanel .gearStats{margin-top:6px}.gearPanel h3{display:none}.gearStats .stat{padding:3px 2px}
   .compareStats{grid-template-columns:1fr}.gearCompare{padding:14px}}
+
+/* ========================================================================
+   Release visual system — Obsidian / Ember
+   世界観の暗さと「読めない暗さ」を分ける。面は青みのある黒、本文は温かい白、
+   選択は金、情報は水色、成功は青緑、危険操作は赤に役割を固定する。
+   ======================================================================== */
+[data-tap="1"]{cursor:pointer}
+[data-tap="1"]:focus-visible,input:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--info);outline-offset:2px}
+
+.screen{background:
+  radial-gradient(circle at 50% -18%,rgba(68,91,124,.15),transparent 36%),
+  linear-gradient(180deg,#090d13 0,var(--bg) 46%,#06090e 100%)}
+#scPause{background:rgba(4,8,13,.80)}
+#scPause .shead,#scPause .sfoot,#scPause>.tabs{background:rgba(9,14,21,.92)}
+.shead{padding-left:max(15px,calc((100vw - 730px)/2));padding-right:max(15px,calc((100vw - 730px)/2));
+  background:linear-gradient(180deg,rgba(16,22,31,.98),rgba(9,13,19,.98));
+  border-bottom-color:#2d3746;box-shadow:0 8px 22px rgba(0,0,0,.18)}
+.sbody{width:min(100%,760px);margin-inline:auto;padding:16px 15px 24px}
+.sfoot,.screen>.tabs,#diveBar{padding-left:max(15px,calc((100vw - 730px)/2));padding-right:max(15px,calc((100vw - 730px)/2))}
+.sfoot{background:rgba(11,15,22,.98);border-top-color:#2d3746}
+h2{font-size:19px;line-height:1.3;letter-spacing:.045em;color:#f7f2e8}
+.sub{color:var(--ink3);line-height:1.55}
+h3{display:flex;align-items:center;gap:9px;font-size:12px;line-height:1.35;color:#c8cbd3;
+  margin:20px 0 9px;letter-spacing:.10em}
+h3::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,var(--line2),transparent)}
+
+.card{border-color:var(--line);border-radius:var(--r-md);padding:13px;margin-bottom:9px;
+  background:linear-gradient(145deg,rgba(255,255,255,.035),transparent 42%),
+  linear-gradient(180deg,#151c27,#0e141d);box-shadow:0 1px 0 rgba(255,255,255,.025) inset}
+#scTown .card:not(.tap){background:linear-gradient(180deg,#111720,#0c1118);border-color:var(--line)}
+#scTown .card.tap,#itC .card.tap{background:linear-gradient(180deg,#202a39,#151d29);
+  border-color:#3a475b;box-shadow:0 5px 14px rgba(0,0,0,.15)}
+.card.tap:hover{border-color:#53627a}
+.nm{font-size:14px;line-height:1.35;letter-spacing:.005em;color:var(--ink)}
+.ty{color:var(--ink3);line-height:1.45}.st{color:var(--ink2);line-height:1.65}
+.tag{border-radius:999px;padding:2px 7px;opacity:.9}
+
+.btn{border-radius:var(--r-sm);border-color:#435069;
+  background:linear-gradient(180deg,#2a3547,#1a2230);color:#f0ede6;
+  box-shadow:0 1px 0 rgba(255,255,255,.07) inset,0 4px 12px rgba(0,0,0,.12);
+  letter-spacing:.015em;transition:transform .08s ease,filter .08s ease,border-color .12s ease}
+#scTown .btn:not(.gold):not(.pri):not(.go):not(.no),
+#itC .btn:not(.gold):not(.pri):not(.go):not(.no){
+  background:linear-gradient(180deg,#293448,#1a2230);border-color:#43516a}
+.btn.pri{background:linear-gradient(180deg,#a33843,#651a25 58%,#45101a);border-color:#d45c65;
+  color:#fff3ed;box-shadow:0 1px 0 rgba(255,255,255,.12) inset,0 7px 18px rgba(118,24,34,.28)}
+.btn.gold{background:linear-gradient(180deg,#80601f,#4f380d 62%,#332307);border-color:#d5a747;
+  color:#fff0bf;box-shadow:0 1px 0 rgba(255,255,255,.10) inset,0 6px 15px rgba(100,73,18,.22)}
+.btn.gh{color:#c4c7d0;border-color:#384459;background:#151c27;font-weight:750}
+.btn.no{opacity:.48;filter:saturate(.35);cursor:not-allowed}
+.btn:active,#scTown .btn:active,#itC .btn:active{transform:translateY(1px) scale(.99);filter:brightness(1.16)}
+
+.screen>.tabs{gap:6px;margin:0;padding-top:6px;padding-bottom:calc(env(safe-area-inset-bottom) + 7px);
+  background:rgba(9,13,19,.98);border-top:1px solid #2d3746;box-shadow:0 -10px 26px rgba(0,0,0,.32)}
+.tab{min-height:48px;padding:5px 2px;border-radius:var(--r-sm);border-color:transparent;background:transparent;
+  color:#7f8794;display:flex;flex-direction:column;gap:3px;align-items:center;justify-content:center;
+  font-size:11px;line-height:1;font-weight:800}
+.tab.on{color:#f3cf7a;border-color:#4f4430;background:linear-gradient(180deg,rgba(223,169,71,.15),rgba(223,169,71,.045));
+  box-shadow:inset 0 2px 0 var(--gold)}
+.tab[data-t]::before{content:"";width:17px;height:17px;display:block;background:currentColor;
+  -webkit-mask-repeat:no-repeat;-webkit-mask-position:center;-webkit-mask-size:contain;
+  mask-repeat:no-repeat;mask-position:center;mask-size:contain}
+.tab[data-t="prep"]::before{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 10.5 12 3l9 7.5v9A1.5 1.5 0 0 1 19.5 21H15v-6H9v6H4.5A1.5 1.5 0 0 1 3 19.5z' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 10.5 12 3l9 7.5v9A1.5 1.5 0 0 1 19.5 21H15v-6H9v6H4.5A1.5 1.5 0 0 1 3 19.5z' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E")}
+.tab[data-t="gear"]::before{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 3l8 3v5c0 5-3.4 8.3-8 10-4.6-1.7-8-5-8-10V6zM8.5 12l2.2 2.2 4.8-5' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 3l8 3v5c0 5-3.4 8.3-8 10-4.6-1.7-8-5-8-10V6zM8.5 12l2.2 2.2 4.8-5' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+.tab[data-t="inv"]::before{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 7l8-4 8 4v10l-8 4-8-4zM4 7l8 4 8-4M12 11v10' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 7l8-4 8 4v10l-8 4-8-4zM4 7l8 4 8-4M12 11v10' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E")}
+.tab[data-t="shop"]::before{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 10v10h16V10M3 10l2-6h14l2 6M8 20v-6h8v6' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 10v10h16V10M3 10l2-6h14l2 6M8 20v-6h8v6' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+.tab[data-t="conf"]::before{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 7h5m4 0h7M9 4v6M4 17h8m4 0h4M16 14v6M4 12h2m4 0h10M6 9v6' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 7h5m4 0h7M9 4v6M4 17h8m4 0h4M16 14v6M4 12h2m4 0h10M6 9v6' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E")}
+.tabs .tab .badge{top:3px;right:7px;border:2px solid #0b0f16;background:#d84e58;box-shadow:0 2px 7px rgba(0,0,0,.4)}
+
+#scTown>.shead{padding-top:calc(env(safe-area-inset-top) + 8px);padding-bottom:8px}
+.profile{grid-template-columns:52px minmax(0,1fr) auto;gap:11px;margin:0}
+.profileIcon{width:50px;height:50px;background:radial-gradient(circle at 35% 28%,#252d3a,#10151e 68%);
+  border-width:2px;box-shadow:0 0 0 3px rgba(255,255,255,.025),0 6px 16px rgba(0,0,0,.28)}
+.profileIcon .clsMark,.member .clsMark{background:#0c1118;border-color:#46536a;box-shadow:0 2px 8px rgba(0,0,0,.45)}
+.uname{color:#f6f1e8}.uname::after{color:#7f8da0}
+.nameCp .hdrCp small,.hdrCp small{font-size:11px;color:#8e96a4}
+.hdrCp span{color:#f0bd59}.xpBar{height:6px;background:#202733;border:1px solid #2d3747}
+.xpBar i{background:linear-gradient(90deg,#4f9ed8,#75d3ee);box-shadow:0 0 10px rgba(105,186,247,.3)}
+.wallet{width:auto;min-width:74px}.currency span{min-width:5.5ch}.currency .gem{color:#75d1f7}.currency.gold span{color:#e5b452}
+
+.innerTabs,.shopTabs,.missionTabs{gap:4px;padding:3px;border:1px solid var(--line);border-radius:var(--r-md);background:#0b1017}
+#scTown .innerTabs .btn.gh,#scTown .shopTabs .btn.gh,#itC .missionTabs .btn.gh{
+  border-color:transparent;background:transparent;box-shadow:none;color:#8f96a4}
+#scTown .innerTabs .btn.gold,#scTown .shopTabs .btn.gold,#itC .missionTabs .btn.gold{
+  color:#f2d289;background:linear-gradient(180deg,#2c2a26,#1c1c1d);border-color:#5d5033;
+  box-shadow:inset 0 -2px 0 var(--gold)}
+.nextCard{border-color:#3e7294;border-radius:var(--r-md);background:
+  linear-gradient(90deg,rgba(73,151,205,.18),rgba(73,151,205,.035));box-shadow:0 8px 22px rgba(0,0,0,.15)}
+.nextCard small{color:#8bc9ed}.nextCard b{color:#f0f1f0}
+#diveBar{background:rgba(10,14,21,.98);border-top-color:#334052;box-shadow:0 -11px 24px rgba(0,0,0,.34)}
+#diveBar .fl.tap{border-color:#3b475a;border-radius:var(--r-sm);background:#121923}
+#diveBar .go{border-radius:var(--r-md);letter-spacing:.18em}
+.diveFit{font-size:12px}
+
+#scTown .slot,#scTown .member,#scTown .loadSlot{background:linear-gradient(180deg,#1a2330,#111821);
+  border-color:#354155;border-radius:var(--r-sm);box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.member.on{box-shadow:inset 0 0 0 1px var(--gold),0 5px 14px rgba(0,0,0,.18)}
+.slot.empty{border-color:#344053;background:#0e141c}.slot.empty .si{color:#747d8c}
+.cell{border-radius:var(--r-sm);background:linear-gradient(180deg,#1b2431,#101720);box-shadow:0 5px 13px rgba(0,0,0,.14)}
+.cell.sel{outline:2px solid #70d8ff;outline-offset:-3px;background:linear-gradient(180deg,rgba(74,169,210,.25),#111b25);
+  box-shadow:0 0 0 1px rgba(112,216,255,.16),0 0 18px rgba(70,176,220,.13)}
+.chip{min-height:44px;padding:8px 10px;border-radius:999px;background:#121923;border-color:#354155;color:#a3a8b4;
+  display:inline-flex;align-items:center;justify-content:center}
+.chip.on{background:#223247;border-color:#58769a;color:#e5f2ff}
+#invBar{background:linear-gradient(180deg,var(--bg) 72%,rgba(7,10,15,.88));padding-top:3px}
+.fold{border-radius:var(--r-sm);background:#111821;border-color:#303b4c;color:#bdc1ca}
+.hintQ{border-color:#4a566c;color:#b5bbc6;background:#121923}
+.stat{border-bottom-color:#273140;color:#aeb2bd}.stat b{color:#f2eee5}
+
+.gearHead{border-color:#354155;border-radius:var(--r-md);background:linear-gradient(100deg,#18212d,#0e141d);
+  box-shadow:0 7px 18px rgba(0,0,0,.16)}
+.gearHero{border-color:#45536a;border-radius:var(--r-sm);background:radial-gradient(circle at 35% 25%,#293548,#101720)}
+.gearCurrent,.gearDelta,.compareItem,.gearCandidate,.qd,.bagRow,.matCell,.matLine{border-radius:var(--r-sm)!important;
+  background:#111821;border-color:#303b4c}
+.gearDelta .up,.compareStats .after.up,.quickDelta .up{color:#72dfb8}
+.gearDelta .dn,.compareStats .after.dn,.quickDelta .dn{color:#ff7b83}
+
+.btn.toggle.on em{border-color:rgba(101,213,175,.58);color:#8ee7cb;background:rgba(101,213,175,.11)}
+.btn.toggle em{border-radius:999px;color:#9ca2af;background:#111721}
+.setNote{color:#9ea4b0}
+.gachaBtns .btn{border-radius:var(--r-md)}.gachaHold{color:#a2a7b2}
+.rateLink{color:#8fcaf4;text-decoration-thickness:1px}
+
+.sellDock{left:50%;right:auto;width:min(100%,760px);transform:translateX(-50%);padding:9px 15px;
+  background:rgba(13,18,26,.98);border:1px solid #425066;border-bottom:0;border-radius:var(--r-lg) var(--r-lg) 0 0;
+  box-shadow:0 -14px 34px rgba(0,0,0,.58)}
+.sellDock .amount b{color:#f0c766}.sellDock .btn{font-size:12px}
+
+.pop{background:rgba(3,6,10,.84);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.popc{max-width:420px;border-radius:var(--r-lg);padding:20px;background:
+  radial-gradient(circle at 50% 0,rgba(73,95,130,.13),transparent 34%),linear-gradient(180deg,#18202c,#0d1219);
+  border-color:#45536a;box-shadow:var(--shadow-2)}
+.popClose{background:#1a2230!important;border-color:#4a586e!important;color:#d7dae1!important}
+#toast{max-width:calc(100vw - 28px);white-space:normal;text-align:center;top:calc(env(safe-area-inset-top) + 116px);
+  border:1px solid #4a3d2a;border-left:3px solid var(--gold);border-radius:var(--r-sm);background:rgba(15,20,28,.96);
+  box-shadow:0 10px 26px rgba(0,0,0,.42)}
+.tutorialBanner{max-width:480px;left:50%;right:auto;width:calc(100% - 28px);transform:translateX(-50%);
+  border-radius:var(--r-md);background:#12243a;border-color:#65baf7;box-shadow:var(--shadow-2)}
+#tutorialBar .tb{border-radius:999px;background:rgba(13,26,43,.94)}
+
+#hud{right:auto;width:min(calc(100% - 56px),540px);padding-top:calc(env(safe-area-inset-top) + 8px);
+  background:linear-gradient(180deg,rgba(4,8,13,.94),rgba(4,8,13,.58) 72%,transparent)}
+.bar{border-radius:999px;background:#090d13;box-shadow:inset 0 0 0 1px #303a48,inset 0 2px 5px rgba(0,0,0,.72)}
+.hval{color:#d8dbe2;font-size:12px;text-shadow:0 1px 3px #000}
+#meta{color:#979eaa;font-size:12px;text-shadow:0 1px 3px #000;display:grid;
+  grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) auto;gap:6px}
+#meta>div{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#goldT,#dpsT{text-align:center}#tmT{text-align:right}
+#pauseB{border-radius:var(--r-sm);border-color:#46536a;background:rgba(14,20,29,.9);box-shadow:0 6px 16px rgba(0,0,0,.3)}
+#mmW{border-radius:var(--r-md);border-color:#3c485c;background:rgba(8,13,20,.82);box-shadow:0 8px 22px rgba(0,0,0,.28)}
+.mmDist{background:rgba(11,17,25,.92);color:#dce0e7}.buff{border-radius:var(--r-sm);background:rgba(11,17,25,.9)}
+#bossBar{border-radius:var(--r-md);border-color:rgba(224,90,99,.62);box-shadow:0 8px 22px rgba(0,0,0,.5)}
+.sk{border-color:rgba(159,176,205,.38);background:radial-gradient(circle at 34% 28%,#44516b,#171e2a 72%);
+  box-shadow:0 6px 18px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.10)}
+#s0{border-color:rgba(231,183,88,.72);background:radial-gradient(circle at 34% 28%,#644a24,#21170d 72%);
+  box-shadow:0 7px 22px rgba(0,0,0,.54),0 0 20px rgba(223,169,71,.10),inset 0 1px 0 rgba(255,255,255,.11)}
+.railBtn{border-color:rgba(213,124,137,.5);background:radial-gradient(circle at 34% 28%,rgba(82,39,49,.9),rgba(17,18,25,.9) 72%)}
+#autoBtn{border-color:#69baf7;background:radial-gradient(circle at 34% 28%,#25466d,#0c1828 72%)}
+
+.classChoice{display:grid;grid-template-columns:82px minmax(0,1fr);gap:14px;align-items:center;
+  min-height:152px;padding:16px;border-left:3px solid var(--class)!important;overflow:visible;
+  background:linear-gradient(135deg,rgba(105,186,247,.07),transparent 42%),linear-gradient(180deg,#202a39,#131b26);
+  border-color:#3d4a5f;box-shadow:0 9px 24px rgba(0,0,0,.22)}
+.classChoiceArt{height:116px;border-radius:var(--r-md);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  color:var(--class);background:radial-gradient(circle at 50% 34%,rgba(105,186,247,.14),transparent 64%),#0d131b;
+  border:1px solid var(--class)}
+.classChoiceArt small{font-size:11px;font-weight:800;color:#aeb4bf;white-space:nowrap}
+.classChoiceMain{min-width:0}.classChoiceTop{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.classChoiceTop .nm{font-size:22px;letter-spacing:.07em}.classEyebrow{font-size:11px;color:#969daa;font-weight:800;letter-spacing:.12em}
+.classArrow{font-size:30px;line-height:1;color:var(--class);opacity:.9}.classChoice .st{margin-top:5px}
+.classStats{display:flex;gap:6px;margin-top:9px}.classStats span{flex:1;padding:5px 3px;text-align:center;border-radius:5px;
+  background:#111924;border:1px solid #2e3a4b;color:#8f97a5;font-size:11px;font-weight:700}
+.classStats b{color:#edf0f1;margin-left:2px}.classSkills{margin-top:7px;color:#b7bbc5;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.classSkills small{color:#7f8795;margin-right:7px}
+
+@media(max-width:520px){
+  .sbody{padding:13px 12px 20px}.shead,.sfoot,.screen>.tabs,#diveBar{padding-left:12px;padding-right:12px}
+  #scTown>.shead{padding-left:12px;padding-right:12px}.profile{grid-template-columns:48px minmax(0,1fr) auto;gap:8px}
+  .profileIcon{width:46px;height:46px}.wallet{min-width:64px}.currency span{min-width:4.5ch}
+  .nameCp{gap:5px}.nameCp .hdrCp{gap:3px}.nameCp .hdrCp span{font-size:14px}
+  .gearHead{min-height:88px}.gearIdentity{font-size:11px}.innerTabs .btn{font-size:11px}
+  .sellDock{padding:8px 10px;gap:5px;grid-template-columns:minmax(104px,1.08fr) minmax(84px,1fr) minmax(70px,.78fr)}
+  .sellDock .amount,.sellDock .btn{font-size:11px}.sellDock .btn{padding:7px 3px}
+  .classChoice{grid-template-columns:70px minmax(0,1fr);gap:11px;min-height:142px;padding:13px 11px}
+  .classChoiceArt{height:108px}.classChoiceTop .nm{font-size:20px}.classStats{gap:4px}
+  #hud{width:calc(100% - 54px)}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}
+}
 </style>
 </head>
 <body>
@@ -747,7 +941,7 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
 <div id="act"></div>
 
 <div class="screen" id="scClass">
-  <div class="shead"><h2>クラス選択</h2><div class="sub">あとから作り直せる</div></div>
+  <div class="shead"><h2>最初のクラスを選ぶ</h2><div class="sub">プレイスタイルはあとから変更できます</div></div>
   <div class="sbody" id="classList"></div>
 </div>
 
@@ -829,7 +1023,7 @@ textarea{width:100%;height:96px;background:#0a0810;border:1px solid var(--line);
    ========================================================================== */
 const CFG={
   TILE_W:52,TILE_H:26,DPR_CAP:2,ECO_DPR:1.25,
-  LIGHT_R:1.05,LIGHT_STRETCH:1.45,DARKNESS:.86,CAM_Y:.42,CAM_LERP:.30,
+  LIGHT_R:1.05,LIGHT_STRETCH:1.45,DARKNESS:.80,CAM_Y:.42,CAM_LERP:.30,
 
   P_SPEED:3.5, ATK_CD:.40, P_RADIUS:.30,
   ATK_MUL:.68,          // 通常攻撃を基準に、技倍率もこの値から導く
@@ -1032,11 +1226,16 @@ function hook(el,fn){
 /* 押せるものには印を残す。検査が「押せるのに44px未満」を見るとき、
    class 名から当てにいくと押せない飾りの枠まで拾ってしまう。 */
 function tapEl(el,fn){let x0=0,y0=0,ok=false;el.dataset.tap="1";
+  /* 触れる面はキーボードでも操作でき、読み上げでもボタンだと分かるようにする。 */
+  if(!el.getAttribute("role"))el.setAttribute("role","button");
+  if(el.getAttribute("tabindex")===null)el.setAttribute("tabindex","0");
   el.addEventListener("touchstart",e=>{const t=e.changedTouches[0];x0=t.clientX;y0=t.clientY;ok=true;},{passive:true});
   el.addEventListener("touchmove",e=>{const t=e.changedTouches[0];
     if(Math.hypot(t.clientX-x0,t.clientY-y0)>12)ok=false;},{passive:true});
   el.addEventListener("touchend",e=>{if(!ok)return;ok=false;e.preventDefault();aInit();fn();},{passive:false});
-  el.addEventListener("mousedown",e=>{e.preventDefault();aInit();fn();});}
+  el.addEventListener("mousedown",e=>{e.preventDefault();aInit();fn();});
+  el.addEventListener("keydown",e=>{if(e.repeat||(e.key!=="Enter"&&e.key!==" "))return;
+    e.preventDefault();aInit();fn();});}
 const HELD=[false,false,false,false];
 function holdBtn(el,i){
   const dn=e=>{e.preventDefault();e.stopPropagation();aInit();HELD[i]=true;
@@ -3141,23 +3340,23 @@ function tileSprites(){
   for(let v=0;v<5;v++){const b=v*3;
     floors.push(mk(CFG.TILE_W+2,CFG.TILE_H+2,HW+1,HH+1,(g,ox,oy)=>{
       const fg=g.createLinearGradient(ox-HW,oy-HH,ox+HW,oy+HH);
-      fg.addColorStop(0,`rgb(${35+b},${32+b},${42+b})`);fg.addColorStop(.55,`rgb(${24+b},${23+b},${31+b})`);
-      fg.addColorStop(1,`rgb(${16+b},${16+b},${22+b})`);g.fillStyle=fg;
+      fg.addColorStop(0,`rgb(${41+b},${43+b},${54+b})`);fg.addColorStop(.55,`rgb(${29+b},${31+b},${40+b})`);
+      fg.addColorStop(1,`rgb(${19+b},${21+b},${28+b})`);g.fillStyle=fg;
       g.beginPath();g.moveTo(ox,oy-HH);g.lineTo(ox+HW,oy);
       g.lineTo(ox,oy+HH);g.lineTo(ox-HW,oy);g.closePath();g.fill();
       g.strokeStyle="rgba(0,0,0,.5)";g.lineWidth=1;g.stroke();
-      g.strokeStyle="rgba(150,135,170,.10)";g.lineWidth=.7;g.beginPath();
+      g.strokeStyle="rgba(155,175,205,.14)";g.lineWidth=.7;g.beginPath();
       g.moveTo(ox-HW*.62,oy+HH*.12);g.lineTo(ox-HW*.18,oy-HH*.08);g.lineTo(ox+HW*.18,oy+HH*.16);
       if(v%2){g.moveTo(ox+HW*.12,oy-HH*.52);g.lineTo(ox+HW*.3,oy-HH*.12);g.lineTo(ox+HW*.58,oy);}g.stroke();
-      g.fillStyle="rgba(205,190,220,.08)";for(let i=0;i<4;i++)g.fillRect(ox-HW*.7+((i*17+v*11)%36),oy-HH*.55+((i*7+v*5)%12),1,1);}));}
+      g.fillStyle="rgba(205,220,240,.10)";for(let i=0;i<4;i++)g.fillRect(ox-HW*.7+((i*17+v*11)%36),oy-HH*.55+((i*7+v*5)%12),1,1);}));}
   const wall=mk(CFG.TILE_W+2,CFG.TILE_H+WH+2,HW+1,HH+WH+1,(g,ox,oy)=>{
-    g.fillStyle="#101015";
+    g.fillStyle="#141923";
     g.beginPath();g.moveTo(ox-HW,oy);g.lineTo(ox,oy+HH);
     g.lineTo(ox,oy+HH-WH);g.lineTo(ox-HW,oy-WH);g.closePath();g.fill();
-    g.fillStyle="#0b0b0f";
+    g.fillStyle="#0e131b";
     g.beginPath();g.moveTo(ox+HW,oy);g.lineTo(ox,oy+HH);
     g.lineTo(ox,oy+HH-WH);g.lineTo(ox+HW,oy-WH);g.closePath();g.fill();
-    g.fillStyle="#1d1d26";
+    g.fillStyle="#252c3a";
     g.beginPath();g.moveTo(ox,oy-HH-WH);g.lineTo(ox+HW,oy-WH);
     g.lineTo(ox,oy+HH-WH);g.lineTo(ox-HW,oy-WH);g.closePath();g.fill();
     g.strokeStyle="rgba(150,150,190,.22)";g.lineWidth=1;g.stroke();
@@ -3222,7 +3421,7 @@ function draw(){
   camX=lerp(camX,c.sx,CFG.CAM_LERP);camY=lerp(camY,c.sy,CFG.CAM_LERP);
   let ox=VW/2-camX,oy=VH*CFG.CAM_Y-camY;
   if(S.shake>0&&S.settings.shake){ox+=rr(-S.shake,S.shake);oy+=rr(-S.shake,S.shake);}
-  ctx.fillStyle="#07070a";ctx.fillRect(0,0,VW,VH);
+  ctx.fillStyle="#06090e";ctx.fillRect(0,0,VW,VH);
   ctx.save();ctx.translate(ox,oy);
   const HW=CFG.TILE_W/2,HH=CFG.TILE_H/2,TS=tileSprites(),RG=24;
   const mnX=Math.max(0,(p.x-RG)|0),mxX=Math.min(MW-1,(p.x+RG)|0);
@@ -3322,7 +3521,7 @@ function dPlayer(){
   ctx.restore();
   const hurt=p.hurtT>0&&((p.hurtT*20)|0)%2===0;
   const rim=S.cls==="warrior"?"rgba(255,180,140,.95)":"rgba(160,205,255,.95)";
-  ctx.fillStyle=hurt?"#fff":(S.cls==="warrior"?"#2a1a16":"#161c2c");
+  ctx.fillStyle=hurt?"#fff":(S.cls==="warrior"?"#38231d":"#1d2942");
   ctx.strokeStyle=rim;ctx.lineWidth=1.9;ctx.beginPath();
   if(S.cls==="warrior"){
     ctx.moveTo(s.sx,s.sy-36);ctx.lineTo(s.sx+13,s.sy-26);ctx.lineTo(s.sx+10,s.sy-5);
@@ -3352,7 +3551,7 @@ function dEnemy(e){
     ctx.beginPath();ctx.ellipse(s.sx,s.sy-h*.4,w*2.4,h*.7,0,0,TAU);ctx.fill();
     ctx.globalCompositeOperation="source-over";}
   const sp=enemySprite(e.k,h,w,
-    f?"#fff":e.frz>0?"#22384a":darken(e.elite?e.elite.col:e.col,.26),
+    f?"#fff":e.frz>0?"#29475d":darken(e.elite?e.elite.col:e.col,.38),
     f?"#fff":e.wind>0?"#ff6a4a":(e.elite?e.elite.col:col)+"dd");
   ctx.drawImage(sp,0,0,sp.width,sp.height,s.sx-sp._ox,s.sy-sp._oy,sp._w,sp._h);
   if(e.wind>0){ctx.globalCompositeOperation="lighter";
@@ -3774,7 +3973,8 @@ function openTown(){
   {const p=pendingCounts();
    const badges={prep:p.quests,gear:p.better,inv:p.newItems};
    for(const t of document.querySelectorAll("#scTown .tab")){
-     t.classList.toggle("on",t.dataset.t===S.tab);
+     const active=t.dataset.t===S.tab;t.classList.toggle("on",active);
+     t.setAttribute("aria-current",active?"page":"false");
      const n=badges[t.dataset.t]||0;
      let dot=t.querySelector(".badge");
      if(n>0){if(!dot){dot=document.createElement("i");dot.className="badge";t.appendChild(dot);}dot.textContent=n>9?"9+":n;}
@@ -4924,7 +5124,8 @@ function renderInv(b){
     g.appendChild(c);}
   b.appendChild(g);
   if(F.sellMode||F.dismantleMode){const selected=F.sellSel.filter(i=>S.stash.includes(i)&&!isEquipped(i)),val=selected.reduce((a,i)=>a+sellV(i),0),crystals=selected.reduce((a,i)=>a+crystalQty(i),0),dock=document.createElement("div");dock.className="sellDock";
-    const amount=document.createElement("div");amount.className="amount";amount.textContent=F.dismantleMode?`${selected.length}個選択 / 結晶 合計${crystals}`:`${selected.length}個選択 / 合計${val} G`;
+    const amount=document.createElement("div");amount.className="amount";
+    amount.innerHTML=`<span>${selected.length}件選択</span><b>${F.dismantleMode?`結晶 ${crystals.toLocaleString()}`:`${val.toLocaleString()} G`}</b>`;
     const ok=document.createElement("div");ok.className="btn gold"+(selected.length?"":" no");ok.textContent=F.dismantleMode?"分解する":"売却する";tapEl(ok,F.dismantleMode?confirmSelectedDismantle:confirmSelectedSell);
     const cancel=document.createElement("div");cancel.className="btn gh";cancel.textContent="キャンセル";tapEl(cancel,()=>{F.sellSel=[];F.sellMode=false;F.dismantleMode=false;openTown();});dock.append(amount,ok,cancel);b.appendChild(dock);}}
 
@@ -5257,7 +5458,8 @@ function openPause(){
   S.paused=true;for(let i=0;i<4;i++)HELD[i]=false;IN.dx=IN.dy=0;
   $("scPause").classList.add("on");
   $("pauseS").textContent=`深度 ${S.floor} / 未帰還 ${S.bag.length}個 / 獲得 ${S.runGold} G`;
-  for(const t of document.querySelectorAll("#scPause .tab"))t.classList.toggle("on",t.dataset.p===S.ptab);
+  for(const t of document.querySelectorAll("#scPause .tab")){const active=t.dataset.p===S.ptab;
+    t.classList.toggle("on",active);t.setAttribute("aria-current",active?"page":"false");}
   const b=$("pauseBody");b.innerHTML="";b.classList.toggle("fit",S.ptab==="gear");b.classList.toggle("lootPanel",S.ptab==="drops");
   if(S.ptab==="drops"){
     const gold=document.createElement("div");gold.className="card";gold.innerHTML=`<div class="stat"><span>今回獲得したゴールド</span><b style="color:var(--gold)">${S.runGold} G</b></div>`;b.appendChild(gold);
@@ -5287,12 +5489,16 @@ function openClass(){
   S.scene="class";S.paused=true;
   const c=$("classList");c.innerHTML="";
   for(const k of CKEYS){const C=CLASSES[k];
-    const d=document.createElement("div");d.className="card tap";
-    d.innerHTML=`<div class="nm" style="color:${C.col}">${C.name}</div>
+    const d=document.createElement("div");d.className="card tap classChoice";
+    d.style.setProperty("--class",C.col);
+    const role=k==="warrior"?"前衛・近接":"後衛・遠距離";
+    d.innerHTML=`<div class="classChoiceArt">${charFace(k,C.col,66)}<small>${role}</small></div>
+      <div class="classChoiceMain"><div class="classChoiceTop"><div>
+        <div class="classEyebrow">${role}</div><div class="nm" style="color:${C.col}">${C.name}</div>
+      </div><span class="classArrow">›</span></div>
       <div class="st">${C.desc}</div>
-      <div class="st" style="margin-top:8px;color:#7f7c8c">
-        HP ${C.hp} / MP ${C.mp} / 射程 ${C.range.toFixed(1)}<br>
-        技: ${DEFAULT_SKILLS[k].map(id=>{const sk=skillDef(k,id);return sk.n+"("+sk.c+")";}).join("・")}</div>`;
+      <div class="classStats"><span>HP <b>${C.hp}</b></span><span>MP <b>${C.mp}</b></span><span>射程 <b>${C.range.toFixed(1)}</b></span></div>
+      <div class="classSkills"><small>初期技</small>${DEFAULT_SKILLS[k].map(id=>skillDef(k,id).n).join("・")}</div></div>`;
     tapEl(d,()=>{S.cls=k;S.avatars[k]=CHARACTERS[k][0].id;S.gear={};for(const s of SLOTK)S.gear[s]=null;
       S.p=newPlayer();$("scClass").classList.remove("on");save();openTown();});
     c.appendChild(d);}
