@@ -69,7 +69,7 @@ Descent では「表示 / 操作 / データ / その他」を維持し、全カ
 ## 今回の受け入れ条件
 
 - 持ち込み品名が `...` または `…` だけにならず、全品名を読める。
-- ミッション3カテゴリ、任務行、受取ボタン、「おすすめ一括」、設定4カテゴリが縦中央に揃う。
+- ミッション3カテゴリ、任務行、受取ボタン、装備8枠目の「おすすめ」、設定4カテゴリが縦中央に揃う。
 - 装備タブに全16ステータスがあり、能力タブには1件もない。
 - 能力割り振りは2列×3段で、操作部分全体が300px以下に収まる。
 - 倉庫の操作アイコンがすべて共通線画SVGである。
@@ -86,4 +86,3 @@ Descent では「表示 / 操作 / データ / その他」を維持し、全カ
 - [Princess Connect missions](https://gamewith.jp/pricone-re/article/show/112451)
 - [Heaven Burns Red micro-interactions](https://appgameui.hatenablog.com/entry/2023/05/15/004027)
 - [Pokémon Masters EX progression](https://www.pokemon.com/es/estrategia/pokemon-masters-ex-niveles-maximos-tableros-piedra-compi-niveles-mas-altos-evolucion-y-mucho-mas)
-

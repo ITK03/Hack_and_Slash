@@ -147,7 +147,7 @@ for (const [width, height, name] of sizes) {
     document.querySelector('#diveBar .step .btn:last-child').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
     return { entered, plus: S.diveFloor, buttons: document.querySelectorAll('#diveBar .step .btn').length };
   });
-  if (floorPick.entered !== 37 || floorPick.plus !== 42 || floorPick.buttons !== 2)
+  if (floorPick.entered !== 36 || floorPick.plus !== 41 || floorPick.buttons !== 2)
     problems.push(`拠点: 階層入力/±5が不正（入力${floorPick.entered} / +5後${floorPick.plus} / ボタン${floorPick.buttons}）`);
 
   // 装備名が枠から溢れて語尾が落ちていないこと

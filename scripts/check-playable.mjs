@@ -329,7 +329,7 @@ await page.goto(base); await page.waitForTimeout(500);
     }
     out.closed = closed;
     out.escaped = !(closed > 0);
-    // ただし素早さ（回避率）では避けられること
+    // ただし装備の回避率では避けられること
     S.p.d.agiD = 4000; S.floor = 1;
     let d = 0; for (let i = 0; i < 200; i++) { _s = i * 99991; S.p.hp = S.p.max; S.p.hurtT = 0; S.p.invulT = 0; const h = S.p.hp; hurtP(50, 't', true); if (S.p.hp === h) d++; }
     out.dodged = d / 200;
@@ -902,7 +902,7 @@ await page.goto(base); await page.waitForTimeout(500);
     document.querySelector('#diveBar .step .btn:last-child').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
     return { entered, plus: S.diveFloor };
   });
-  if (floorPick.entered !== 23 || floorPick.plus !== 28) problems.push(`階層入力が不正（${floorPick.entered} → ${floorPick.plus}）`);
+  if (floorPick.entered !== 21 || floorPick.plus !== 26) problems.push(`階層入力が不正（${floorPick.entered} → ${floorPick.plus}）`);
   await tap('#scTown .tab[data-t="shop"]'); await page.waitForTimeout(250);
   await tap('.rateLink'); await page.waitForTimeout(300);
   const rates = await page.evaluate(() => document.querySelectorAll('.rateRow').length);

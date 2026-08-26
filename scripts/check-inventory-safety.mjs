@@ -60,23 +60,23 @@ const beforeReload = game.run(function () {
   const basicPotionWithLoadout = S.drops.some(x => x.pot === 'mend1');
   CFG.POTION_POT_DROP = oldPotionRate;
 
-  S.floor = 100; S.p.mDrop = 99; S.p.sDrop = 99; S.p.d.mf = 99;
-  S.p.d.pw = ['greed']; S.p.d.pwN = { greed: 7 };
-  const cappedDrop = itemDropChance(S.p, 100);
-  const capAt100 = itemDropCap(100);
+  S.floor = 100; S.p.mDrop = 1; S.p.sDrop = 1; S.p.d.dropRate = .25;
+  S.p.d.pw = []; S.p.d.pwN = {};
+  const boostedItemDrop = itemDropChance(S.p);
   const damagingSkills = [];
   for (const pool of Object.values(SKILL_POOL)) for (const skill of pool) if (skill.mul > 0) damagingSkills.push(skill.mul);
   for (const { ch } of allRoster()) if (ch.uniq && ch.uniq.mul > 0) damagingSkills.push(ch.uniq.mul);
 
   S.deepest = 100; setDiveFloor(77);
-  const freeFloor = S.diveFloor;
+  const legalFloor = S.diveFloor;
+  S.debug = true; setDiveFloor(77); const debugFloor = S.diveFloor; S.debug = false;
   save();
   return {
     extractedSlots, gloveLocked: glove.locked, protectedExcluded,
     transferAsked, stayedBeforeConfirm, movedAfterConfirm,
     leaveAsked, unequippedOnLeave,
     noPotionWithoutLoadout, basicPotionWithLoadout,
-    cappedDrop, capAt100, maxSkill: Math.max(...damagingSkills), freeFloor,
+    boostedItemDrop, legalFloor, debugFloor, maxSkill: Math.max(...damagingSkills),
     gloveUid: glove.uid,
   };
 });
@@ -91,10 +91,10 @@ assert.equal(beforeReload.leaveAsked, true, '編成離脱時に全装備を外�
 assert.equal(beforeReload.unequippedOnLeave, true, '全解除を選ぶと倉庫へ戻す');
 assert.equal(beforeReload.noPotionWithoutLoadout, true, '癒血の雫を持ち込まないと樽から出ない');
 assert.equal(beforeReload.basicPotionWithLoadout, true, '癒血の雫を持ち込むと樽から出る');
-assert.equal(beforeReload.cappedDrop, beforeReload.capAt100, '極端な補正でも100層の上限で止まる');
-assert.equal(beforeReload.capAt100, 0.25, '100層の装備ドロップ率上限は25%');
+assert.equal(beforeReload.boostedItemDrop, 0.06, 'ドロップ率25%が装備抽選にも共通倍率で乗る');
 assert.ok(beforeReload.maxSkill <= 2, `攻撃技の最大倍率は2倍以下（実値 ${beforeReload.maxSkill}）`);
-assert.equal(beforeReload.freeFloor, 77, '開始階層の自由入力を5層刻みに丸めない');
+assert.equal(beforeReload.legalFloor, 76, '通常プレイの開始階層を1+5nへ丸める');
+assert.equal(beforeReload.debugFloor, 77, 'デバッグモードは任意階を指定できる');
 
 game.reload();
 const afterReload = game.run(function (uid) {
@@ -105,4 +105,4 @@ assert.equal(afterReload.exists, true, '手袋が保存後も消えない');
 assert.equal(afterReload.slot, 'glove', '保存後も手袋の部位を保つ');
 assert.equal(afterReload.locked, true, '保護状態が保存後も消えない');
 
-console.log('所持品・装備移管・保護・ドロップ上限・階層入力検査 passed');
+console.log('所持品・装備移管・保護・共通ドロップ率・階層入力検査 passed');

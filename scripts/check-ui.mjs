@@ -230,7 +230,7 @@ notes.push('拠点・装備一覧・能力割り振り・ガチャ・表示設�
 {
   const targetScreens = [
     [() => { S.tab = 'prep'; openTown(); }, ['.miniHelp', '#diveBar .fl', '#diveBar .go', '.homeUtilities .btn']],
-    [() => { S.tab = 'gear'; S.gearSub = 'equip'; openTown(); }, ['.gearHead .innerTabs .btn', '.gearOverview .btn']],
+    [() => { S.tab = 'gear'; S.gearSub = 'equip'; openTown(); }, ['.gearHead .innerTabs .btn', '.recommendSlot']],
     [() => { S.tab = 'inv'; S.invSub = 'gear'; openTown(); }, ['.innerTabs .btn', '.invTools .btn']],
     [() => { S.tab = 'shop'; S.shopSub = 'gacha'; openTown(); }, ['.shopTabs .btn', '.gachaBtns .btn']],
     [() => { S.tab = 'conf'; S.settingsPage = 'display'; openTown(); }, ['.settingsNav .btn', '.settingsPage.on .btn']],
@@ -274,7 +274,7 @@ notes.push('拠点・装備一覧・能力割り振り・ガチャ・表示設�
     S.tab = 'gear'; S.gearSub = 'equip'; S.gearSlot = null; openTown();
     const gear = {
       stats: document.querySelectorAll('.gearStats .stat').length,
-      autoCentered: centered(document.querySelector('.gearOverview .btn')),
+      autoCentered: centered(document.querySelector('.recommendSlot')),
     };
     S.gearSub = 'ability'; openTown();
     const abilityBox = document.querySelector('.allocGrid')?.getBoundingClientRect();
@@ -302,7 +302,7 @@ notes.push('拠点・装備一覧・能力割り振り・ガチャ・表示設�
   if (layout.mission.labels.some(x => !x || /^\.{2,}$|^…+$/.test(x))) add('ミッションの区分名が潰れている');
   if (layout.mission.tabs.some(x => !x) || layout.mission.actions.some(x => !x)) add('ミッションのタブまたは受取操作が中央揃えではない');
   if (layout.gear.stats !== 16) add(`装備タブの全ステータスが${layout.gear.stats}/16項目`);
-  if (!layout.gear.autoCentered) add('「おすすめ一括」が中央揃えではない');
+  if (!layout.gear.autoCentered) add('「おすすめ」が中央揃えではない');
   if (layout.ability.stats !== 0) add('能力タブに全ステータスが残っている');
   if (layout.ability.tiles !== 6 || !layout.ability.leadBeforeGrid) add('能力タブの割り振りが上部の2列×3段になっていない');
   if (layout.ability.blockHeight > 300) add(`能力割り振りが高すぎる（${layout.ability.blockHeight}px）`);

@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "serve": "python3 -m http.server 8000 -d public",
-    "check": "node scripts/check-prototype.mjs && node scripts/check-ui-structure.mjs && node scripts/check-inventory-safety.mjs && node scripts/check-daily.mjs && node scripts/check-progression.mjs && node scripts/check-breakthrough.mjs && node scripts/check-balance.mjs && node scripts/check-consumables.mjs && node scripts/check-bundle-b.mjs && node scripts/check-elements.mjs",
+    "check": "node scripts/check-prototype.mjs && node scripts/check-ui-structure.mjs && node scripts/check-inventory-safety.mjs && node scripts/check-affix-balance.mjs && node scripts/check-daily.mjs && node scripts/check-progression.mjs && node scripts/check-breakthrough.mjs && node scripts/check-balance.mjs && node scripts/check-consumables.mjs && node scripts/check-bundle-b.mjs && node scripts/check-elements.mjs",
     "check:pr12": "node scripts/check-pr12-merge.mjs",
     "deploy": "wrangler deploy",
     "check:layout": "node scripts/check-layout.mjs",
