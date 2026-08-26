@@ -930,7 +930,7 @@ h3::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,var(--li
 .profileIcon>svg,.profileIcon>span{transform:rotate(-45deg)}
 .profileIcon .clsMark{right:-5px;bottom:-5px;transform:rotate(-45deg);width:18px;height:18px}
 .uname{font-size:12px}.hdrLv b{font-size:11px}.hdrCp span{font-size:14px}.hdrCp small{font-size:11px}
-.wallet{width:auto;min-width:66px}.currency{height:18px}.currency span{min-width:4.5ch;font-size:11px}
+.wallet{width:15ch;min-width:15ch}.currency{height:18px}.currency span{min-width:13ch;font-size:11px}
 .sbody{padding:9px 12px 12px;scrollbar-width:none}.sbody::-webkit-scrollbar{display:none}
 h3{margin:11px 0 6px;font-size:11px;letter-spacing:.12em;color:#c7c9d0}
 h3::before{content:"◆";font-size:8px;color:var(--gold);filter:drop-shadow(0 0 5px rgba(223,169,71,.45))}
@@ -970,14 +970,16 @@ h3::before{content:"◆";font-size:8px;color:var(--gold);filter:drop-shadow(0 0 
 .homeUtilities .btn{margin:0;padding:0 8px;display:flex;align-items:center;justify-content:space-between;font-size:11px}
 .homeUtilities .btn em{font-style:normal;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-/* 出撃は「階層を選ぶ / 適性を見る / 潜る」の一段だけ。±連打は階層一覧へ集約する。 */
-#diveBar{display:none;grid-template-columns:84px minmax(0,1fr) 94px;gap:7px;align-items:center;flex-wrap:nowrap;
-  min-height:58px;padding:6px 12px calc(env(safe-area-inset-bottom) * .25 + 6px)}
+/* 出撃は適性の上段と、−5 / 自由入力 / ＋5 / 潜るの操作段に集約する。 */
+#diveBar{display:none;grid-template-columns:minmax(0,1fr) 104px;grid-template-areas:"fit fit" "step go";
+  gap:5px 8px;align-items:stretch;min-height:88px;padding:6px 12px calc(env(safe-area-inset-bottom) * .25 + 6px)}
 #diveBar.on{display:grid}
-#diveBar .step{display:block}#diveBar .fl{width:100%;min-width:0;min-height:44px;padding:3px 13px 3px 4px}
-#diveBar .fl b{font-size:17px}#diveBar .fl small{font-size:11px}
-#diveBar .go{min-height:46px;padding:0 4px;font-size:13px;letter-spacing:.12em}
-.diveFit{order:0;min-width:0;margin:0;font-size:11px;line-height:1.25;display:flex;flex-direction:column;justify-content:center}
+#diveBar .step{grid-area:step;display:grid;grid-template-columns:44px minmax(72px,1fr) 44px;gap:5px;min-width:0}
+#diveBar .step .btn{width:auto;min-width:44px;min-height:46px;padding:0;margin:0;display:flex;align-items:center;justify-content:center}
+#diveBar .floorInput{box-sizing:border-box;width:100%;min-width:0;height:46px;padding:0 4px;border:1px solid #3b475a;border-radius:5px;
+  background:#121923;color:#f2eadc;text-align:center;font-size:17px;font-weight:900;font-variant-numeric:tabular-nums}
+#diveBar .go{grid-area:go;align-self:stretch;min-height:46px;padding:0 4px;font-size:13px;letter-spacing:.12em;display:flex;align-items:center;justify-content:center}
+.diveFit{grid-area:fit;order:0;min-width:0;margin:0;font-size:11px;line-height:1.25;display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:8px}
 .diveFit b{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.diveFit small{font-size:11px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* 装備。装備と全能力値は同じ作業面に置く。能力タブはポイント割り振り専用。 */
@@ -1042,6 +1044,25 @@ h3::before{content:"◆";font-size:8px;color:var(--gold);filter:drop-shadow(0 0 
 .inventoryMeta b{color:var(--ink);white-space:nowrap}.inventoryMeta span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;padding-bottom:8px}
 .grid.withDock{padding-bottom:72px}.cell{border-radius:5px;box-shadow:none}.cell .cellIc svg{width:24px;height:24px}
+.cell .cellTop .sel svg{margin:0;color:#8fc6e8}.ownerMark{position:absolute;left:3px;top:3px;z-index:1;min-width:16px;height:16px;
+  display:grid;place-items:center;border-radius:3px;background:#17120a;border:1px solid #a87c2d;color:#f0c866;font-size:10px;font-weight:900}
+.ownerNote{min-height:34px;margin:0 0 6px;padding:5px 8px;display:flex;align-items:center;justify-content:center;
+  border:1px solid #6f5528;border-radius:5px;background:rgba(155,111,31,.12);color:#e9c66f;font-size:11px;font-weight:800}
+
+/* 素材は全所持数を先に一覧表示し、管理操作と入手先は折りたたむ。 */
+.materialTotals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:5px 0 7px}
+.materialTotal{min-width:0;padding:7px;border:1px solid #344154;border-radius:7px;background:linear-gradient(180deg,#17212d,#0e151e)}
+.materialTotalHead{display:flex;align-items:center;justify-content:space-between;gap:5px}.materialTotalHead span{display:flex;align-items:center;gap:4px;min-width:0}
+.materialTotalHead b{font-size:12px}.materialTotalHead strong{font-size:16px;color:#f0cf82;font-variant-numeric:tabular-nums}.materialTotal>small{display:block;margin:2px 0 5px;color:var(--ink3);font-size:10px}
+.materialTierStrip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}.materialTierStrip>span{min-width:0;padding:3px 1px;text-align:center;border:1px solid #293544;border-radius:4px;background:#0d141d;opacity:.52}
+.materialTierStrip>span.owned{opacity:1;border-color:#53657d}.materialTierStrip small{display:block;font-size:9px;color:var(--ink3)}.materialTierStrip b{font-size:12px;font-variant-numeric:tabular-nums}
+.materialSectionTitle{display:flex;align-items:center;justify-content:space-between;min-height:30px;margin:3px 1px 4px}.materialSectionTitle b{font-size:12px}.materialSectionTitle span{font-size:10px;color:var(--ink3)}
+.partInventoryGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}.partInventoryCell{min-width:0;min-height:66px;padding:4px 2px;display:grid;grid-template-rows:20px minmax(20px,auto) 16px;place-items:center;
+  border:1px solid #334052;border-radius:6px;background:linear-gradient(180deg,#17202c,#0e151e);text-align:center}.partInventoryCell.empty{opacity:.46;filter:saturate(.45)}
+.partInventoryIcon{display:grid;place-items:center}.partInventoryName{max-width:100%;font-size:10px;font-weight:800;line-height:1.05;overflow-wrap:anywhere}.partInventoryCell>b{font-size:14px;color:#f0e7d8;font-variant-numeric:tabular-nums}
+.materialFold{margin-top:6px;border:1px solid #303c4d;border-radius:6px;background:#0e151e}.materialFold>summary{box-sizing:border-box;min-height:44px;padding:0 10px;display:flex;align-items:center;justify-content:space-between;gap:8px;list-style:none;color:#cdd4de;font-size:11px;font-weight:900}
+.materialFold>summary::-webkit-details-marker{display:none}.materialFold>summary::after{content:"▾";color:#8492a4}.materialFold[open]>summary::after{transform:rotate(180deg)}.materialFold>summary small{margin-left:auto;color:var(--ink3);font-size:10px;font-weight:700}
+.materialFoldBody{padding:7px;border-top:1px solid #2d3949}.materialAction+ .materialAction{margin-top:8px}.materialAction>div:first-child{display:flex;justify-content:space-between;gap:6px;margin-bottom:4px}.materialAction b{font-size:11px}.materialAction small{font-size:10px;color:var(--ink3)}.materialAction .craftBtns{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
 
 /* 商店はポスター風の横長カード。説明を枠の下へ積まない。 */
 .gachaCard{position:relative;display:grid;grid-template-columns:62px minmax(0,1fr);column-gap:9px;padding:8px;overflow:hidden}
@@ -1084,7 +1105,8 @@ h3::before{content:"◆";font-size:8px;color:var(--gold);filter:drop-shadow(0 0 
 #hud{width:min(calc(100% - 56px),400px)}
 
 @media(max-width:359px){.grid{grid-template-columns:repeat(5,minmax(0,1fr))}
-  #diveBar{grid-template-columns:78px minmax(0,1fr) 86px;gap:5px}.gachaCard{grid-template-columns:54px minmax(0,1fr)}.gachaArt{width:54px}
+  #diveBar{grid-template-columns:minmax(0,1fr) 88px;gap:5px}.gachaCard{grid-template-columns:54px minmax(0,1fr)}.gachaArt{width:54px}
+  #diveBar .step{grid-template-columns:42px minmax(62px,1fr) 42px}.partInventoryGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
   .loadSlot{padding-left:5px;padding-right:5px;grid-template-columns:24px minmax(0,1fr);column-gap:4px}
   .allocTile{grid-template-columns:42px minmax(0,1fr) 42px}.allocTile .plus{width:42px}}
 @media(max-width:520px){
@@ -1233,7 +1255,9 @@ const CFG={
   WIND:.46,
 
   /* --- ドロップ --- */
-  DROP_CHANCE:.048,      // 旧 .24 の 2割
+  DROP_CHANCE:.048,      // 無補正時の装備ドロップ率
+  DROP_CAP_F1:.08,       // 浅層で祭壇・強欲を重ねても8%まで
+  DROP_CAP_F100:.25,     // 100層・完成装備でも約25%を上限にする
   GOLD_CHANCE:.42, POTION_POT_DROP:.12, HEART_DROP:.05, METAL_CHANCE:.0045,
   CHEST_CHANCE:.035,     // 旧 .34 の 1割
   RARITY:[
@@ -1465,32 +1489,32 @@ const SKILL_POOL={
       d:"直線に踏み込みながら斬る"},
     {id:"slam",   n:"大地砕き",dep:0, tag:"全周・気絶",c:34,cd:5.0,k:"slam",mul:1.7,r:4.6,stun:1.4,
       d:"周囲を叩きつけて怯ませる"},
-    {id:"whirl",  n:"旋風",    dep:15,tag:"全周・連射",c:20,cd:.9,k:"cleave",mul:6.15,r:3.0,arc:3.15,
+    {id:"whirl",  n:"旋風",    dep:15,tag:"全周・連射",c:20,cd:.9,k:"cleave",mul:1.4,r:3.0,arc:3.15,
       d:"全周を薙ぐ"},
-    {id:"charge", n:"疾駆",    dep:25,tag:"移動・長距離",c:18,cd:1.4,k:"dash",mul:7.70,w:1.45,len:6.6,
+    {id:"charge", n:"疾駆",    dep:25,tag:"移動・長距離",c:18,cd:1.4,k:"dash",mul:1.6,w:1.45,len:6.6,
       d:"長距離を太く駆け抜ける"},
-    {id:"verdict",n:"断罪",    dep:40,tag:"単体・大打撃",c:52,cd:7.0,k:"slam",mul:19.68,r:2.6,stun:2.8,
+    {id:"verdict",n:"断罪",    dep:40,tag:"単体・大打撃",c:52,cd:7.0,k:"slam",mul:2.0,r:2.6,stun:2.8,
       d:"足元を砕いて長く怯ませる"},
     {id:"cry",    n:"鬨の声",  dep:20,tag:"自己強化",    c:30,cd:16,k:"cry",mul:0,atk:1.28,dr:.14,dur:12,heal:.06,
       d:"12秒間攻防を強化して回復する"},
     {id:"bulwark",n:"不動",    dep:35,tag:"自己強化・防御",c:26,cd:22,k:"cry",mul:0,atk:1.05,dr:.34,dur:9,heal:.14,col:"#7ad0ff",
       d:"9秒間被害を減らして回復する"}],
   mage:[
-    {id:"ball",  n:"火球",    dep:0, tag:"遠距離・連射",c:24,cd:.7,k:"ball",mul:4.56,sp:11,r:2.2,col:"#ff8a3a",
+    {id:"ball",  n:"火球",    dep:0, tag:"遠距離・連射",c:24,cd:.7,k:"ball",mul:1.3,sp:11,r:2.2,col:"#ff8a3a",
       d:"炸裂する火球を飛ばす"},
-    {id:"nova",  n:"氷結新星",dep:0, tag:"全周・凍結",  c:32,cd:3.0,k:"nova",mul:6.69,r:3.4,freeze:2.2,blink:4.4,col:"#8ad8ff",
+    {id:"nova",  n:"氷結新星",dep:0, tag:"全周・凍結",  c:32,cd:3.0,k:"nova",mul:1.5,r:3.4,freeze:2.2,blink:4.4,col:"#8ad8ff",
       d:"前方へ跳び周囲を凍らせる"},
-    {id:"chain", n:"連鎖雷撃",dep:0, tag:"多数・連鎖",  c:70,cd:2.6,k:"chain",mul:8.62,jumps:6,range:4.6,
+    {id:"chain", n:"連鎖雷撃",dep:0, tag:"多数・連鎖",  c:70,cd:2.6,k:"chain",mul:1.4,jumps:6,range:4.6,
       d:"雷が最大6体へ連鎖する"},
-    {id:"lance", n:"貫通氷槍",dep:15,tag:"遠距離・低燃費",c:14,cd:.5,k:"ball",mul:3.70,sp:16,r:1.3,col:"#8ad8ff",
+    {id:"lance", n:"貫通氷槍",dep:15,tag:"遠距離・低燃費",c:14,cd:.5,k:"ball",mul:1.25,sp:16,r:1.3,col:"#8ad8ff",
       d:"小さな爆風の氷槍を飛ばす"},
-    {id:"inferno",n:"業火の渦",dep:25,tag:"全周・大範囲",c:46,cd:4.2,k:"nova",mul:11.86,r:5.6,col:"#ff7a3a",
+    {id:"inferno",n:"業火の渦",dep:25,tag:"全周・大範囲",c:46,cd:4.2,k:"nova",mul:1.75,r:5.6,col:"#ff7a3a",
       d:"広い周囲を炎で焼く"},
-    {id:"emperor",n:"雷帝",   dep:40,tag:"多数・遠連鎖",c:96,cd:3.4,k:"chain",mul:12.88,jumps:10,range:6.4,
+    {id:"emperor",n:"雷帝",   dep:40,tag:"多数・遠連鎖",c:96,cd:3.4,k:"chain",mul:1.65,jumps:10,range:6.4,
       d:"雷が最大10体へ遠く連鎖する"},
-    {id:"spear", n:"貫きの矢",dep:20,tag:"直線・貫通",  c:34,cd:1.6,k:"pierce",mul:10.64,sp:19,pierce:5,col:"#c8a0ff",
+    {id:"spear", n:"貫きの矢",dep:20,tag:"直線・貫通",  c:34,cd:1.6,k:"pierce",mul:1.55,sp:19,pierce:5,col:"#c8a0ff",
       d:"直線上の敵を最大5体貫く"},
-    {id:"ruin",  n:"滅びの光",dep:35,tag:"直線・大貫通",c:64,cd:3.2,k:"pierce",mul:20.89,sp:24,pierce:9,col:"#ff6ad0",
+    {id:"ruin",  n:"滅びの光",dep:35,tag:"直線・大貫通",c:64,cd:3.2,k:"pierce",mul:1.9,sp:24,pierce:9,col:"#ff6ad0",
       d:"光線が直線上の敵を最大9体貫く"}],
 };
 const DEFAULT_SKILLS={warrior:["cleave","dash","slam"],mage:["ball","nova","chain"]};
@@ -1537,10 +1561,10 @@ const CTIER={
   SSR:{n:"SSR",col:"#ffb347",label:"最上",weight:8},
 };
 const TIER_ORDER=["N","R","SR","SSR"];
-/* 固有技は「型の基準DPS × 再使用時間 × 等級」で作る。等級だけを変えた差は最大2割。 */
+/* 固有技は「1発の基準倍率 × 等級」で作り、通常攻撃比2倍を上限にする。 */
 const UNIQUE_TIER_MUL={N:1,R:1.06,SR:1.12,SSR:1.20};
-function uniqueDamage(tier,typeDps,spec){
-  return Object.assign(spec,{typeDps,tierMul:UNIQUE_TIER_MUL[tier],mul:+(typeDps*spec.cd*UNIQUE_TIER_MUL[tier]).toFixed(2)});
+function uniqueDamage(tier,baseMul,spec){
+  return Object.assign(spec,{baseMul,tierMul:UNIQUE_TIER_MUL[tier],mul:+Math.min(2,baseMul*UNIQUE_TIER_MUL[tier]).toFixed(2)});
 }
 function uniqueBuff(tier,spec){
   const m=UNIQUE_TIER_MUL[tier];spec.tierMul=m;
@@ -1556,38 +1580,38 @@ const CHARACTERS={
      uniq:uniqueBuff("N",{id:"u_gai",n:"守りの構え",tag:"固有・自己強化",c:24,cd:18,k:"cry",mul:0,baseAtk:.05,baseDr:.16,baseHeal:.08,dur:10,col:"#d9824b",
        d:"10秒間、被ダメ-16%と少しの回復。堅いだけで、火力は伸びない。"})},
     {id:"luca",n:"ルカ",tier:"R",trait:"軽装",d:"移動速度 +4%",ms:1.04,col:"#e0b05b",
-     uniq:uniqueDamage("R",6.1,{id:"u_luca",n:"疾風の一閃",tag:"固有・移動",c:20,cd:1.5,k:"dash",w:1.3,len:6.0,
+     uniq:uniqueDamage("R",1.6,{id:"u_luca",n:"疾風の一閃",tag:"固有・移動",c:20,cd:1.5,k:"dash",w:1.3,len:6.0,
        d:"長く踏み込んで斬り抜ける。突進斬りより遠く、軽い。"})},
     {id:"baldo",n:"バルド",tier:"R",trait:"集中",d:"クリティカル率 +3%",crit:.03,col:"#bb6655",
-     uniq:uniqueDamage("R",3.7,{id:"u_baldo",n:"一点突き",tag:"固有・単体",c:30,cd:4.0,k:"slam",r:2.2,stun:1.6,
+     uniq:uniqueDamage("R",1.75,{id:"u_baldo",n:"一点突き",tag:"固有・単体",c:30,cd:4.0,k:"slam",r:2.2,stun:1.6,
        d:"足元だけを貫く重い一撃。範囲は狭いが単体に刺さる。"})},
     {id:"gerd",n:"ゲルト",tier:"SR",trait:"重装",d:"最大HP +8% / 被ダメ -4%",hp:1.08,dr:.04,col:"#8a7a5a",
      uniq:uniqueBuff("SR",{id:"u_gerd",n:"不落の盾",tag:"固有・防御",c:28,cd:15,k:"cry",mul:0,baseAtk:.05,baseDr:.18,baseHeal:.09,dur:11,col:"#8a9ab0",
        d:"11秒間、被ダメ-20%と回復。深部で殴り合うための構え。"})},
     {id:"verna",n:"ヴェルナ",tier:"SR",trait:"猛攻",d:"攻撃力 +6% / 攻撃速度 +5%",atk:1.06,as:1.05,col:"#d05a4a",
-     uniq:uniqueDamage("SR",6.5,{id:"u_verna",n:"連斬",tag:"固有・扇・連射",c:16,cd:.45,k:"cleave",r:3.6,arc:1.9,
+     uniq:uniqueDamage("SR",1.35,{id:"u_verna",n:"連斬",tag:"固有・扇・連射",c:16,cd:.45,k:"cleave",r:3.6,arc:1.9,
        d:"薙ぎ払いより広く速い扇。MPが続く限り振り続けられる。"})},
     {id:"leon",n:"レオンハルト",tier:"SSR",trait:"覇断",d:"攻撃力 +14% / クリ率 +5% / 被ダメ -6%",atk:1.14,crit:.05,dr:.06,col:"#ffb347",
-     uniq:uniqueDamage("SSR",3.4,{id:"u_leon",n:"覇王断",tag:"固有・全周・大打撃",c:48,cd:5.5,k:"slam",r:4.2,stun:2.4,
+     uniq:uniqueDamage("SSR",1.65,{id:"u_leon",n:"覇王断",tag:"固有・全周・大打撃",c:48,cd:5.5,k:"slam",r:4.2,stun:2.4,
        d:"広い全周を叩き潰して長く怯ませる。範囲も威力も断罪を上回る。"})}],
   mage:[
     {id:"mira",n:"ミラ",tier:"N",trait:"泉の心得",d:"最大MP +3%",mp:1.03,col:"#729cf2",
-     uniq:uniqueDamage("N",6.15,{id:"u_mira",n:"水鏡",tag:"固有・遠距離",c:20,cd:.8,k:"ball",sp:12,r:2.0,col:"#729cf2",
+     uniq:uniqueDamage("N",1.3,{id:"u_mira",n:"水鏡",tag:"固有・遠距離",c:20,cd:.8,k:"ball",sp:12,r:2.0,col:"#729cf2",
        d:"火球よりわずかに安いだけの水の弾。堅実だが伸びしろは無い。"})},
     {id:"noa",n:"ノア",tier:"R",trait:"足運び",d:"移動速度 +4%",ms:1.04,col:"#86b8e8",
-     uniq:uniqueDamage("R",2.8,{id:"u_noa",n:"退き風",tag:"固有・全周・離脱",c:26,cd:2.6,k:"nova",r:3.6,freeze:1.6,blink:5.4,col:"#86b8e8",
+     uniq:uniqueDamage("R",1.4,{id:"u_noa",n:"退き風",tag:"固有・全周・離脱",c:26,cd:2.6,k:"nova",r:3.6,freeze:1.6,blink:5.4,col:"#86b8e8",
        d:"大きく跳んでから凍らせる。氷結新星より遠くへ逃げられる。"})},
     {id:"iris",n:"イリス",tier:"R",trait:"幸運",d:"運 +6",luk:6,col:"#a78be8",
-     uniq:uniqueDamage("R",3.9,{id:"u_iris",n:"星屑",tag:"固有・多数・連鎖",c:58,cd:2.2,k:"chain",jumps:8,range:5.2,
+     uniq:uniqueDamage("R",1.35,{id:"u_iris",n:"星屑",tag:"固有・多数・連鎖",c:58,cd:2.2,k:"chain",jumps:8,range:5.2,
        d:"連鎖雷撃より安く、よく跳ぶ。数がいる場所で回る。"})},
     {id:"sera",n:"セラ",tier:"SR",trait:"深泉",d:"最大MP +12% / クールダウン -4%",mp:1.12,cdr:.04,col:"#4ac8d0",
-     uniq:uniqueDamage("SR",8.8,{id:"u_sera",n:"氷牙",tag:"固有・直線・貫通",c:30,cd:1.2,k:"pierce",sp:21,pierce:6,col:"#4ac8d0",
+     uniq:uniqueDamage("SR",1.45,{id:"u_sera",n:"氷牙",tag:"固有・直線・貫通",c:30,cd:1.2,k:"pierce",sp:21,pierce:6,col:"#4ac8d0",
        d:"貫きの矢より安く速い氷の牙。通路で真価が出る。"})},
     {id:"faust",n:"ファウスト",tier:"SR",trait:"焦土",d:"攻撃力 +7% / クリ倍率 +20%",atk:1.07,cdmg:.20,col:"#c05ad0",
-     uniq:uniqueDamage("SR",3.25,{id:"u_faust",n:"焦土",tag:"固有・全周・大範囲",c:52,cd:3.8,k:"nova",r:6.0,col:"#c05ad0",
+     uniq:uniqueDamage("SR",1.6,{id:"u_faust",n:"焦土",tag:"固有・全周・大範囲",c:52,cd:3.8,k:"nova",r:6.0,col:"#c05ad0",
        d:"業火の渦より広く重い。足止めは無く、当てる位置取りが要る。"})},
     {id:"arte",n:"アルテミシア",tier:"SSR",trait:"殲滅",d:"攻撃力 +14% / 最大MP +10% / CD -7%",atk:1.14,mp:1.10,cdr:.07,col:"#ff8ad0",
-     uniq:uniqueDamage("SSR",8.3,{id:"u_arte",n:"終焉の光",tag:"固有・直線・大貫通",c:70,cd:2.6,k:"pierce",sp:26,pierce:12,col:"#ff8ad0",
+     uniq:uniqueDamage("SSR",1.65,{id:"u_arte",n:"終焉の光",tag:"固有・直線・大貫通",c:70,cd:2.6,k:"pierce",sp:26,pierce:12,col:"#ff8ad0",
        d:"12体まで貫く光。滅びの光より安く、速く、よく届く。"})}],
 };
 const charTier=ch=>CTIER[(ch&&ch.tier)||"N"];
@@ -2055,6 +2079,17 @@ function rarRoll(fl,mf,luk){
   const w=CFG.RARITY.map((r,i)=>Math.max(.0001,r[1]*(i>=2?bonus:1))); // 階層ではレア率を変えない
   const t=w.reduce((a,b)=>a+b,0);let v=rnd()*t;
   for(let i=0;i<w.length;i++){v-=w[i];if(v<=0)return i;}return 0;}
+/* 装備ドロップ率は、補正を積み上げても現在深度に応じた上限を越えない。
+   深度1では8%、深度100で25%に達し、それ以降も25%で止める。 */
+const itemDropCap=fl=>Math.min(CFG.DROP_CAP_F100,
+  CFG.DROP_CAP_F1+(CFG.DROP_CAP_F100-CFG.DROP_CAP_F1)*clamp((Math.max(1,fl)-1)/99,0,1));
+function itemDropChance(p=S.p,fl=S.floor){
+  if(!p)return CFG.DROP_CHANCE;
+  const greedCount=((p.d&&p.d.pwN)||{}).greed||0;
+  const greed=greedCount?1+.8*pwStack(greedCount):1;
+  const raw=CFG.DROP_CHANCE*p.mDrop*p.sDrop*greed*(1+p.d.mf);
+  return Math.min(itemDropCap(fl),raw);
+}
 const SW={atk:5,matk:5,atkP:4,hp:1,armor:1.4,crit:7,cdmg:2,as:5,ms:3,ls:9,cdr:4,dr:5,
   mf:1.2,mreg:1.5,luk:3,rng:4,agiF:3,mpF:1,lukF:3};
 const ENHANCE_PER_LV=.07; // 基礎主能力への加算。複利にはしない
@@ -2092,11 +2127,13 @@ const effScore=it=>it?iScore(it)*((it.ac&&it.ac!==S.cls)?.6:1)*itemBaseMultiplie
 /* その部位に、今より実効で強い持ち物が倉庫にあるか */
 const hasUpgrade=slot=>{const cur=S.gear[slot],base=effScore(cur);
   return S.stash.some(x=>x.slot===slot&&!isEquipped(x)&&effScore(x)>base);};
+let itemUidSeq=0;
+const newItemUid=()=>`gear_${Date.now().toString(36)}_${(++itemUidSeq).toString(36)}_${Math.random().toString(36).slice(2,7)}`;
 function makeItem(fl,mf,luk,forceRar){
   let rar=rarRoll(fl,mf,luk);
   if(forceRar!=null)rar=Math.max(rar,forceRar);
   const sd=pick(SLOTS),il=Math.max(1,Math.round(fl));
-  const it={rar,slot:sd.k,ilvl:il,lv:1,xp:0,affs:[],pw:null,element:pick([...ELEMENT_KEYS,"neutral"])};
+  const it={uid:newItemUid(),rar,slot:sd.k,ilvl:il,lv:1,xp:0,affs:[],pw:null,locked:false,element:pick([...ELEMENT_KEYS,"neutral"])};
   if(sd.k==="weapon"){it.wt=rnd()<.5?"sword":"staff";it.base=pick(WEAPN[it.wt]);}
   else if(ACSLOT(sd.k)){it.ac=pick(ACLS);it.base=pick(BASEN[sd.k][it.ac]);}
   else it.base=pick(BASEN[sd.k]);
@@ -2143,6 +2180,8 @@ function statsHTML(it,cmp){
     if(worn)h+=`<div class="ty">装備中に同じ効果が${worn}個。これを足すと効果 ${pwStack(worn+1).toFixed(2)}倍（重ねるほど伸びは小さくなります）。</div>`;}}
   return h;}
 const sellV=it=>Math.max(1,Math.round((8+it.ilvl*4)*[1,2,5,14,60][it.rar]/CFG.SELL_DIV));
+function setItemLocked(it,value){if(!it)return;it.locked=!!value;
+  S.inv.sellSel=(S.inv.sellSel||[]).filter(x=>!sameGear(x,it));save();}
 
 /* ---------- 状態 ---------- */
 /* 新規キャラクターの能力値。xpCurveV2 を必ず立てる。
@@ -2225,7 +2264,7 @@ function claimReachMission(floor){
 
 const TUTORIAL_SLOTS=["weapon","helm","armor","glove","boot","ring","amulet"];
 function tutorialItem(slot){
-  const sd=SLOTS.find(x=>x.k===slot),it={slot,ilvl:3,rar:0,lv:1,xp:0,affs:[],tutorial:true};
+  const sd=SLOTS.find(x=>x.k===slot),it={uid:newItemUid(),slot,ilvl:3,rar:0,lv:1,xp:0,affs:[],locked:false,tutorial:true};
   if(slot==="weapon"){it.wt="sword";it.base="ロングソード";it.main={id:"atk",v:6};}
   else{it.ac=ACSLOT(slot)?"warrior":null;it.base=Array.isArray(BASEN[slot])?BASEN[slot][0]:BASEN[slot].warrior[0];it.main={id:sd.main,v:sd.lo};}
   it.name="訓練用"+it.base;it.score=iScore(it);return it;}
@@ -2328,6 +2367,8 @@ function derive(){
   const chAtk=ch.atk||1;
   const physAtk=(t.atk+t.atkP+str*.92+lv*2.1)*traitAtk*chAtk,specAtk=(t.matk+t.atkP+mag*.92+lv*2.1)*traitAtk*chAtk;
   const bonusAgi=b.agi+t.agiF;
+  const mf=Math.min(3,t.mf/100),gearGreed=pwN.greed?1+.8*pwStack(pwN.greed):1;
+  const dropChance=Math.min(itemDropCap(Math.max(S.floor||1,S.diveFloor||1)),CFG.DROP_CHANCE*(1+mf)*gearGreed);
   return {C,pw,pwN,opt:t,str,mag,def,agi,spi,luk,physAtk,specAtk,
     max:Math.round((C.hp+lv*17+t.hp)*(ch.hp||1)*traitHP*traitOne),
     atkFlat:(C.atkStat==="mag"?specAtk:physAtk), armor,
@@ -2342,7 +2383,7 @@ function derive(){
     ls:Math.min(.03,t.ls/100), cdr:Math.min(.5,t.cdr/100+b.spi*.0015+(ch.cdr||0)),
     dr:Math.min(.7,armorDR(armor)*(C.defMul||1)+(ch.dr||0)),
     stRes:Math.min(.72,def/(def+150)),
-    agiD:agi, mf:Math.min(3,t.mf/100),
+    agiD:agi,mf,dropChance,
     mpMax:Math.round((C.mp+t.mpF)*manaPw*(ch.mp||1)),
     mpReg:(CFG.MP_REGEN+spi*.075)*(1+t.mreg/100)*manaPw*(C.mpRegMul||1)};
 }
@@ -2388,7 +2429,7 @@ const DSHOW=[["max","HP",0],["mpMax","MP",0],
   ["as","攻撃速度",1],["ms","移動速度",1],
   ["dodge","回避率",1],["cdr","クールダウン短縮",1],
   ["crit","クリティカル発生率",1],["cdmg","クリティカル倍率",1],
-  ["ls","ライフスティール",1],["mf","アイテム発見率",1]];
+  ["ls","ライフスティール",1],["dropChance","装備ドロップ率",1]];
 function optTotals(over,overSlot){
   const t={};
   for(const k of SLOTK){
@@ -2459,7 +2500,7 @@ function curve(fl,points){
    「あと少しで時間切れ」ではなく「長引くほど自分が不利」を体で分からせるため。 */
 const bossRageMul=t=>1+Math.max(0,(t||0)-CFG.BOSS_ENRAGE_AT)*CFG.BOSS_ENRAGE_RATE;
 const enemyAcceleration=fl=>Math.pow(CFG.ENEMY_ACCEL_GROWTH,Math.max(0,fl-CFG.ENEMY_ACCEL_START));
-const enemyHPScale=fl=>CFG.ENEMY_HP_MUL*curve(fl,[[1,2.2],[5,3],[10,4],[20,9],[35,34],[60,80],[80,100],[100,170]])*enemyAcceleration(fl);
+const enemyHPScale=fl=>CFG.ENEMY_HP_MUL*curve(fl,[[1,2.2],[5,3],[10,4],[20,9],[35,34],[60,80],[80,102],[100,174]])*enemyAcceleration(fl);
 const enemyDMGScale=fl=>CFG.ENEMY_DMG_MUL*curve(fl,[[1,.18],[5,.30],[10,.55],[20,1.35],[35,2.8],[60,6.8],[80,12],[100,29]])*enemyAcceleration(fl);
 // 各階層ボスは通常進行曲線に対して HP 2倍、攻撃力 1.5倍。
 const bossHPScale=fl=>2*CFG.ENEMY_HP_MUL*curve(fl,[[5,.40],[10,.80],[20,1.8],[35,4.2],[60,9.5],[80,16],[100,37]])*enemyAcceleration(fl);
@@ -2732,10 +2773,10 @@ function killE(e){
     dropPart(e);
     dropGold(e.x,e.y,300+S.floor*50);if(S.floor!==5||!["boss_message","return"].includes((S.tutorial||{}).phase))toast("ボス撃破 — 深度 "+(S.floor+1)+" 開始を解放");}
   else if(e.elite){if(rnd()<.5)dropItem(e.x,e.y,1);dropGold(e.x,e.y,50+S.floor*10);}
-  else{const dm=p.mDrop*p.sDrop*(hasPw("greed")?1+.8*pwMul("greed"):1)*(1+p.d.mf);
+  else{
     if(rnd()<CFG.CRYSTAL_ENEMY_DROP)S.drops.push({x:e.x,y:e.y,mat:"crystal",tier:materialTier(S.floor),n:materialScale(S.floor),t:0});
     dropPart(e);
-    if(rnd()<CFG.DROP_CHANCE*dm)dropItem(e.x,e.y);
+    if(rnd()<itemDropChance(p,S.floor))dropItem(e.x,e.y);
     if(rnd()<CFG.GOLD_CHANCE)dropGold(e.x,e.y,Math.round((6+S.floor*3)*rr(.6,1.6)*(1+luk*.012)));
     if(rnd()<CFG.HEART_DROP)S.drops.push({x:e.x,y:e.y,heart:1,t:0});
     if(rnd()<CFG.SHARD_DROP)S.drops.push({x:e.x,y:e.y,shard:1,t:0});}
@@ -2751,7 +2792,9 @@ function barrelDrop(x,y){
   if(rnd()<CFG.CRYSTAL_BARREL_DROP)S.drops.push({x,y,mat:"crystal",tier:materialTier(S.floor),n:materialScale(S.floor),t:0});
   /* ポーションは樽の副産物として独立抽選する。ここで return すると、供給を増やした分だけ
      ゴールドや破片を減らしてしまうため、以降の抽選も続ける。 */
-  if(rnd()<CFG.POTION_POT_DROP)S.drops.push({x,y,pot:1,t:0});
+  /* 樽から出るのは最下位の癒血の雫だけ。持ち込みに入れていない潜行では
+     使い道のない瓶を床へ出さない。上位回復薬の残数へ化けることも防ぐ。 */
+  if(S.loadout.includes("mend1")&&rnd()<CFG.POTION_POT_DROP)S.drops.push({x,y,pot:"mend1",t:0});
   if(rnd()<CFG.SHARD_DROP*.5){S.drops.push({x,y,shard:1,t:0});return;}
   if(rnd()<CFG.GOLD_CHANCE*.5)dropGold(x,y,Math.round((6+S.floor*3)*rr(.6,1.6)));
   if(rnd()<CFG.DROP_CHANCE*.5)dropItem(x,y);}
@@ -3226,7 +3269,7 @@ function update(dt){
     // 0.1秒後から吸着。0.5m圏内は足元で拾った時と同じく即時回収する。
     // 回復薬は枠、ハートはHPに空きがあるときだけ吸着する。
     if(d.t>=CFG.PICKUP_DELAY&&dist<=CFG.MAGNET_RADIUS&&dist>CFG.PICKUP_RADIUS
-      &&!(d.pot&&!S.loadout.some((k,j)=>k&&CONSUMABLES[k].heal&&S.runItems[j]<runCap(k)))
+      &&!(d.pot&&!S.loadout.some((k,j)=>k===d.pot&&S.runItems[j]<runCap(k)))
       &&!(d.heart&&p.hp>=p.max)){
       const pull=Math.min(dist,CFG.MAGNET_SPEED*dt);d.x+=(p.x-d.x)/dist*pull;d.y+=(p.y-d.y)/dist*pull;}
     const pr=CFG.PICKUP_RADIUS;
@@ -3239,7 +3282,7 @@ function update(dt){
       else if(d.heart){if(p.hp>=p.max)continue;p.hp=Math.min(p.max,p.hp+p.max*.04);
         burst(p.x,p.y,"#ff6080",7,1.1);tone(820,.07,"sine",.08,1100);}
       else if(d.gold){S.gold+=d.gold;S.runGold+=d.gold;SFX.gold();}
-      else if(d.pot){const j=S.loadout.findIndex((k,j)=>k&&CONSUMABLES[k].heal&&S.runItems[j]<runCap(k));if(j<0)continue;const key=S.loadout[j];S.runItems[j]++;S.consumables[key]=(S.consumables[key]||0)+1;runPick().pots++;SFX.pot();}
+      else if(d.pot){const j=S.loadout.findIndex((k,j)=>k===d.pot&&S.runItems[j]<runCap(k));if(j<0)continue;const key=d.pot;S.runItems[j]++;S.consumables[key]=(S.consumables[key]||0)+1;runPick().pots++;SFX.pot();}
       else{S.bag.push(d.it);SFX.gold();}
       S.drops.splice(i,1);}}
   for(const q of S.props)if(q.t==="shrine")q.tm+=dt;
@@ -3457,9 +3500,10 @@ function doAction(){
   $("act").style.display="none";}
 
 /* ---------- 確認ダイアログ ---------- */
-let askFn=null,askPrevPaused=false;
-function ask(t,d,fn){askPrevPaused=S.paused;S.paused=true;for(let i=0;i<4;i++)HELD[i]=false;
-  $("askT").textContent=t;$("askD").style.whiteSpace="pre-line";$("askD").textContent=d||"";askFn=fn;$("askPop").classList.add("on");}
+let askFn=null,askNoFn=null,askPrevPaused=false;
+function ask(t,d,fn,noFn,yesText="はい",noText="やめる"){askPrevPaused=S.paused;S.paused=true;for(let i=0;i<4;i++)HELD[i]=false;
+  $("askT").textContent=t;$("askD").style.whiteSpace="pre-line";$("askD").textContent=d||"";
+  $("askY").textContent=yesText;$("askN").textContent=noText;askFn=fn;askNoFn=noFn||null;$("askPop").classList.add("on");}
 hookLater();
 function hookLater(){}
 
@@ -3812,7 +3856,7 @@ function dDrop(d){
   if(d.pot){
     /* 回復枠が満杯、または回復薬を持ち込んでいないと拾えない。
        拾えない物を光らせると、取りに行かせて無駄足を踏ませる。 */
-    const room=S.loadout.some((k,j)=>k&&CONSUMABLES[k].heal&&S.runItems[j]<runCap(k));
+    const room=S.loadout.some((k,j)=>k==="mend1"&&S.runItems[j]<runCap("mend1"));
     if(!room){ctx.globalAlpha=.34;}
     const pl=.72+Math.sin(d.t*4.6)*.28;
     ctx.fillStyle="rgba(240,80,100,.30)";ctx.globalAlpha=pl;
@@ -4091,7 +4135,7 @@ function endRun(alive,cause){
   // boss_message は深度5ボス撃破時に設定され、そこから先へ進む経路が無かった。
   // 帰還した時点で装備・商店・編成の案内へ繋ぐ（無料ガチャ2回もこの枝にある）。
   if(alive&&["return","boss_message"].includes((S.tutorial||{}).phase)){S.tutorial.phase="equip_tab";hideTutorial();}
-  if(alive){S.stash.push(...got);gainRankXP(returnRankXP(S.floor));SFX.extract();}else SFX.death();
+  if(alive){extractLootToStash(got);gainRankXP(returnRankXP(S.floor));SFX.extract();}else SFX.death();
   S.log.runs.push({t:Math.round(S.runT),floor:S.floor,start:S.startFloor,alive,
     items:got.length,kills:S.p.kills,lv:S.base.lv,gold:S.gold,ups:S.p.ups.slice()});
   save();
@@ -4144,8 +4188,8 @@ function openTown(){
   ensureDaily();
   S.scene="town";S.paused=true;
   $("scTown").classList.add("on");$("pauseB").classList.remove("show");
-  $("townG").textContent=S.gold;
-  $("premiumT").textContent=S.premium||0;
+  $("townG").textContent=Math.floor(S.gold||0).toLocaleString();
+  $("premiumT").textContent=Math.floor(S.premium||0).toLocaleString();
   /* アカウント共通ランクと戦闘力を常駐させる。キャラLvは仲間・装備画面に残す。 */
   {const need=rankNeed(S.rank.lv),cur=S.rank.xp||0;
    $("hdrLv").textContent="ランク"+S.rank.lv;
@@ -4560,16 +4604,15 @@ function openProfileIconPick(){const c=$("itC");c.innerHTML='<div class="nm">プ
   const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);$("itPop").classList.add("on");}
 function showGachaResult(title,html){hideTutorial();const c=$("itC");c.innerHTML=`<div style="text-align:center"><div style="font-size:18px;font-weight:900;margin-bottom:18px">${title}</div>${html}</div>`;const x=document.createElement("div");x.className="btn pri";x.textContent="閉じる";tapEl(x,()=>{$("itPop").classList.remove("on");openTown();});c.appendChild(x);$("itPop").classList.add("on");}
 
-/* 選べる開始階層の上限。SKIP_STEP刻みで、到達済みの手前まで。 */
-function maxStartFloor(){return Math.max(1,Math.floor((S.deepest-1)/CFG.SKIP_STEP)*CFG.SKIP_STEP+1);}
-function setDiveFloor(v){const mx=maxStartFloor();v=clamp(Math.floor(+v||1),1,mx);
-  S.diveFloor=Math.floor((v-1)/CFG.SKIP_STEP)*CFG.SKIP_STEP+1;save();}
-/* 階層選択。深度が伸びるほど±だけでは遠すぎるので、一覧から直接選べるようにする。 */
+/* 到達済みの階層は整数で直接指定できる。±は5層刻みだが、自由入力を丸めない。 */
+function maxStartFloor(){return Math.max(1,Math.floor(S.deepest||1));}
+function setDiveFloor(v){const mx=maxStartFloor();S.diveFloor=clamp(Math.floor(+v||1),1,mx);save();}
+/* 旧一覧入口。通常は固定出撃バーの自由入力と±5から選ぶ。 */
 function openFloorPick(after){
   const mx=maxStartFloor();
   invMenu("開始階層を選ぶ",c=>{
     const note=document.createElement("div");note.className="sub";
-    note.textContent=`到達済みの ${S.deepest}F 手前まで、${CFG.SKIP_STEP}階層ごとに選べます。`;c.appendChild(note);
+    note.textContent=`到達済みの1F〜${S.deepest}Fを選べます。通常は出撃バーへ直接入力できます。`;c.appendChild(note);
     const top=document.createElement("div");top.className="btn gold";top.textContent=`最深から始める（${mx}F）`;
     tapEl(top,()=>{setDiveFloor(mx);$("itPop").classList.remove("on");after();});c.appendChild(top);
     const grid=document.createElement("div");grid.className="floorGrid";c.appendChild(grid);
@@ -4578,18 +4621,19 @@ function openFloorPick(after){
       d.innerHTML=`<b>${f}F</b><small style="color:${ELEMENTS[el].col}">${elementName(el)}</small>`;
       tapEl(d,()=>{setDiveFloor(f);$("itPop").classList.remove("on");after();});grid.appendChild(d);}
   },after);}
-/* タブバーの上に常駐する出撃バー。階層選択・適性・出撃を一段に集約する。 */
+/* タブバーの上に常駐する出撃バー。適性と、階層入力・出撃を二段に集約する。 */
 function renderDiveBar(){
   const bar=$("diveBar"),maxStart=maxStartFloor();
   S.diveFloor=clamp(S.diveFloor||1,1,maxStart);
   bar.innerHTML="";bar.classList.add("on");
   const step=document.createElement("div");step.className="step";
-  const label=document.createElement("div");label.className="fl";
-  const paint=()=>{const el=dominantElement(S.diveFloor);
-    label.innerHTML=`<b>${S.diveFloor}F</b><small style="color:${ELEMENTS[el].col}">${elementName(el)}属性</small>`;};
-  /* ±を何度も押す操作はやめ、階層表示そのものから一覧を一度だけ開く。 */
-  label.classList.add("tap");tapEl(label,()=>maxStart>1?openFloorPick(openTown):toast("最深到達で開始階層が増えます"));
-  paint();step.appendChild(label);bar.appendChild(step);
+  const minus=document.createElement("div");minus.className="btn gh";minus.textContent="−5";
+  const input=document.createElement("input");input.className="floorInput";input.type="text";input.value=S.diveFloor;input.setAttribute("inputmode","numeric");input.setAttribute("aria-label",`開始階層 1から${maxStart}`);
+  const plus=document.createElement("div");plus.className="btn gh";plus.textContent="＋5";
+  const apply=v=>{setDiveFloor(v);input.value=S.diveFloor;paintFit();};
+  tapEl(minus,()=>apply(S.diveFloor-CFG.SKIP_STEP));tapEl(plus,()=>apply(S.diveFloor+CFG.SKIP_STEP));
+  input.addEventListener("change",()=>apply(input.value));input.addEventListener("blur",()=>apply(input.value));input.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();apply(input.value);input.blur();}});
+  step.append(minus,input,plus);bar.appendChild(step);
   /* 装備が階層に追いついているか。潜ってから気付かせない。 */
   const fit=document.createElement("div");fit.className="diveFit";
   const paintFit=()=>{const f=gearFitText(S.diveFloor);
@@ -4597,7 +4641,7 @@ function renderDiveBar(){
     fit.style.color=f.c;
     fit.innerHTML=`<b>${f.line}</b><small>次のボス ${nextBoss}F・<span style="color:${ELEMENTS[boss].col}">${elementName(boss)}属性</span></small>`;};
   paintFit();bar.appendChild(fit);
-  const go=document.createElement("div");go.className="btn pri go";go.textContent="潜　る";
+  const go=document.createElement("div");go.className="btn pri go";go.textContent="潜る";
   tapEl(go,()=>confirmDive(S.diveFloor));bar.appendChild(go);
 }
 /* 拠点タブは「誰で潜るか」を最初に見せる。
@@ -4708,7 +4752,7 @@ function renderPartySection(b){
   const h=document.createElement("h3");h.textContent=`潜入編成　${formed} / ${cap}`;
   const help=document.createElement("div");help.className="miniHelp";help.textContent="?";
   tapEl(help,()=>invMenu("潜入編成",c=>{const n=document.createElement("div");n.className="st";
-    n.textContent="左から出撃。倒れると次の番手へ交代します。装備は共有ですが、装備中の品を別の番手は使えません。";c.appendChild(n);},openTown));
+    n.textContent="左から出撃。倒れると次の番手へ交代します。編成から外すときは、全装備を倉庫へ戻すか確認します。";c.appendChild(n);},openTown));
   head.append(h,help);b.appendChild(head);
   const g=document.createElement("div");g.className="formation";
   for(let i=0;i<4;i++){const key=S.formation[i],entry=roster.find(x=>x.k+":"+x.ch.id===key),d=document.createElement("div");d.className="member"+(i===0?" on":"");
@@ -4727,9 +4771,13 @@ function renderPartySection(b){
   renderLoadout(b);
   renderDiveBar();
 }
+function confirmPartyLeave(key,commit){const gear=characterGear(key),count=Object.values(gear||{}).filter(Boolean).length;
+  if(!count)return commit();
+  ask("編成から外す",`${characterName(key)} は装備を ${count}個 つけています。\n全て外して倉庫へ戻しますか？`,
+    ()=>{unequipCharacter(key);commit();},commit,"全て外して解除","装備のまま解除");}
 function openFormationPick(slot){hideTutorial();const c=$("itC"),t=(S.tutorial||{}).phase==="formation_slot";c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:10px">${t?"魔術師を選び、ミラに入れ替えよう":"職業を選択"}</div>`;
   const keys=t?["mage"]:[...new Set(unlockedRoster().map(x=>x.k))];for(const k of keys){const d=document.createElement("div");d.className="card tap";d.innerHTML=`<div class="nm" style="color:${CLASSES[k].col}">${CLASSES[k].name}</div><div class="st">${CLASSES[k].desc}</div>`;tapEl(d,()=>openFormationChoices(slot,k));c.appendChild(d);}
-  if(slot>0&&S.formation[slot]){const rm=document.createElement("div");rm.className="btn gh";rm.textContent="この枠を外す";tapEl(rm,()=>{S.formation.splice(slot,1);save();$("itPop").classList.remove("on");openTown();});c.appendChild(rm);}
+  if(slot>0&&S.formation[slot]){const rm=document.createElement("div");rm.className="btn gh";rm.textContent="この枠を外す";tapEl(rm,()=>{const old=S.formation[slot];confirmPartyLeave(old,()=>{S.formation.splice(slot,1);save();$("itPop").classList.remove("on");openTown();});});c.appendChild(rm);}
   const x=document.createElement("div");x.className="btn popClose";x.textContent="閉じる";tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);$("itPop").classList.add("on");}
 function openFormationChoices(slot,k){const c=$("itC");c.innerHTML=`<div class="nm">${CLASSES[k].name}のキャラクター</div>`;for(const ch of CHARACTERS[k].filter(ch=>S.unlockedCharacters.includes(k+":"+ch.id))){const key=k+":"+ch.id,on=S.formation.includes(key),d=document.createElement("div");d.className="card tap"+(on?" no":"");d.style.borderColor=charTier(ch).col;
   d.innerHTML=`<div class="row"><div><div class="nm" style="color:${ch.col}">● ${ch.n} <b style="color:${charTier(ch).col};font-size:11px">${charTier(ch).n}</b> <i style="font-style:normal;color:${CLASSES[k].col}">${CLASS_MARK[k]||""}</i></div><div class="ty">${ch.trait}</div></div>${on?'<span class="tag">編成中</span>':""}</div><div class="st">${ch.d}<br><b style="color:#cfc6dd">固有技: ${ch.uniq?ch.uniq.n:"なし"}</b> — ${ch.uniq?ch.uniq.d:""}</div>`;tapEl(d,()=>{if(on)return;
@@ -4737,21 +4785,7 @@ function openFormationChoices(slot,k){const c=$("itC");c.innerHTML=`<div class="
   // ガイは編成済みで選べず、ミラを選ぶかスキップする以外に完了できなくなる。
   const finishTutorial=()=>{if((S.tutorial||{}).phase==="formation_slot"&&key==="mage:mira"){S.tutorial.phase="done";toast("チュートリアル完了！","ok");}};
   const commit=()=>{S.formation[slot]=key;S.formation=S.formation.filter(Boolean).slice(0,formationCapacity());finishTutorial();save();$("itPop").classList.remove("on");openTown();};
-  /* 1番手＝実際に潜るキャラクター。装備とレベルはキャラクターごとに別なので、
-     育てた1番手を降ろすと、次の潜行は装備なしのLv1で始まることになる。
-     チュートリアル最終手順がまさにこれ（ガイ→ミラ）で、案内どおり進めた新規が
-     訓練用装備一式を持ったまま裸のLv1で潜る形になっていた。降ろす前に必ず知らせる。 */
-  const previous=slot===0&&S.formation[0],prevState=previous&&S.characterStates[previous];
-  const prevGear=previous===activeCharacterKey()?S.gear:(prevState||{}).gear;
-  const prevCount=Object.values(prevGear||{}).filter(Boolean).length;
-  if(previous&&previous!==key&&prevCount){
-    const [pk,pid]=previous.split(":"),pch=(CHARACTERS[pk]||[]).find(x=>x.id===pid)||{n:previous};
-    const next=S.characterStates[key],nextCount=Object.values((next||{}).gear||{}).filter(Boolean).length;
-    finishTutorial();save();
-    ask("1番手を入れ替える",
-      `1番手は実際に潜るキャラクターです。\n装備とレベルはキャラクターごとに別々なので、${pch.n}の装備${prevCount}個は${ch.n}では使えません。\n${ch.n}の装備は${nextCount}個、レベルは${(next&&next.base?next.base.lv:1)}です。`,commit);
-    return;}
-  commit();});c.appendChild(d);}const back=document.createElement("div");back.className="btn gh";back.textContent="職業選択へ戻る";tapEl(back,()=>openFormationPick(slot));c.appendChild(back);$("itPop").classList.add("on");}
+  const previous=S.formation[slot];if(previous&&previous!==key)return confirmPartyLeave(previous,commit);commit();});c.appendChild(d);}const back=document.createElement("div");back.className="btn gh";back.textContent="職業選択へ戻る";tapEl(back,()=>openFormationPick(slot));c.appendChild(back);$("itPop").classList.add("on");}
 
 /* 設定は機能を失わず4ページに分ける。全見出しを縦積みすると、変更したい項目へ
    到達するまでに何画面もスクロールするため、見出し単位で既存DOMを振り分ける。 */
@@ -4919,7 +4953,7 @@ function openRecords(after=openTown){const r=S.log.runs;invMenu("記録",c=>{
 /* ---------- 倉庫: アイコン格子 + フィルタ/並べ替え + 固定売却バー ---------- */
 function invFiltered(){
   const F=S.inv;F.filters=F.filters||[];
-  let list=[...S.stash,...equippedEntries().map(e=>e.it)];
+  let list=allOwnedGear();
   const fs=F.filters;
   if(fs.length){list=list.filter(i=>fs.some(f=>{
     if(f[0]==="r"&&f.length===2)return i.rar===+f[1];
@@ -4935,7 +4969,7 @@ const HELP_SECTIONS=[
   ["基本の流れ",()=>[
     "拠点で編成・装備・持ち込みを決めて<b>潜る</b>。深度を1つずつ下りながら、階段で次の深度へ進む。",
     "帰還ポータルへ戻ると戦利品が確定する。<b>倒れると未帰還の装備は失う</b>（ゴールドと経験値は残る）。",
-    `開始深度は到達済みの手前まで${CFG.SKIP_STEP}階層ごとに選べる。出撃バーの数字を押すと一覧が開く。`,
+    `開始深度は到達済みの1F〜最深層を自由入力できる。左右の−${CFG.SKIP_STEP} / ＋${CFG.SKIP_STEP}でも調整できる。`,
     `${CFG.BOSS_EVERY}深度ごとにボスが出る。倒すと次の深度が解放される。`]],
   ["操作",()=>[
     "左半分がスティック、右下が<b>攻撃</b>、その周りの3つが<b>技</b>。右端の縦一列が<b>持ち込みアイテム</b>で1タップで使う。",
@@ -4966,13 +5000,13 @@ const HELP_SECTIONS=[
   ["素材と調合",()=>[
     "素材は2系統。<b>結晶と核</b>はどこでも出る汎用材、<b>固有素材</b>は決まった敵からしか落ちない。",
     `固有素材は全${PART_KEYS.length}種。出どころの敵が深いほど等級が高く、落ちにくい（${Math.round(PART_DROP[0]*100)}% 〜 ${Math.round(PART_DROP[4]*1000)/10}%）。`,
-    "倉庫の<b>結晶</b>タブ下段に、どの素材がどの敵から落ちるかを出している。固有素材は売れない。",
+    "倉庫の<b>素材</b>タブで全所持数を一覧できる。入手先とドロップ率は必要なときだけ折り畳みを開く。固有素材は売れない。",
     `消耗品は系統ごとに最大3段。1段目は結晶だけで作れて効果は弱く短い。上の段ほど固有素材が要り、効果と持続が伸びる（例: 癒血の雫 12% → 秘薬 30%+継続回復）。`,
     "つまり<b>強い持ち込みは深く潜らないと作れない</b>。結晶をためるだけでは上位品は作れない。",
     "枠の色＝等級（装備と同じ表）、絵の色＝系統。"]],
   ["育成と経済",()=>[
-    "装備は倉庫で共有。装備中の品は他のキャラクターでは使えない。",
-    "分解で結晶、ボスで核。結晶は装備強化、核は限界突破に使う。上位1個＝下位4個で交換できる。",
+    "装備は倉庫で共有。別のキャラクターが装備中の品にはEが付き、選ぶと所有者を確認してから付け替える。",
+    "大事な装備は詳細から保護できる。保護中は強化素材・売却・分解・継承に使えない。分解で結晶、ボスで核を得られる。",
     "日替わり任務3つと全達成ボーナス、日次ボーナス（結晶と核が2倍）がある。",
     "ガチャの10連は単発10回と同額。利点は下限保証だけで、割引は無い。"]],
   ["この画面について",()=>[
@@ -5038,17 +5072,18 @@ function openInvSort(){const F=S.inv;
       tapEl(d,()=>{F.sort=k;$("itPop").classList.remove("on");openTown();});c.appendChild(d);}});}
 function openInvLegend(){
   invMenu("装備一覧の見かた",c=>{const legend=document.createElement("div");legend.className="invLegend";
-    legend.innerHTML=`<span><b style="color:#7ad04e">▲</b> 装備中より強い（職業・属性補正込み）</span><span><b style="color:var(--gold)">E</b> 装備中</span>`
+    legend.innerHTML=`<span><b style="color:#7ad04e">▲</b> 装備中より強い（職業・属性補正込み）</span><span><b style="color:var(--gold)">E</b> いずれかのキャラが装備中</span>`
+      +`<span>${icon("ui_lock",12)} 保護中（素材・売却・分解の対象外）</span>`
       +`<span><b>右下の数字</b> 装備の深度</span><span><b style="color:#7ad0ff">左下の +N</b> 強化レベル</span>`
       +`<span><b>枠の色</b> ${CFG.RARITY.map((r,i)=>`<i class="${RC[i]}">${r[0]}</i>`).join(" / ")}</span>`;
     c.appendChild(legend);},openTown);
 }
 function openInvSell(){const F=S.inv;F.sellSel=F.sellSel||[];
   invMenu("レア度で一括選択",c=>{
-    const note=document.createElement("div");note.className="sub";note.textContent="選んだ等級以下をまとめて選択します。装備中の品は選ばれません。";c.appendChild(note);
-    for(let r=0;r<5;r++){const candidates=S.stash.filter(i=>!isEquipped(i)&&i.rar<=r),d=document.createElement("div");d.className="btn gh";d.textContent=`${CFG.RARITY[r][0]}以下を選択（${candidates.length}個）`;tapEl(d,()=>{F.sellSel=[...new Set([...F.sellSel,...candidates])];$("itPop").classList.remove("on");openTown();});c.appendChild(d);}});}
-function confirmSelectedSell(){const F=S.inv,selected=F.sellSel.filter(i=>S.stash.includes(i)&&!isEquipped(i)),val=selected.reduce((a,i)=>a+sellV(i),0);if(!selected.length)return;ask("選択装備を売却",`${selected.length}個を ${val} G で売却します。よろしいですか？`,()=>{for(const it of selected){const k=S.stash.indexOf(it);if(k>=0)S.stash.splice(k,1);}S.gold+=val;F.sellSel=[];F.sellMode=false;SFX.gold();toast("+"+val+" G");save();openTown();});}
-function confirmSelectedDismantle(){const F=S.inv,selected=F.sellSel.filter(i=>S.stash.includes(i)&&!isEquipped(i));if(!selected.length)return;
+    const note=document.createElement("div");note.className="sub";note.textContent="選んだ等級以下をまとめて選択します。装備中・保護中の品は選ばれません。";c.appendChild(note);
+    for(let r=0;r<5;r++){const candidates=S.stash.filter(i=>!isEquipped(i)&&!i.locked&&i.rar<=r),d=document.createElement("div");d.className="btn gh";d.textContent=`${CFG.RARITY[r][0]}以下を選択（${candidates.length}個）`;tapEl(d,()=>{F.sellSel=[...new Set([...F.sellSel,...candidates])];$("itPop").classList.remove("on");openTown();});c.appendChild(d);}});}
+function confirmSelectedSell(){const F=S.inv,selected=F.sellSel.filter(i=>S.stash.includes(i)&&!isEquipped(i)&&!i.locked),val=selected.reduce((a,i)=>a+sellV(i),0);if(!selected.length)return;ask("選択装備を売却",`${selected.length}個を ${val} G で売却します。よろしいですか？`,()=>{for(const it of selected){const k=S.stash.indexOf(it);if(k>=0)S.stash.splice(k,1);}S.gold+=val;F.sellSel=[];F.sellMode=false;SFX.gold();toast("+"+val+" G");save();openTown();});}
+function confirmSelectedDismantle(){const F=S.inv,selected=F.sellSel.filter(i=>S.stash.includes(i)&&!isEquipped(i)&&!i.locked);if(!selected.length)return;
   const gains={};for(const it of selected){const tier=materialTier(it.ilvl);gains[tier]=(gains[tier]||0)+crystalQty(it);}
   const detail=Object.entries(gains).map(([tier,n])=>`階梯${tier} ×${n}`).join(" / ");
   ask("選択装備を分解",`${selected.length}個を分解して結晶 ${detail} を得ます。よろしいですか？`,()=>{for(const it of selected){const k=S.stash.indexOf(it);if(k>=0)S.stash.splice(k,1);addMat("crystal",materialTier(it.ilvl),crystalQty(it));}dailyProgress("dismantled",selected.length);F.sellSel=[];F.sellMode=false;F.dismantleMode=false;SFX.chest();toast("結晶を獲得");save();openTown();});}
@@ -5071,7 +5106,7 @@ const paidId=()=>"paid_"+Date.now().toString(36)+"_"+Math.random().toString(36).
 const INHERIT_NEED=3;                       // 素材に要る同レア装備の数
 const inheritStock=()=>(S.paidInventory.sigils||[]).length;
 /* 引き上げ候補。同じレア度で、装備中でなく、対象より深い階層のもの。 */
-const inheritCandidates=it=>S.stash.filter(x=>x!==it&&x.rar===it.rar&&x.ilvl>it.ilvl
+const inheritCandidates=it=>S.stash.filter(x=>x!==it&&!x.locked&&x.rar===it.rar&&x.ilvl>it.ilvl
   &&!SLOTK.some(k=>S.gear[k]===x));
 /* 素材から決まる引き上げ先。最も浅い素材の階層まで。 */
 const inheritTarget=(it,picked)=>picked.length<INHERIT_NEED?null
@@ -5172,7 +5207,7 @@ function renderLoadout(b){
    売却と分解は装備一覧の選択モードにまとめ、操作列は常に一段に収める。 */
 /* 分解は売却と同じ「装備を選んで処分する」操作なので、装備区画の中に置く。
    単独タブにすると、同じ一覧を2つの入口から開くことになる。 */
-const INV_TABS=[["gear","装備"],["item","道具"],["mat","結晶"],["craft","調合"]];
+const INV_TABS=[["gear","装備"],["item","道具"],["mat","素材"],["craft","調合"]];
 /* 結晶と核。何をいくつ持っているか、上位へどう変換できるかをここへ集める。 */
 function renderMaterialPanel(b){
   for(const [kind,label,note] of [["crystal","結晶","装備の強化と調合に使う"],["core","核","限界突破と上位品の調合に使う"]]){
@@ -5219,6 +5254,33 @@ function renderMaterialPanel(b){
     rows.appendChild(x);}
   conv.appendChild(rows);b.appendChild(conv);
   renderPartPanel(b);}
+/* 素材は「カードを縦に読む」のではなく、全所持数を先に一覧で読む。
+   売却・変換・入手先は必要な時だけ開く二次操作へ分ける。 */
+function renderMaterialDashboard(b){
+  const totals=document.createElement("div");totals.className="materialTotals";
+  for(const [kind,label,note] of [["crystal","結晶","強化・調合"],["core","核","上位強化・調合"]]){
+    const bucket=matBucket(kind),max=Math.max(materialTier(S.deepest),...Object.keys(bucket).map(Number),1);
+    const card=document.createElement("div");card.className="materialTotal";
+    card.innerHTML=`<div class="materialTotalHead"><span>${icon(kind==="crystal"?"m_crystal":"m_core",20)}<b>${label}</b></span><strong>${materialCount(kind).toLocaleString()}</strong></div><small>${note}</small>`;
+    const strip=document.createElement("div");strip.className="materialTierStrip";
+    for(let t=1;t<=max;t++){const cell=document.createElement("span");cell.className=(bucket[t]||0)?"owned":"";cell.innerHTML=`<small>階梯${t}</small><b>${(bucket[t]||0).toLocaleString()}</b>`;strip.appendChild(cell);}card.appendChild(strip);totals.appendChild(card);}
+  b.appendChild(totals);
+  const owned=PART_KEYS.filter(k=>partCount(k)>0).length,title=document.createElement("div");title.className="materialSectionTitle";
+  title.innerHTML=`<b>固有素材</b><span>${owned} / ${PART_KEYS.length}種を所持</span>`;b.appendChild(title);
+  const grid=document.createElement("div");grid.className="partInventoryGrid";
+  for(const key of PART_KEYS){const d=PARTS[key],have=partCount(key),cell=document.createElement("div");cell.className="partInventoryCell"+(have?" owned":" empty");cell.style.borderColor=hexA(rareFrame(d.rar),have?.78:.28);
+    cell.innerHTML=`<span class="partInventoryIcon">${partIcon(key,18)}</span><span class="partInventoryName">${d.n}</span><b>${have.toLocaleString()}</b>`;grid.appendChild(cell);}b.appendChild(grid);
+  const manage=document.createElement("details");manage.className="materialFold";manage.innerHTML="<summary>素材を整理する <small>結晶の売却・階梯変換</small></summary>";
+  const body=document.createElement("div");body.className="materialFoldBody";
+  {const sell=document.createElement("div");sell.className="materialAction";sell.innerHTML='<div><b>余った結晶を売る</b><small>強化に使う方が得です</small></div>';
+   const rows=document.createElement("div");rows.className="craftBtns";const bucket=matBucket("crystal"),tiers=Object.keys(bucket).map(Number).sort((a,z)=>a-z).filter(t=>bucket[t]>0);
+   if(!tiers.length){const e=document.createElement("div");e.className="ty";e.textContent="売れる結晶がありません";sell.appendChild(e);}
+   for(const t of tiers){const unit=matSellValue(t),n=bucket[t],x=document.createElement("div");x.className="btn gh";x.innerHTML=`階梯${t} ×${n}<small>${(unit*n).toLocaleString()} G</small>`;tapEl(x,()=>ask(`階梯${t}の結晶を売る`,`${n}個を ${(unit*n).toLocaleString()} Gで売ります。`,()=>{const b2=matBucket("crystal"),have=b2[t]||0;if(!have)return;b2[t]=0;S.gold+=unit*have;SFX.gold();save();openTown();}));rows.appendChild(x);}if(tiers.length)sell.appendChild(rows);body.appendChild(sell);}
+  {const conv=document.createElement("div");conv.className="materialAction";conv.innerHTML='<div><b>階梯を上げる</b><small>下位4個 → 上位1個</small></div>';
+   const rows=document.createElement("div");rows.className="craftBtns";for(const kind of ["crystal","core"]){const bucket=matBucket(kind),from=Object.keys(bucket).map(Number).sort((a,z)=>a-z).find(t=>bucket[t]>=4),x=document.createElement("div");x.className="btn "+(from?"gold":"no");x.innerHTML=from?`${kind==="crystal"?"結晶":"核"}<small>階梯${from}×4 → ${from+1}×1</small>`:`${kind==="crystal"?"結晶":"核"}<small>4個未満</small>`;tapEl(x,()=>{if(!from)return;const n=Math.floor(bucket[from]/4);ask("階梯を上げる",`階梯${from}を${n*4}個使い、階梯${from+1}を${n}個作ります。`,()=>{bucket[from]-=n*4;addMat(kind,from+1,n);SFX.chest();save();openTown();});});rows.appendChild(x);}conv.appendChild(rows);body.appendChild(conv);}
+  manage.appendChild(body);b.appendChild(manage);
+  const source=document.createElement("details");source.className="materialFold";source.innerHTML="<summary>入手先とドロップ率 <small>敵別の詳細</small></summary>";const sourceBody=document.createElement("div");sourceBody.className="materialFoldBody";renderPartPanel(sourceBody);source.appendChild(sourceBody);b.appendChild(source);
+}
 /* 所持している道具と素材の一覧。倉庫の「道具」タブと、潜行中の戦利品画面で共用する。
    何を何個持っているのかが、拠点でもダンジョン内でも同じ形で分かるようにする。 */
 function renderHoldings(b,opt){
@@ -5321,7 +5383,7 @@ function renderInv(b){
   b.appendChild(tabs);
   if(sub==="item"){renderHoldings(b);return;}
   if(sub==="craft"){renderCraftPanel(b);return;}
-  if(sub==="mat"){renderMaterialPanel(b);return;}
+  if(sub==="mat"){renderMaterialDashboard(b);return;}
   /* 装備と分解は同じ一覧を使う。分解のときだけ選択モードで開く。 */
   if(sub!=="gear"){F.dismantleMode=false;F.sellMode=false;}
   if(!F.dismantleMode)F.sellSel=F.sellSel.filter(()=>F.sellMode);
@@ -5352,17 +5414,17 @@ function renderInv(b){
     c.style.borderColor=it.rar===4?"#ff8adf":CFG.RARITY[it.rar][3];
     /* 印は上段の帯に「左＝選択 / 右＝装備中か更新できるか」で並べる。
        以前は選択の印と▲が同じ左上に出て重なっていた。 */
-    c.innerHTML=`<div class="cellTop"><span class="mk sel">${sel?(F.dismantleMode?"分":"売"):""}</span>`
+    c.innerHTML=`<div class="cellTop"><span class="mk sel">${sel?(F.dismantleMode?"分":"売"):it.locked?icon("ui_lock",12):""}</span>`
       +`<span class="mk">${equipped?'<b class="e">E</b>':(better?'<b class="u">▲</b>':"")}</span></div>`
       +`<div class="cellIc">${icon(iconKey(it),26)}</div>`
       +`<div class="cellBtm"><span class="enh">${(it.lv||1)>1?"+"+((it.lv||1)-1):""}</span>`
       +`<span class="lvl">${it.ilvl}</span></div>`;
-    tapEl(c,()=>{if(!equipped&&(F.sellMode||F.dismantleMode)){const i=F.sellSel.indexOf(it);if(i>=0)F.sellSel.splice(i,1);else F.sellSel.push(it);openTown();}else showItem(it,false);});
+    tapEl(c,()=>{if(!equipped&&!it.locked&&(F.sellMode||F.dismantleMode)){const i=F.sellSel.indexOf(it);if(i>=0)F.sellSel.splice(i,1);else F.sellSel.push(it);openTown();}else showItem(it,false);});
     c.addEventListener("touchstart",()=>{}, {passive:true});
-    c.addEventListener("contextmenu",e=>{e.preventDefault();if(equipped||!selecting)return;const i=F.sellSel.indexOf(it);if(i>=0)F.sellSel.splice(i,1);else F.sellSel.push(it);openTown();});
+    c.addEventListener("contextmenu",e=>{e.preventDefault();if(equipped||it.locked||!selecting)return;const i=F.sellSel.indexOf(it);if(i>=0)F.sellSel.splice(i,1);else F.sellSel.push(it);openTown();});
     g.appendChild(c);}
   b.appendChild(g);
-  if(F.sellMode||F.dismantleMode){const selected=F.sellSel.filter(i=>S.stash.includes(i)&&!isEquipped(i)),val=selected.reduce((a,i)=>a+sellV(i),0),crystals=selected.reduce((a,i)=>a+crystalQty(i),0),dock=document.createElement("div");dock.className="sellDock";
+  if(F.sellMode||F.dismantleMode){const selected=F.sellSel.filter(i=>S.stash.includes(i)&&!isEquipped(i)&&!i.locked),val=selected.reduce((a,i)=>a+sellV(i),0),crystals=selected.reduce((a,i)=>a+crystalQty(i),0),dock=document.createElement("div");dock.className="sellDock";
     const amount=document.createElement("div");amount.className="amount";
     amount.innerHTML=`<span>${selected.length}件選択</span><b>${F.dismantleMode?`結晶 ${crystals.toLocaleString()}`:`${val.toLocaleString()} G`}</b>`;
     const ok=document.createElement("div");ok.className="btn gold"+(selected.length?"":" no");ok.textContent=F.dismantleMode?"分解する":"売却する";tapEl(ok,F.dismantleMode?confirmSelectedDismantle:confirmSelectedSell);
@@ -5378,11 +5440,13 @@ function showItem(it,inDungeon){
       ${CFG.RARITY[it.rar][0]} / ${SLOTN(it.slot)} / 深度${it.ilvl}</div>`;
   const mk=(t,cls,fn,host=c)=>{const d=document.createElement("div");d.className="btn "+cls;d.textContent=t;
     tapEl(d,fn);c.appendChild(d);};
-  if(!equipped){
-    mk("装備変更",(!cur||it.score>cur.score)?"pri":"",()=>openGearCompare(it.slot,it,inDungeon));
-  }
+  if(owner&&owner!==activeCharacterKey()){
+    const note=document.createElement("div");note.className="ownerNote";note.textContent=`E ${characterName(owner)}が装備中`;c.appendChild(note);
+    mk(`${currentCharacter().n}へ付け替える`,"pri",()=>requestEquipItem(it,it.slot,()=>{$("itPop").classList.remove("on");inDungeon?openPause():openTown();}));
+  }else if(!equipped)mk("装備変更",(!cur||it.score>cur.score)?"pri":"",()=>openGearCompare(it.slot,it,inDungeon));
   const st=document.createElement("div");st.className="st optBox";st.style.textAlign="center";st.style.fontSize="13px";st.style.lineHeight="1.9";
   st.innerHTML=statsHTML(it);c.appendChild(st);
+  if(!inDungeon)mk(it.locked?"保護を解除":"保護する","gh",()=>{setItemLocked(it,!it.locked);toast(it.locked?"装備を保護しました":"保護を解除しました","ok");showItem(it,false);});
   if(!inDungeon&&it.lv<itemMaxLv(it)){
     const need=fuseNeed(it),gold=fuseGold(it);
     mk(`強化する（Lv${it.lv} / ${it.xp}exp）`,"gold",()=>{$("itPop").classList.remove("on");openFuse(it);});}
@@ -5400,7 +5464,7 @@ function showItem(it,inDungeon){
   if(equippedHere)mk("外す","gh",()=>{if(!S.stash.includes(it))S.stash.push(it);S.gear[it.slot]=null;S.p.d=derive();recalcHP(S.p);
     $("itPop").classList.remove("on");save();inDungeon?openPause():openTown();});
   else{
-    if(!inDungeon)mk("売却 "+sellV(it)+"G","gh",()=>{
+    if(!inDungeon&&!equipped)mk("売却 "+sellV(it)+"G",it.locked?"no":"gh",()=>{if(it.locked)return toast("保護中の装備は売却できません","ng");
       S.gold+=sellV(it);const k=S.stash.indexOf(it);if(k>=0)S.stash.splice(k,1);
       SFX.gold();$("itPop").classList.remove("on");save();openTown();});}
   mk("閉じる","gh",()=>$("itPop").classList.remove("on"));
@@ -5416,8 +5480,8 @@ function fusePreview(target,xp){let lv=target.lv,cur=target.xp+xp,up=0;
   return {lv,xp:cur,up};}
 function openFuse(target){
   if(fuseTarget!==target){fuseTarget=target;fuseSel=[];}
-  fuseSel=fuseSel.filter(i=>S.stash.includes(i)&&i!==target&&!isEquipped(i));
-  const list=S.stash.filter(i=>i!==target&&i.slot===target.slot&&!isEquipped(i))
+  fuseSel=fuseSel.filter(i=>S.stash.includes(i)&&i!==target&&!isEquipped(i)&&!i.locked);
+  const list=S.stash.filter(i=>i!==target&&i.slot===target.slot&&!isEquipped(i)&&!i.locked)
     .sort((a,b)=>fuseXP(b)-fuseXP(a));
   const c=$("itC"),need=fuseNeed(target),perGold=fuseGold(target);
   const tier=materialTier(target.ilvl),crystals=crystalNeed(target),needsCore=coreNeeded(target);
@@ -5459,6 +5523,7 @@ function openFuse(target){
 
 function equip(it){
   if(it.wt&&WCLS[it.wt]!==S.cls){toast(WCLS[it.wt]==="warrior"?"剣は戦士専用":"杖は魔術師専用");return;}
+  if(it.ac&&it.ac!==S.cls){toast(it.ac==="warrior"?"戦士用の防具です":"魔術師用の防具です");return;}
   const old=S.gear[it.slot];
   S.gear[it.slot]=it;
   const i=S.stash.indexOf(it);if(i>=0)S.stash.splice(i,1);
@@ -5515,7 +5580,7 @@ function openInherit(it){
 /* 装備枠から開く部位専用画面。グローバルのプロフィールと下部タブを残すため、
    ポップアップではなく townBody の内容だけを切り替える。 */
 function gearCandidateAllowed(it,slotK){
-  if(!it||it.slot!==slotK||isEquipped(it))return false;
+  if(!it||it.slot!==slotK||equippedOwner(it)===activeCharacterKey())return false;
   if(it.wt&&WCLS[it.wt]!==S.cls)return false;
   if(it.ac&&it.ac!==S.cls)return false;
   return true;
@@ -5523,6 +5588,7 @@ function gearCandidateAllowed(it,slotK){
 function gearWorkspaceBack(){S.gearSlot=null;S.gearCompareChoice=null;openTown();}
 function disposeCurrentGear(it,kind){
   if(!it||S.gear[it.slot]!==it)return;
+  if(it.locked)return toast("保護中の装備は売却・分解できません","ng");
   const reward=kind==="sell"?`${sellV(it)} G`:`階梯${materialTier(it.ilvl)}結晶 ${crystalQty(it)}`;
   ask(kind==="sell"?"装備中の品を売却":"装備中の品を分解",`${it.name} を外して${kind==="sell"?"売却":"分解"}します。\n獲得: ${reward}`,()=>{
     S.gear[it.slot]=null;
@@ -5541,7 +5607,7 @@ function renderGearWorkspace(host,slotK){
     :`<div class="ty">いまの装備</div><div class="st">装備されていません。</div>`;
   const actions=document.createElement("div");actions.className="gearActions";
   const action=(name,cls,fn,wide=false)=>{const x=document.createElement("div");x.className=`btn ${cls}${wide?" wide":""}`;x.textContent=name;tapEl(x,fn);actions.appendChild(x);};
-  if(it){action("強化","gold",()=>showItem(it,false));action("分解","gh",()=>disposeCurrentGear(it,"dismantle"));action("売却","gh",()=>disposeCurrentGear(it,"sell"));}
+  if(it){action("強化","gold",()=>showItem(it,false));action("分解",it.locked?"no":"gh",()=>disposeCurrentGear(it,"dismantle"));action("売却",it.locked?"no":"gh",()=>disposeCurrentGear(it,"sell"));}
   else{action("強化","no",()=>{});action("分解","no",()=>{});action("売却","no",()=>{});}
   action("おすすめ","gold",()=>autoEquipBest(()=>{S.gearSlot=slotK;openTown();}));
   if(it)action("引き上げ","gh",()=>it.rar===4?openInherit(it):toast("引き上げは伝説の装備にだけ使えます","ng"),true);else action("引き上げ","no",()=>{},true);
@@ -5549,10 +5615,10 @@ function renderGearWorkspace(host,slotK){
   const filters=document.createElement("div");filters.className="gearFilters";
   const filter=document.createElement("div");filter.className="btn gh";filter.textContent=S.gearCandidateRare?"絞込: 希少以上":"絞込: すべて";tapEl(filter,()=>{S.gearCandidateRare=!S.gearCandidateRare;openTown();});
   const sort=document.createElement("div");sort.className="btn gh";sort.textContent=S.gearCandidateSort==="score"?"並替: 強さ":"並替: 深度";tapEl(sort,()=>{S.gearCandidateSort=S.gearCandidateSort==="score"?"depth":"score";openTown();});filters.append(filter,sort);wrap.appendChild(filters);
-  let list=S.stash.filter(x=>gearCandidateAllowed(x,slotK));if(S.gearCandidateRare)list=list.filter(x=>x.rar>=2);
+  let list=allOwnedGear().filter(x=>gearCandidateAllowed(x,slotK));if(S.gearCandidateRare)list=list.filter(x=>x.rar>=2);
   list.sort((a,z)=>S.gearCandidateSort==="score"?powerWith(slotK,z)-powerWith(slotK,a):z.ilvl-a.ilvl);
   if(!list.length){const empty=document.createElement("div");empty.className="card";empty.innerHTML='<div class="st">装備できる物がありません。</div>';wrap.appendChild(empty);}
-  else{const grid=document.createElement("div");grid.className="gearCandidates";for(const x of list){const d=document.createElement("div");d.className=`gearCandidate ${RC[x.rar]}`;d.style.borderColor=x.rar===4?"#ff8adf":CFG.RARITY[x.rar][3];d.setAttribute("aria-label",x.name);d.innerHTML=icon(iconKey(x),32)+`<small>${x.ilvl}</small>`;tapEl(d,()=>{S.gearCompareChoice=x;openTown();});grid.appendChild(d);}wrap.appendChild(grid);}
+  else{const grid=document.createElement("div");grid.className="gearCandidates";for(const x of list){const owner=equippedOwner(x),d=document.createElement("div");d.className=`gearCandidate ${RC[x.rar]}`;d.style.borderColor=x.rar===4?"#ff8adf":CFG.RARITY[x.rar][3];d.setAttribute("aria-label",x.name+(owner?` ${characterName(owner)}が装備中`:""));d.innerHTML=(owner?'<i class="ownerMark">E</i>':"")+icon(iconKey(x),32)+`<small>${x.ilvl}</small>`;tapEl(d,()=>{S.gearCompareChoice=x;openTown();});grid.appendChild(d);}wrap.appendChild(grid);}
   host.appendChild(wrap);
 }
 function renderGearComparePage(host,slotK,it){
@@ -5561,7 +5627,8 @@ function renderGearComparePage(host,slotK,it){
   const page=document.createElement("div");page.className="gearComparePage";
   const box=(x,label)=>`<div class="compareItem"><div class="ty">${label}</div><div class="${x?RC[x.rar]:""}">${icon(x?iconKey(x):slotK,36)}</div><div class="nm ${x?RC[x.rar]:""}">${x?x.name:"装備なし"}</div><div class="st">${compareItemStats(x,null,false)}</div></div>`;
   page.innerHTML=`<div class="nm">${SLOTN(slotK)}の比較</div><div class="compareHead">${box(old,"変更前")}${box(it,"変更後")}</div>${gearDerivedDeltaHTML(slotK,it)}`;
-  const acts=document.createElement("div");acts.className="gearCompareActions";const equipB=document.createElement("div");equipB.className="btn pri";equipB.textContent="装備";tapEl(equipB,()=>{equipItem(it,slotK);S.gearCompareChoice=null;openTown();});const back=document.createElement("div");back.className="btn gh";back.textContent="戻る";tapEl(back,()=>{S.gearCompareChoice=null;openTown();});acts.append(equipB,back);page.appendChild(acts);host.appendChild(page);
+  const owner=equippedOwner(it);if(owner){const note=document.createElement("div");note.className="ownerNote";note.textContent=`E ${characterName(owner)}が装備中`;page.appendChild(note);}
+  const acts=document.createElement("div");acts.className="gearCompareActions";const equipB=document.createElement("div");equipB.className="btn pri";equipB.textContent=owner?"付け替える":"装備";tapEl(equipB,()=>requestEquipItem(it,slotK,()=>{S.gearCompareChoice=null;openTown();}));const back=document.createElement("div");back.className="btn gh";back.textContent="戻る";tapEl(back,()=>{S.gearCompareChoice=null;openTown();});acts.append(equipB,back);page.appendChild(acts);host.appendChild(page);
 }
 /* 装備枠を押したときの旧ポップアップ。ダンジョン内からだけ使用する。
    候補をこの画面に直接並べ、押した瞬間に装備する（2タップ）。細かく見たい人だけ詳細へ降りる。 */
@@ -5577,7 +5644,7 @@ function openGearDetail(slotK,inDungeon){
   if(!inDungeon){
     /* 候補は「戦闘力が最も高くなる物」だけ。同値が並んだときは全部出す。
        上位3件を出すと、どれを選べばよいのかを結局こちらで判断させることになる。 */
-    const cands=S.stash.filter(x=>x.slot===slotK).map(x=>({x,cp:powerWith(slotK,x)}))
+    const cands=allOwnedGear().filter(x=>gearCandidateAllowed(x,slotK)).map(x=>({x,cp:powerWith(slotK,x)}))
       .filter(o=>o.cp>nowCp);
     const best=cands.length?Math.max(...cands.map(o=>o.cp)):0;
     const pool=cands.filter(o=>o.cp===best);
@@ -5591,7 +5658,7 @@ function openGearDetail(slotK,inDungeon){
         +`<span class="tag" style="color:#7ad04e;border-color:#7ad04e">戦闘力 +${(o.cp-nowCp).toLocaleString()}</span></div>`
         +`<div class="ty">${SLOTN(o.x.slot)} / 深度${o.x.ilvl} / 強化+${o.x.lv}</div>`
         +`<div class="st">${compareItemStats(o.x,it,true)}</div>`;
-      tapEl(d,()=>{equipItem(o.x,slotK);$("itPop").classList.remove("on");inDungeon?openPause():openTown();});
+      tapEl(d,()=>requestEquipItem(o.x,slotK,()=>{$("itPop").classList.remove("on");inDungeon?openPause():openTown();}));
       c.appendChild(d);}}
   const add=(text,cls,fn)=>{const d=document.createElement("div");d.className="btn "+cls;d.textContent=text;tapEl(d,fn);c.appendChild(d);};
   if(it)add("強化・売却","gold",()=>showItem(it,inDungeon));
@@ -5601,10 +5668,19 @@ function openGearDetail(slotK,inDungeon){
   add("閉じる","popClose",()=>$("itPop").classList.remove("on"));$("itPop").classList.add("on");}
 /* 1部位を装備する。倉庫から抜き、外した物を倉庫へ戻す。 */
 function equipItem(x,slotK){
-  const slot=slotK||x.slot,old=S.gear[slot];
-  const i=S.stash.indexOf(x);if(i>=0)S.stash.splice(i,1);
-  S.gear[slot]=x;if(old)S.stash.push(old);
-  S.p.d=derive();recalcHP(S.p);SFX.chest();save();}
+  const slot=slotK||x.slot,owner=equippedOwner(x),old=S.gear[slot];
+  if(owner&&owner!==activeCharacterKey()){
+    const gear=characterGear(owner);if(gear)for(const k of SLOTK)if(sameGear(gear[k],x))gear[k]=null;}
+  for(let i=S.stash.length-1;i>=0;i--)if(sameGear(S.stash[i],x))S.stash.splice(i,1);
+  if(old&&!sameGear(old,x)&&!S.stash.some(it=>sameGear(it,old)))S.stash.push(old);
+  S.gear[slot]=x;if(S.p){S.p.d=derive();recalcHP(S.p);}SFX.chest();save();}
+function requestEquipItem(x,slotK,after){
+  if(x.wt&&WCLS[x.wt]!==S.cls)return toast(WCLS[x.wt]==="warrior"?"剣は戦士専用":"杖は魔術師専用","ng");
+  if(x.ac&&x.ac!==S.cls)return toast(x.ac==="warrior"?"戦士用の防具です":"魔術師用の防具です","ng");
+  const owner=equippedOwner(x),commit=()=>{equipItem(x,slotK);if(after)after();};
+  if(owner&&owner!==activeCharacterKey()){
+    ask("装備を付け替える",`${x.name} は ${characterName(owner)} が装備しています。\n${currentCharacter().n}へ付け替えますか？`,commit,null,"付け替える","やめる");
+  }else commit();}
 /* おすすめ装備の一括着用。7部位を手作業で埋め直す手間をなくす。
    判定は effScore（職業・属性の補正込み）ではなく、戦闘力そのもので選ぶ。
    1部位ずつ最良を採るので、共鳴が絡む組み合わせ最適解ではないが、迷いは消える。 */
@@ -5664,17 +5740,17 @@ function openGearCompare(slotK,it,inDungeon){
     <div class="compareHead">${itemBox(old,"変更前")}${itemBox(it,"変更後")}</div>
     ${gearDerivedDeltaHTML(slotK,it)}`;
   const equipB=document.createElement("div");equipB.className="btn pri";equipB.textContent="この装備に変更";
-  tapEl(equipB,()=>{equip(it);$("itPop").classList.remove("on");inDungeon?openPause():openTown();});c.appendChild(equipB);
+  tapEl(equipB,()=>requestEquipItem(it,slotK,()=>{$("itPop").classList.remove("on");inDungeon?openPause():openTown();}));c.appendChild(equipB);
   const back=document.createElement("div");back.className="btn gh";back.textContent="候補一覧へ戻る";tapEl(back,()=>openPick(slotK,inDungeon));c.appendChild(back);
   $("itPop").classList.add("on");}
 function openPick(slotK,inDungeon){
-  const list=S.stash.filter(i=>i.slot===slotK&&!isEquipped(i)).sort((a,b)=>b.score-a.score),c=$("itC");
+  const list=allOwnedGear().filter(i=>gearCandidateAllowed(i,slotK)).sort((a,b)=>b.score-a.score),c=$("itC");
   c.classList.remove("gearCompare");c.innerHTML=`<div style="font-size:15px;font-weight:800;margin-bottom:4px">${SLOTN(slotK)}を変更</div>
     <div class="sub" style="margin-bottom:12px">保有装備からアイコンを選択</div>`;
   if(!list.length)c.innerHTML+='<div class="card"><div class="st">変更できる保有装備がありません。</div></div>';
   else{const g=document.createElement("div");g.className="grid";for(const it of list){const d=document.createElement("div");
     d.className="cell "+RC[it.rar];d.style.borderColor=it.rar===4?"#ff8adf":CFG.RARITY[it.rar][3];d.setAttribute("aria-label",it.name);d.title=it.name;
-    d.innerHTML=icon(iconKey(it),30)+`<div class="lvl">${it.ilvl}</div>`;tapEl(d,()=>openGearCompare(slotK,it,inDungeon));g.appendChild(d);}c.appendChild(g);}
+    const owner=equippedOwner(it);d.innerHTML=(owner?'<div class="ownerMark">E</div>':"")+icon(iconKey(it),30)+`<div class="lvl">${it.ilvl}</div>`;tapEl(d,()=>openGearCompare(slotK,it,inDungeon));g.appendChild(d);}c.appendChild(g);}
   const x=document.createElement("div");x.className="btn popClose";x.textContent="戻る";tapEl(x,()=>openGearDetail(slotK,inDungeon));c.appendChild(x);
   $("itPop").classList.add("on");}
 
@@ -5684,10 +5760,21 @@ function openPick(slotK,inDungeon){
 function emptyGear(){const g={};for(const k of SLOTK)g[k]=null;return g;}
 function activeCharacterKey(){return S.cls+":"+(S.avatars[S.cls]||CHARACTERS[S.cls][0].id);}
 function storeActiveCharacter(){if(!S.cls)return;S.characterStates[activeCharacterKey()]={base:S.base,gear:S.gear};S.chars[S.cls]={base:S.base};}
-function equippedEntries(){const out=[];for(const [owner,st] of Object.entries(S.characterStates||{}))for(const it of Object.values(st.gear||{}))if(it)out.push({it,owner});
-  for(const it of Object.values(S.gear||{}))if(it&&!out.some(e=>e.it===it))out.push({it,owner:activeCharacterKey()});return out;}
-const equippedOwner=it=>(equippedEntries().find(e=>e.it===it)||{}).owner;
+const sameGear=(a,b)=>!!a&&!!b&&(a===b||a.uid&&b.uid&&a.uid===b.uid);
+function equippedEntries(){const out=[],seen=new Set();
+  for(const [owner,st] of Object.entries(S.characterStates||{}))for(const it of Object.values(st.gear||{}))if(it){const key=it.uid||it;if(!seen.has(key)){seen.add(key);out.push({it,owner});}}
+  for(const it of Object.values(S.gear||{}))if(it){const key=it.uid||it;if(!seen.has(key)){seen.add(key);out.push({it,owner:activeCharacterKey()});}}return out;}
+const equippedOwner=it=>(equippedEntries().find(e=>sameGear(e.it,it))||{}).owner;
 const isEquipped=it=>!!equippedOwner(it);
+function allOwnedGear(){const out=[],seen=new Set();for(const it of [...S.stash,...equippedEntries().map(e=>e.it)]){if(!it)continue;const key=it.uid||it;if(seen.has(key))continue;seen.add(key);out.push(it);}return out;}
+function characterName(key){const [k,id]=String(key||"").split(":"),ch=(CHARACTERS[k]||[]).find(x=>x.id===id);return ch?ch.n:key||"ほかのキャラクター";}
+function characterGear(key){if(key===activeCharacterKey())return S.gear;return ((S.characterStates||{})[key]||{}).gear||null;}
+function unequipCharacter(key){const gear=characterGear(key);if(!gear)return 0;let n=0;
+  for(const slot of SLOTK){const it=gear[slot];if(!it)continue;if(!S.stash.some(x=>sameGear(x,it)))S.stash.push(it);gear[slot]=null;n++;}
+  if(key===activeCharacterKey()){S.gear=gear;if(S.p){S.p.d=derive();recalcHP(S.p);}}return n;}
+function extractLootToStash(items){let added=0;const known=new Set(allOwnedGear().map(it=>it.uid||it));
+  for(const it of items||[]){if(!it||!SLOTK.includes(it.slot))continue;if(!it.uid)it.uid=newItemUid();it.locked=!!it.locked;
+    const key=it.uid||it;if(known.has(key))continue;known.add(key);S.stash.push(it);added++;}return added;}
 function selectCharacter(k,id,after){const target=k+":"+id;if(target===activeCharacterKey()){if(after)after();return;}
   storeActiveCharacter();S.cls=k;S.avatars[k]=id;const sv=S.characterStates[target];
   S.base=sv&&sv.base?sv.base:newBase();S.gear=sv&&sv.gear?sv.gear:emptyGear();S.alloc=null;S.p=newPlayer();SFX.lvl();save();if(after)after();else openTown();}
@@ -5888,6 +5975,8 @@ function load(){try{
   if((d.matTierVersion||1)<2)for(const kind of ["crystal","core"]){const old=S.mats[kind],moved={};for(const [tier,n] of Object.entries(old))moved[Math.max(1,(+tier||1)-1)]=(moved[Math.max(1,(+tier||1)-1)]||0)+n;S.mats[kind]=moved;}
   const fix=it=>{
     if(!it)return null;
+    if(!it.uid)it.uid=newItemUid();
+    it.locked=!!it.locked;
     if(!ELEMENTS[it.element])it.element="neutral"; // 属性導入前の装備は無属性として安全に移行
     if(it.slot==="belt")return null;                 // ベルトは廃止
     if(it.slot==="ring1"||it.slot==="ring2")it.slot="ring";
@@ -6052,8 +6141,8 @@ tapEl($("btnResume"),()=>{$("scPause").classList.remove("on");S.paused=false;upd
 tapEl($("btnGiveUp"),()=>{$("scPause").classList.remove("on");
   ask("ここで力尽きる",`編成全員を全滅扱いにして、今回拾った ${S.bag.length} 個を失って拠点に戻ります。`,()=>{S.partyIndex=S.formation.length;endRun(false,"探索を断念した");});});
 tapEl($("btnBack"),leaveEnd);
-tapEl($("askY"),()=>{$("askPop").classList.remove("on");S.paused=askPrevPaused;const f=askFn;askFn=null;if(f)f();});
-tapEl($("askN"),()=>{$("askPop").classList.remove("on");S.paused=askPrevPaused;askFn=null;});
+tapEl($("askY"),()=>{$("askPop").classList.remove("on");S.paused=askPrevPaused;const f=askFn;askFn=askNoFn=null;if(f)f();});
+tapEl($("askN"),()=>{$("askPop").classList.remove("on");S.paused=askPrevPaused;const f=askNoFn;askFn=askNoFn=null;if(f)f();});
 hook($("lockHit"),lockHit);
 for(const t of document.querySelectorAll("#scTown .tab"))tapEl(t,()=>{
   const phase=(S.tutorial||{}).phase,target=t.dataset.t;

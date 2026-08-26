@@ -894,18 +894,21 @@ await page.goto(base); await page.waitForTimeout(500);
   notes.push(`装備枠 ${sizes.装備.join('/')}px / 技一覧の先頭 ${firstSkill ? firstSkill.name : '無し'}`);
   await tap('#scTown .tab[data-t="prep"]'); await page.waitForTimeout(250);
 
-  // 階層一覧・提供割合・編成
+  // 階層の自由入力・±5、提供割合・編成
   await tap('#scTown .tab[data-t="prep"]'); await page.waitForTimeout(250);
-  await tap('#diveBar .fl'); await page.waitForTimeout(300);
-  const floors = await page.evaluate(() => document.querySelectorAll('.floorGrid .fbtn').length);
-  if (floors < 2) problems.push(`階層一覧が開かない（選択肢${floors}）`);
-  await page.evaluate(() => $('itPop').classList.remove('on'));
+  const floorPick = await page.evaluate(() => {
+    S.deepest = 60; openTown(); const input = document.querySelector('#diveBar .floorInput');
+    input.value = '23'; input.dispatchEvent(new Event('change', { bubbles: true })); const entered = S.diveFloor;
+    document.querySelector('#diveBar .step .btn:last-child').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    return { entered, plus: S.diveFloor };
+  });
+  if (floorPick.entered !== 23 || floorPick.plus !== 28) problems.push(`階層入力が不正（${floorPick.entered} → ${floorPick.plus}）`);
   await tap('#scTown .tab[data-t="shop"]'); await page.waitForTimeout(250);
   await tap('.rateLink'); await page.waitForTimeout(300);
   const rates = await page.evaluate(() => document.querySelectorAll('.rateRow').length);
   if (!rates) problems.push('提供割合が開かない');
   await page.evaluate(() => $('itPop').classList.remove('on'));
-  notes.push(`拠点の全タブ・階層一覧(${floors}件)・提供割合(${rates}行) 開通`);
+  notes.push(`拠点の全タブ・階層入力(${floorPick.entered}→${floorPick.plus})・提供割合(${rates}行) 開通`);
 }
 
 /* 5. 管理者モードの説明ボタン。テストプレイ中に仕様を引くための入口。 */
