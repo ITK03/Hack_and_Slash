@@ -2523,6 +2523,8 @@ function spawnBoss(fl){
     hp:b.hp*hs,max:b.hp*hs,dmg:b.dmg*ds,element,eleRes:null,
     flash:0,kbx:0,kby:0,agro:false,frz:0,stun:0,elite:null,shield:0,regen:0,dot:0,dotT:0,
     wind:0,tel:0,telK:null,telX:0,telY:0,telA:0,phase:1,sumT:8,
+    /* 固有技に加えて、全ボスが2種の副技を交互に使う。これで各ボスは必ず3技。 */
+    extraT:3.2/rate,extraI:0,recover:0,
     /* 挙動ごとの作業用。角度・消失・守りの向きなどをここに持つ */
     orbit:rnd()*TAU,orbitDir:rnd()<.5?1:-1,vanish:0,facing:0,ringR:0,volley:0,trailT:0,
     /* 激昂。dmg0 は素の攻撃力。rageT は戦いが始まってからの秒数。 */
@@ -3289,6 +3291,15 @@ function bossAI(e,d,ux,uy,dt){
   const p=S.p,tm=e.telMul||1;
   if(e.phase===1&&e.hp<e.max*.5){e.phase=2;e.sp*=1.15;e.cd*=.8;toast("ボスが激昂した");shk(9);SFX.boss();}
   if(e.tel>0){e.tel-=dt;if(e.tel<=0)bossRelease(e,d,dt);return;}
+  /* 技後の硬直。深部ほど短くするが、完全には消さない。 */
+  if(e.recover>0){e.recover-=dt;return;}
+  e.extraT-=dt;
+  if(e.extraT<=0){
+    const side=e.extraI++%2===0?"shot":"nova";
+    e.extraT=(e.phase===2?4.2:5.8)*tm;
+    e.tel=side==="shot"?.48*tm:.7*tm;e.telK=side;e.telA=Math.atan2(uy,ux);
+    toast(side==="shot"?"三連射":"衝撃波");return;
+  }
   e.cdT-=dt;
   (BOSS_AI[e.pat]||BOSS_AI.charger)(e,d,ux,uy,dt,tm);
   /* 触れている間の削り。どのボスも密着し続けると痛い。 */
@@ -3330,7 +3341,17 @@ function bossRelease(e,d,dt){
     for(let i=0;i<(e.phase===2?5:3);i++){const a=rnd()*TAU,r=i===0?0:rr(1.5,4.5);
       S.fx.push({t:"pool",x:p.x+Math.cos(a)*r,y:p.y+Math.sin(a)*r,tm:0,dur:7,R:1.5,
         col:e.col,dmg:e.dmg*.5,en:1,tick:0,element:e.element,st:"psn"});}
-    tone(180,.2,"triangle",.08,120);}}
+    tone(180,.2,"triangle",.08,120);}
+  else if(e.telK==="shot"){
+    /* 狙い撃ち: 横へずれるだけで3発まとめて避けられる。 */
+    for(const off of [-.22,0,.22]){const a=e.telA+off;
+      S.bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*6.4,vy:Math.sin(a)*6.4,dmg:e.dmg*.48,t:0,col:e.col,r:.2,element:e.element});}
+    tone(430,.16,"square",.08,180);}
+  else if(e.telK==="nova"){
+    /* 衝撃波: 近接に居続けると当たるが、離れるための予兆を出す。 */
+    S.fx.push({t:"boom",x:e.x,y:e.y,tm:0,R:3.0,col:e.col,dmg:e.dmg*.9,en:1,element:e.element});shk(5);}
+  /* 深度1では約1.35秒、100Fでは約0.32秒。攻撃後に明確な反撃時間を作る。 */
+  e.recover=Math.max(.32,1.35-(S.floor-1)*.0105);}
 const BOSS_AI={
   /* 火1: 長距離を突進し、走った跡を燃やす。直線を外れれば当たらない。 */
   charger(e,d,ux,uy,dt,tm){
@@ -4102,6 +4123,14 @@ function clearRunVisuals(){
   S.enemies.length=0;S.bullets.length=0;S.drops.length=0;
   S.parts.length=0;S.nums.length=0;S.fx.length=0;S.corpses.length=0;
   S.boss=null;$("bossBar").style.display="none";}
+/* 死亡はフロアの作り直しではない。敵・開封済み宝箱・毒床・ボスHP・戦利品を残し、
+   倒れた地点へ戻る。編成交代でも enterFloor を呼ばないことが重要。 */
+function resumeFloorAfterDeath(label){
+  const x=S.p.x,y=S.p.y;
+  S.p=newPlayer();S.p.x=x;S.p.y=y;S.p.hp=S.p.max*.55;S.p.invulT=2.2;
+  S.paused=false;refreshSkillButtons();renderRail();updBuffs();updHUD();
+  save();toast(label+" — 同じ場所から再開","ok");
+}
 /* ---------- 潜行終了 ---------- */
 let deathReturnTimer=null,deathCountdownTimer=null;
 function leaveEnd(){clearTimeout(deathReturnTimer);clearInterval(deathCountdownTimer);
@@ -4110,9 +4139,8 @@ function endRun(alive,cause){
   S.paused=true;
   if(!alive&&S.formation&&S.partyIndex+1<S.formation.length){
     S.partyIndex++;const [k,id]=S.formation[S.partyIndex].split(":");
-    selectCharacter(k,id,()=>{S.p=newPlayer();S.paused=false;enterFloor(S.floor);
-      /* 交代で技も持ち物の使い勝手も変わる。表示を新しいキャラクターに合わせ直す。 */
-      refreshSkillButtons();renderRail();updBuffs();updHUD();toast(`${currentCharacter().n}に交代`);});return;}
+    selectCharacter(k,id,()=>resumeFloorAfterDeath(`${currentCharacter().n}に交代`));return;}
+  if(!alive){resumeFloorAfterDeath("力尽きた");return;}
   /* 潜行専用の表示と場の状態をここで必ず片付ける。updHUD は潜行中しか回らないので、
      戦闘HUDを消す責任を updHUD に持たせると、拠点へ戻っても出たままになる。 */
   clearRunVisuals();
@@ -4637,7 +4665,6 @@ function renderDiveBar(){
    日替わり任務を先頭に積むと、編成と潜るボタンが画面2枚分下に押しやられて
    毎回スクロールが要る。任務は下段の折りたたみへ回す。 */
 function renderPrepTab(b){
-  renderNextAction(b);
   renderPartySection(b);
   const ready=[0,1,2].filter(i=>dailyDone(i)&&!ensureDaily().claimed[i]).length
     +REACH_MISSIONS.filter(m=>S.deepest>=m.floor&&!(S.reachClaims||{})[m.floor]).length;
