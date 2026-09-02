@@ -455,6 +455,17 @@ await page.goto(base); await page.waitForTimeout(500);
         hero: !!(card && card.querySelector('.gearHero')),
       };
     }
+    /* キャラの切り替えは、横並びのチップではなく左上のアイコンから開く一覧に変わった。
+       アイコンを押して一覧が出ること、そこから別のキャラへ移れることを見る。 */
+    S.gearSub = 'equip'; openTown();
+    const hero = document.querySelector('.gearHead .gearHero');
+    out.heroTappable = !!hero;
+    if (hero) hero.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    out.pickerOpened = document.getElementById('itPop').classList.contains('on');
+    const other = [...document.querySelectorAll('#itC .card.tap, #itC .member, #itC .allyCard')]
+      .find(e => /ノア/.test(e.textContent));
+    if (other) other.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    out.switched = currentCharacter().n;
     return out;
   });
   for (const sub of ['equip', 'skill', 'ability', 'break']) {
@@ -464,8 +475,10 @@ await page.goto(base); await page.waitForTimeout(500);
     if (!/Lv\d/.test(b.name) || !/戦闘力/.test(b.name)) problems.push(`${sub}タブにLvと戦闘力が出ていない（${b.name}）`);
     if (!b.hero || b.tabs !== 4 || b.height > 100) problems.push(`${sub}タブの統合ヘッダーが要件外（${b.height}px / ${b.tabs}区画）`);
   }
-  if (bar.switched !== 'ノア') problems.push(`チップのタップで切り替わらない（${bar.switched}）`);
-  notes.push(`キャラ切替: ${bar.skill.chips.join('/')} — 枠付き「${bar.skill.tag} ${bar.skill.name}」${bar.skill.sub.replace(/\s+/g, '')} ＋[${bar.skill.swap}] → タップで ${bar.switched}`);
+  if (!bar.heroTappable) problems.push('左上のキャラクターアイコンが無い');
+  if (!bar.pickerOpened) problems.push('キャラクターアイコンを押しても一覧が開かない');
+  notes.push(`統合ヘッダー: ${bar.equip.height}px / ${bar.equip.tabs}区画 — ${bar.equip.name.replace(/\s+/g, ' ').trim()}`);
+  notes.push(`  アイコンを押して一覧 → 選択後 ${bar.switched}`);
 }
 
 /* 2n. 所持品が拠点の倉庫とダンジョン内の両方で見えること。 */

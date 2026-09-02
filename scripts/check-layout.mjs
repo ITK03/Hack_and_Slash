@@ -129,9 +129,11 @@ for (const [width, height, name] of sizes) {
   });
   await page.reload(); await page.waitForTimeout(600);
 
-  // 古い1F保存は最深へ寄せ、以降は自由入力と±5で直接選べること
-  const dive = await page.evaluate(() => S.diveFloor);
-  if (dive !== 60) problems.push(`拠点: 深度60の保存から開始階層が ${dive}F（最深の60Fになるはず）`);
+  /* 古い1F保存は「選べる中で最も深い階層」へ寄せること。
+     通常プレイの開始階層は 1+5n に限られるので、深度60なら56Fが上限になる
+     （60は 1+5n ではない）。ここは maxStartFloor() を正とし、値を写さない。 */
+  const dive = await page.evaluate(() => ({ now: S.diveFloor, max: maxStartFloor(), deepest: S.deepest }));
+  if (dive.now !== dive.max) problems.push(`拠点: 深度${dive.deepest}の保存から開始階層が ${dive.now}F（選べる上限の ${dive.max}F になるはず）`);
 
   // 拠点タブは「誰で潜るか」がスクロールなしで見えること
   const prep = await page.evaluate(() => {
