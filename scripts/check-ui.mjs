@@ -205,6 +205,112 @@ for (const [name, open] of SCREENS) {
 }
 notes.push(`画面 ${SCREENS.length}面: 枠の大きさ・スクロール・文字のはみ出し・フォント・コントラスト・文字の下限・印の重なりを検査`);
 
+/* ---------- 毎回使う主要画面は、初期状態でスクロールを要求しないこと ----------
+   長い詳細画面はスクロールしてよい。一方、拠点・装備・召喚・表示設定は
+   「確認して次の操作をする」面なので、390x844 の1画面内に主操作を収める。 */
+const COMPACT_SCREENS = [
+  ['拠点', () => { S.tab = 'prep'; openTown(); }],
+  ['装備一覧', () => { S.tab = 'gear'; S.gearSub = 'equip'; S.gearSlot = null; openTown(); }],
+  ['能力割り振り', () => { S.tab = 'gear'; S.gearSub = 'ability'; S.gearSlot = null; S.alloc = null; openTown(); }],
+  ['ガチャ', () => { S.tab = 'shop'; S.shopSub = 'gacha'; openTown(); }],
+  ['表示設定', () => { S.tab = 'conf'; S.settingsPage = 'display'; openTown(); }],
+];
+for (const [name, open] of COMPACT_SCREENS) {
+  await page.evaluate(open);
+  await page.waitForTimeout(100);
+  const over = await page.evaluate(() => {
+    const body = document.getElementById('townBody');
+    return body ? Math.max(0, Math.round(body.scrollHeight - body.clientHeight)) : 9999;
+  });
+  if (over > 4) add(`[${name}] 日常操作画面に ${over}px の不要な縦スクロールがある`);
+}
+notes.push('拠点・装備一覧・能力割り振り・ガチャ・表示設定: 390x844で主要操作が1画面に収まること');
+
+/* 見える枠は小さくしても、主要操作のタップ領域は44pxを割らせない。 */
+{
+  const targetScreens = [
+    [() => { S.tab = 'prep'; openTown(); }, ['.miniHelp', '#diveBar .fl', '#diveBar .go', '.homeUtilities .btn']],
+    [() => { S.tab = 'gear'; S.gearSub = 'equip'; openTown(); }, ['.gearHead .innerTabs .btn', '.recommendSlot']],
+    [() => { S.tab = 'inv'; S.invSub = 'gear'; openTown(); }, ['.innerTabs .btn', '.invTools .btn']],
+    [() => { S.tab = 'shop'; S.shopSub = 'gacha'; openTown(); }, ['.shopTabs .btn', '.gachaBtns .btn']],
+    [() => { S.tab = 'conf'; S.settingsPage = 'display'; openTown(); }, ['.settingsNav .btn', '.settingsPage.on .btn']],
+  ];
+  const tooSmall = [];
+  for (const [open, selectors] of targetScreens) {
+    await page.evaluate(open);
+    tooSmall.push(...await page.evaluate(selectors => selectors.flatMap(sel => [...document.querySelectorAll(sel)].filter(el => {
+      const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && (r.width < 43.5 || r.height < 43.5);
+    }).map(el => `${sel} ${Math.round(el.getBoundingClientRect().width)}x${Math.round(el.getBoundingClientRect().height)}`)), selectors));
+  }
+  if (tooSmall.length) add(`主要操作のタップ領域が44px未満: ${tooSmall.join(' / ')}`);
+  notes.push('コンパクト化した主要操作も44px以上のタップ領域を維持');
+}
+
+/* ---------- 今回直した情報配置と中央揃えを固定する ---------- */
+{
+  const layout = await page.evaluate(() => {
+    const centered = el => {
+      if (!el) return false;
+      const cs = getComputedStyle(el);
+      return /flex|grid/.test(cs.display) && cs.alignItems === 'center' && cs.justifyContent === 'center';
+    };
+    S.tab = 'prep';
+    S.loadout = ['mend3', 'ward2', 'clear2', 'swift2'];
+    openTown();
+    const loadout = [...document.querySelectorAll('.loadSlot .loadCopy b')].map(el => ({
+      text: el.textContent.trim(), width: el.clientWidth, scrollWidth: el.scrollWidth,
+      overflow: getComputedStyle(el).textOverflow,
+    }));
+    openMissions('daily');
+    const missionTabs = [...document.querySelectorAll('.missionTabs .btn')];
+    const missionRows = [...document.querySelectorAll('.q')];
+    const mission = {
+      tabs: missionTabs.map(centered),
+      labels: missionTabs.map(el => el.textContent.trim()),
+      actions: missionRows.map(row => row.querySelector('.btn')).filter(Boolean).map(centered),
+    };
+    document.getElementById('itPop').classList.remove('on');
+
+    S.tab = 'gear'; S.gearSub = 'equip'; S.gearSlot = null; openTown();
+    const gear = {
+      stats: document.querySelectorAll('.gearStats .stat').length,
+      autoCentered: centered(document.querySelector('.recommendSlot')),
+    };
+    S.gearSub = 'ability'; openTown();
+    const abilityBox = document.querySelector('.allocGrid')?.getBoundingClientRect();
+    const actionsBox = document.querySelector('.allocActions')?.getBoundingClientRect();
+    const ability = {
+      stats: document.querySelectorAll('.gearStats').length,
+      tiles: document.querySelectorAll('.allocTile').length,
+      leadBeforeGrid: (document.querySelector('.abilityLead')?.getBoundingClientRect().top || 9999)
+        < (abilityBox?.top || 0),
+      blockHeight: abilityBox && actionsBox ? Math.round(actionsBox.bottom - abilityBox.top) : 9999,
+    };
+
+    S.tab = 'inv'; S.invSub = 'gear'; S.inv.sellMode = false; S.inv.dismantleMode = false; openTown();
+    const invTools = [...document.querySelectorAll('.invTools .toolIcon')];
+    const inventory = { icons: invTools.filter(el => el.querySelector('svg')).length, tools: invTools.length };
+
+    S.tab = 'conf'; S.settingsPage = 'display'; openTown();
+    const settings = [...document.querySelectorAll('.settingsNav .btn')].map(centered);
+    return { loadout, mission, gear, ability, inventory, settings };
+  });
+  for (const x of layout.loadout) {
+    if (!x.text || /^\.{2,}$|^…+$/.test(x.text)) add(`持ち込み名が省略記号だけになっている: 「${x.text}」`);
+    if (x.scrollWidth > x.width + 1 || x.overflow === 'ellipsis') add(`持ち込み名が読めない: 「${x.text}」 ${x.width}/${x.scrollWidth}px`);
+  }
+  if (layout.mission.labels.some(x => !x || /^\.{2,}$|^…+$/.test(x))) add('ミッションの区分名が潰れている');
+  if (layout.mission.tabs.some(x => !x) || layout.mission.actions.some(x => !x)) add('ミッションのタブまたは受取操作が中央揃えではない');
+  if (layout.gear.stats !== 16) add(`装備タブの全ステータスが${layout.gear.stats}/16項目`);
+  if (!layout.gear.autoCentered) add('「おすすめ」が中央揃えではない');
+  if (layout.ability.stats !== 0) add('能力タブに全ステータスが残っている');
+  if (layout.ability.tiles !== 6 || !layout.ability.leadBeforeGrid) add('能力タブの割り振りが上部の2列×3段になっていない');
+  if (layout.ability.blockHeight > 300) add(`能力割り振りが高すぎる（${layout.ability.blockHeight}px）`);
+  if (layout.inventory.icons !== layout.inventory.tools) add(`倉庫の操作アイコンが線画SVGに統一されていない（${layout.inventory.icons}/${layout.inventory.tools}）`);
+  if (layout.settings.some(x => !x)) add('設定カテゴリの文字が中央揃えではない');
+  notes.push('持ち込み名・任務中央揃え・装備内全16能力・能力専用割り振り・倉庫線画アイコンを検査');
+}
+
 /* ---------- 強調ボタンが地の色に埋もれていないこと ----------
    一括の面指定で .gold や .pri を上書きすると、「潜る」が普通のボタンと
    同じ見た目になる。実際にこれで色が消えたことがあるので検査に置く。 */
@@ -225,6 +331,37 @@ notes.push(`画面 ${SCREENS.length}面: 枠の大きさ・スクロール・文
   });
   for (const m of same) add(`強調ボタンの色が消えている: ${m}`);
   notes.push('強調ボタン（潜る・おすすめ等）が通常ボタンと区別できること');
+}
+
+/* ---------- 選択処分ドックは下部タブの上に1行で収まること ---------- */
+{
+  const dock = await page.evaluate(() => {
+    S.tab = 'inv'; S.invSub = 'gear';
+    S.inv.sellMode = true; S.inv.dismantleMode = false; S.inv.sellSel = [];
+    openTown();
+    const el = document.querySelector('.sellDock');
+    const tabs = document.querySelector('#scTown > .tabs');
+    if (!el || !tabs) return null;
+    const children = [...el.children].map(x => {
+      const r = x.getBoundingClientRect();
+      return { top: r.top, bottom: r.bottom, center: (r.top + r.bottom) / 2 };
+    });
+    const r = el.getBoundingClientRect(), t = tabs.getBoundingClientRect();
+    return {
+      count: children.length,
+      centerSpread: Math.max(...children.map(x => x.center)) - Math.min(...children.map(x => x.center)),
+      height: r.height,
+      tabGap: t.top - r.bottom,
+    };
+  });
+  if (!dock) add('売却選択ドックが表示されない');
+  else {
+    if (dock.count !== 3) add(`売却選択ドックの要素数が${dock.count}（合計／実行／キャンセルの3つではない）`);
+    if (dock.centerSpread > 2) add(`売却選択ドックが1行ではない（中心差 ${dock.centerSpread.toFixed(1)}px）`);
+    if (dock.height > 66) add(`売却選択ドックが高すぎる（${dock.height.toFixed(1)}px）`);
+    if (Math.abs(dock.tabGap) > 3) add(`売却選択ドックと下部タブが接していない（間隔 ${dock.tabGap.toFixed(1)}px）`);
+  }
+  notes.push('売却・分解ドック: 合計／実行／キャンセルが1行で下部タブ直上に収まること');
 }
 
 /* ---------- 3. 演出と状態が残らないこと ---------- */

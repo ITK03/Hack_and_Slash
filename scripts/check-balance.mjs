@@ -4,7 +4,14 @@ import { installDiveMeasurement } from './measure-dive.mjs';
 const game = await loadGame();
 installDiveMeasurement(game);
 
-const report = game.run(() => {
+const sampleScale = Math.max(.05, Math.min(1, Number(process.env.BALANCE_SAMPLE_SCALE) || 1));
+const report = game.run((sampleScale) => {
+  /* 数千回の模擬戦ではトースト等のUIタイマーを発火させない。
+     戦闘結果に関係しないクロージャを全試行ぶん保持するとNodeのヒープを使い切る。 */
+  window.setTimeout = () => 0;
+  window.setInterval = () => 0;
+  const samplesFor = n => Math.max(3, Math.round(n * sampleScale));
+  const economySamplesFor = n => Math.max(1, Math.round(n * sampleScale));
   const profiles = [
     /* 素手の帯は敵の解放深度に合わせた調整値。
        以前は9種すべてが深度9までに出そろい、装備なしでも早々に巨躯や爆ぜ手と
@@ -32,8 +39,9 @@ const report = game.run(() => {
       do item = makeItem(depth, 0, 0, profile.rarity); while (item.slot !== slot || item.rar !== profile.rarity || (item.ac && item.ac !== 'warrior'));
       for (const affix of item.affs) {
         const rule = AFF.find(candidate => candidate.id === affix.id);
+        const step = rule.step || 1;
         affix.q = profile.quality;
-        affix.v = Math.max(1, Math.round(rule.f(item.ilvl) * profile.quality));
+        affix.v = Math.max(step, Math.round(rule.f(item.ilvl) * profile.quality / step) * step);
       }
       item.lv = 1 + Math.floor((itemMaxLv(item) - 1) * profile.enhance);
       // 属性を主題としない検査では共鳴を必ず0段階にする。neutral に揃えると
@@ -81,9 +89,9 @@ const report = game.run(() => {
     let lower = 1, upper = 300;
     while (lower < upper) {
       const middle = Math.floor((lower + upper) / 2);
-      if (deathRate(profile, plainDepth(middle), 48) >= .5) upper = middle; else lower = middle + 1;
+      if (deathRate(profile, plainDepth(middle), samplesFor(48)) >= .5) upper = middle; else lower = middle + 1;
     }
-    const rate = deathRate(profile, plainDepth(lower), 160);
+    const rate = deathRate(profile, plainDepth(lower), samplesFor(160));
     combat.push({ name: profile.name, level: profile.level, depth: lower, deathRate: rate, range: profile.range });
   }
   /* ボス床を外した通常床での死亡率。手ごたえの上下はここで見る。
@@ -93,7 +101,7 @@ const report = game.run(() => {
   const plainFloors = { 素手: [6, 7, 8, 9], 標準: [42, 47, 52, 57, 62], 厳選: [82, 87, 92, 97] };
   const bossFloors = { 素手: [5, 10], 標準: [45, 50, 55, 60], 厳選: [85, 90, 95, 100] };
   const meanRate = (profile, depths) => {
-    const rates = depths.map(depth => deathRate(profile, depth, 48));
+    const rates = depths.map(depth => deathRate(profile, depth, samplesFor(48)));
     return rates.reduce((a, b) => a + b, 0) / rates.length;
   };
   const plain = profiles.map(profile => ({
@@ -104,7 +112,7 @@ const report = game.run(() => {
 
   const selected = profiles.find(profile => profile.name === '厳選');
   let boostedLower = combat.find(row => row.name === '厳選').depth, boostedUpper = 200;
-  while (boostedLower < boostedUpper) { const middle = Math.floor((boostedLower + boostedUpper) / 2); if (deathRate(selected, plainDepth(middle), 48, 2) >= .5) boostedUpper = middle; else boostedLower = middle + 1; }
+  while (boostedLower < boostedUpper) { const middle = Math.floor((boostedLower + boostedUpper) / 2); if (deathRate(selected, plainDepth(middle), samplesFor(48), 2) >= .5) boostedUpper = middle; else boostedLower = middle + 1; }
   const powerGain = { base: combat.find(row => row.name === '厳選').depth, doubled: boostedLower, gain: boostedLower - combat.find(row => row.name === '厳選').depth };
 
   // A single dive always resolves floors 1..target depth through the shared helper.
@@ -112,7 +120,7 @@ const report = game.run(() => {
     const item = makeItem(depth, 0, 0, 2); item.lv = 1; item.xp = 0;
     let cost = 0;
     while (item.lv < itemMaxLv(item)) { cost += crystalNeed(item); item.lv++; }
-    const samples = depth <= 10 ? 80 : depth <= 50 ? 30 : depth <= 100 ? 16 : depth <= 300 ? 6 : 3;
+    const samples = economySamplesFor(depth <= 10 ? 80 : depth <= 50 ? 30 : depth <= 100 ? 16 : depth <= 300 ? 6 : 3);
     let yieldTotal = 0;
     for (let run = 0; run < samples; run++) yieldTotal += window.measureMaterialDive(depth);
     const yieldPerDive = yieldTotal / samples;
@@ -121,7 +129,7 @@ const report = game.run(() => {
   enterFloor(1000);
   const depth1000 = { entered: S.floor === 1000, enemies: S.enemies.length, finite: S.enemies.every(enemy => Number.isFinite(enemy.hp) && Number.isFinite(enemy.dmg)) };
   return { combat, plain, powerGain, economy, depth1000 };
-});
+}, sampleScale);
 
 game.run(() => localStorage.setItem('descent_v5', JSON.stringify({
   cls: 'warrior', mats: { crystal: { 2: 7, 4: 3 }, core: { 3: 2 } }, tutorial: { phase: 'done' },

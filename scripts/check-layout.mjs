@@ -129,9 +129,9 @@ for (const [width, height, name] of sizes) {
   });
   await page.reload(); await page.waitForTimeout(600);
 
-  // 到達済みなのに毎回1Fから、では潜るまでに±を何十回も押すことになる
+  // 古い1F保存は最深へ寄せ、以降は自由入力と±5で直接選べること
   const dive = await page.evaluate(() => S.diveFloor);
-  if (dive !== 56) problems.push(`拠点: 深度60の保存から開始階層が ${dive}F（最深の 56F になるはず）`);
+  if (dive !== 60) problems.push(`拠点: 深度60の保存から開始階層が ${dive}F（最深の60Fになるはず）`);
 
   // 拠点タブは「誰で潜るか」がスクロールなしで見えること
   const prep = await page.evaluate(() => {
@@ -141,12 +141,14 @@ for (const [width, height, name] of sizes) {
   if (prep.scroll > 2) problems.push(`拠点: 初期表示で ${Math.round(prep.scroll)}px スクロールが要る`);
   if (prep.formBottom > prep.h) problems.push('拠点: 編成がスクロールしないと見えない');
 
-  // 階層一覧が開き、最深が選べること
-  await page.evaluate(() => document.querySelector('#diveBar .fl').dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
-  await page.waitForTimeout(300);
-  const floors = await page.evaluate(() => document.querySelectorAll('.floorGrid .fbtn').length);
-  if (floors !== 12) problems.push(`拠点: 階層一覧の選択肢が ${floors}件（1F〜56Fの12件のはず）`);
-  await page.evaluate(() => $('itPop').classList.remove('on'));
+  const floorPick = await page.evaluate(() => {
+    const input = document.querySelector('#diveBar .floorInput'); input.value = '37'; input.dispatchEvent(new Event('change', { bubbles: true }));
+    const entered = S.diveFloor;
+    document.querySelector('#diveBar .step .btn:last-child').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    return { entered, plus: S.diveFloor, buttons: document.querySelectorAll('#diveBar .step .btn').length };
+  });
+  if (floorPick.entered !== 36 || floorPick.plus !== 41 || floorPick.buttons !== 2)
+    problems.push(`拠点: 階層入力/±5が不正（入力${floorPick.entered} / +5後${floorPick.plus} / ボタン${floorPick.buttons}）`);
 
   // 装備名が枠から溢れて語尾が落ちていないこと
   await page.evaluate(() => { document.querySelector('#scTown .tab[data-t="gear"]').dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); });
