@@ -283,15 +283,25 @@ if (report.clearTimes.advantage == null || report.clearTimes.disadvantage == nul
    その深さの差そのものが秒数に出るため、生の比では属性の効果と混ざる
    （浅い層ほど比率としての差が大きく、実測で無属性でも1.32倍付いた）。
    そこで無属性の同じ2帯の比で割り、深さの影響を打ち消してから判定する。
-   下限1.7は据え置き。 */
+
+   下限は 1.7 → 1.15。「有利6.0倍は数字が大きすぎる」という指示で
+   有利倍率を 4.5/6.0 → 1.6/2.0、不利倍率を 0.5 → 0.8 へ縮めたため。
+   与ダメージの開きが 9倍 から 2倍 になれば、秒数の開きもその通り縮む
+   （実測 1.92 → 1.27）。緩めて通したのではなく、狙う開きそのものを変えている。 */
 const neutralBandRatio = report.clearTimes.neutralDisadvantage / report.clearTimes.neutralAdvantage;
 const elementalTimeRatio = (report.clearTimes.disadvantage / report.clearTimes.advantage) / neutralBandRatio;
-const CLEAR_TIME_MIN_RATIO = 1.7;
+const CLEAR_TIME_MIN_RATIO = 1.15;
 if (elementalTimeRatio < CLEAR_TIME_MIN_RATIO) throw new Error(`深さの差を除いた有利帯・不利帯のクリア時間比 ${elementalTimeRatio.toFixed(2)} は${CLEAR_TIME_MIN_RATIO}未満`);
-/* 帯に合わせる価値の本判定。同じ有利帯を、合わせたビルドと無属性で走らせて
-   クリア時間を比べる。死亡率と違い飽和しないので、敵編成を入れ替えても意味が変わらない。
-   共鳴5個で与ダメージ4.5倍・被ダメージ0.75倍が乗るぶん、明確に速くなること。 */
-const MATCHED_TIME_MIN_RATIO = 1.25;
+/* 同じ有利帯を、合わせたビルドと無属性で走らせてクリア時間を比べる。
+   下限は 1.25 → 1.00。有利倍率を2.0までに抑えた以上、片付ける速さでは
+   ほとんど差が出ない（実測 1.32 → 1.02）。倍率2倍では、装備深度が与ダメージを
+   6倍動かす gearOutMul に対して属性は脇役にしかなれない。
+
+   そのぶん、帯に合わせる価値は「速さ」ではなく「生き残り」に出る
+   （被ダメージ 0.75倍）。実測でも到達深度は 無属性39 に対し 帯に合わせて44 と
+   +5層あり、そちらは MATCHED_MIN_GAIN の帯で従来どおり縛っている。
+   ここは「合わせたのに遅くなってはいけない」という下限として残す。 */
+const MATCHED_TIME_MIN_RATIO = 1.00;
 const matchedTimeRatio = report.clearTimes.neutralAdvantage / report.clearTimes.advantage;
 if (!(matchedTimeRatio >= MATCHED_TIME_MIN_RATIO)) throw new Error(`有利帯を、帯に合わせたビルドは無属性の ${matchedTimeRatio.toFixed(2)}倍の速さでしか片付けられない（${MATCHED_TIME_MIN_RATIO}倍以上あること）`);
 if (report.clearTimes.neutralAdvantage == null || report.clearTimes.neutralDisadvantage == null) throw new Error('無属性で有利帯・不利帯を実戦闘でクリアできなかった');
@@ -299,8 +309,16 @@ if (report.clearTimes.neutralAdvantage == null || report.clearTimes.neutralDisad
    有利帯と不利帯には必ず深さの差があり、無属性でも秒数は揃わない。
    この値は上の割り算で深さの影響を除くために使うので、数字だけ残す。 */
 if (Object.values(report.damage).some(value => value == null)) throw new Error('実生成敵への通常攻撃ダメージを測定できなかった');
-if (report.damage.normalNeutral <= report.damage.normalResonance) throw new Error(`普通の敵への与ダメージ 無属性${report.damage.normalNeutral.toFixed(1)} は属性5個共鳴${report.damage.normalResonance.toFixed(1)}以下`);
-if (report.damage.weakResonance < report.damage.weakNeutral * 1.8) throw new Error(`弱点の敵への属性5個共鳴ダメージ${report.damage.weakResonance.toFixed(1)}は無属性${report.damage.weakNeutral.toFixed(1)}の1.8倍未満`);
+/* 「弱点でない相手には無属性のほうが強い」。< から <= へ緩めた。
+   無属性の上乗せをオプションから外し主ステータスだけに絞ったので、
+   主ステータスが効かない組み合わせ（魔力の杖を持った戦士など、この計測の乱数で
+   実際に引いた）では両者が同値になる。上乗せ1.15そのものは、同じ装備の属性だけを
+   変えて主ステータスを比べる判定（上の neutralBonus）で直接見ている。 */
+if (report.damage.normalNeutral < report.damage.normalResonance) throw new Error(`普通の敵への与ダメージ 無属性${report.damage.normalNeutral.toFixed(1)} が属性5個共鳴${report.damage.normalResonance.toFixed(1)}を下回る`);
+/* 1.8 → 1.4。有利倍率 4.5 → 1.6（5個共鳴）にしたぶん、4.12倍 → 1.60倍 になった。
+   「7個で6倍は大きすぎる、2倍でも悩む」という指示に伴う変更。 */
+const WEAK_MIN_RATIO = 1.4;
+if (report.damage.weakResonance < report.damage.weakNeutral * WEAK_MIN_RATIO) throw new Error(`弱点の敵への属性5個共鳴ダメージ${report.damage.weakResonance.toFixed(1)}は無属性${report.damage.weakNeutral.toFixed(1)}の${WEAK_MIN_RATIO}倍未満`);
 if (report.adverseProgress.progressed === 0) throw new Error(`深度${report.adverseProgress.floor}の不利帯で属性ビルドが24/24回、一体も倒せず進行不能`);
 if (legacy !== 'neutral') throw new Error('既存セーブ装備が無属性へ移行されない');
 console.log('既存セーブ移行', legacy);

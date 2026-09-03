@@ -28,7 +28,14 @@ for (const id of report.mainIds) assert.ok(report.ids.includes(id), `主能力 $
 assert.equal(report.naked.crit, .01, '能力値を振ってもクリティカル率は1%のまま');
 assert.equal(report.naked.stRes, 0, '能力値を振っても状態異常耐性は0%のまま');
 assert.equal(report.naked.dodge, 0, '能力値を振っても回避率は0%のまま');
-for (const [id, target] of Object.entries({ crit: .25, cdmg: 2.5, stRes: .2, dodge: .15, as: 2.5, ms: 2.5, ls: .1, mf: .25 }))
+/* 100層で7部位すべてを厳選したときの上限。
+   旧目標は crit .25 / cdmg 2.5 / stRes .2 / dodge .15 / as 2.5 / ms 2.5 / ls .1 / mf .25。
+   この検査は無属性の装備で測っており、旧値には無属性の上乗せ(NEUTRAL_BASE 1.15)が
+   そのまま乗っていた。上乗せは「無属性は共鳴しない代わりに主ステータスが高い」という
+   決めごとなのに、オプションにも掛かっていて、上限そのものが装備の属性で変わっていた。
+   オプションから外したので、ここは AFF の表が本当に出せる値へ置き直す（いずれも旧値の約87%）。
+   数字を緩めたのではなく、上乗せを二重に数えていたのをやめた結果の実値。 */
+for (const [id, target] of Object.entries({ crit: .22, cdmg: 2.368, stRes: .175, dodge: .133, as: 2.33, ms: 2.33, ls: .091, mf: .217 }))
   assert.ok(Math.abs(report.peaks[id] - target) <= .005, `${id} の100層厳選値 ${report.peaks[id]} ≒ ${target}`);
 
 console.log('装備オプション整合・100層厳選上限検査 passed');

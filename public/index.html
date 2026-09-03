@@ -316,6 +316,12 @@ h3{font-size:11px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
 /* 区画のタブは固定する。スクロールした先で切り替えたいのに、
    毎回一番上まで戻らないと押せなかった。 */
 .innerTabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin:0}
+/* 倉庫のタブ（装備/道具/素材/調合）は、下へスクロールしても上に残す。
+   一緒に流れていくと、格子を見ている間はタブへ戻るのに一度上まで戻ることになる。
+   box-shadow の広がりで左右と上の余白ぶんを地の色で塗り、下を流れる中身を隠す。
+   .sbody の直下にある時だけ効かせる（装備タブのタブは見出しの中なので対象外）。 */
+.sbody>.innerTabs{position:sticky;top:0;z-index:6;
+  box-shadow:0 0 0 15px var(--bg),0 12px 12px -9px rgba(4,6,10,.85)}
 .innerTabs .btn{flex:1;margin:0;padding:0 2px;font-size:11px;white-space:nowrap}
 /* 絞込などの操作列も、タブのすぐ下に固定して同じ扱いにする。 */
 #invBar{position:sticky;top:57px;z-index:5;background:var(--bg);padding-bottom:6px}
@@ -1697,7 +1703,13 @@ const elTag=(k,sz)=>{const e=ELEMENTS[k]||ELEMENTS.neutral;
 // 5層帯ごとに優勢属性を固定し、8帯で火水木を2回、光闇を1回ずつ巡回する。
 const dominantElement=fl=>["fire","water","wood","light","fire","water","wood","dark"][Math.floor((Math.max(1,fl)-1)/5)%8];
 const bossElement=fl=>ELEMENT_KEYS[(Math.floor(Math.max(5,fl)/5)-1)%5];
-function resonance(gear=S.gear){const counts={};for(const it of Object.values(gear||{}))if(it&&it.element&&it.element!=="neutral")counts[it.element]=(counts[it.element]||0)+1;let element="neutral",count=0;for(const k of ELEMENT_KEYS)if((counts[k]||0)>count){element=k;count=counts[k];}const stage=count>=7?3:count>=5?2:count>=3?1:0,rare=element==="light"||element==="dark";return{element:stage?element:"neutral",count,stage,advantage:(rare?[1,1.8,5.0,6.5]:[1,1.8,4.5,6.0])[stage],
+function resonance(gear=S.gear){const counts={};for(const it of Object.values(gear||{}))if(it&&it.element&&it.element!=="neutral")counts[it.element]=(counts[it.element]||0)+1;let element="neutral",count=0;for(const k of ELEMENT_KEYS)if((counts[k]||0)>count){element=k;count=counts[k];}const stage=count>=7?3:count>=5?2:count>=3?1:0,rare=element==="light"||element==="dark";return{element:stage?element:"neutral",count,stage,/* 有利な相手への与ダメージ倍率。旧値は 火水木 1.8/4.5/6.0・光闇 1.8/5.0/6.5。
+     7個そろえて6倍は数字が大きすぎるという指摘を受けて 2.0 を上限に引き下げた。
+     なお elementMultiplier の1.5倍はこの上に乗らない。resonanceDamageMultiplier は
+     1.5を「有利かどうか」の判定にしか使っておらず、実際に掛かるのはここの値だけ。
+     不利側は disadvantageMultiplier(0.5) のままなので、帯を合わせるかどうかで
+     与ダメージは4倍の開きが残る（旧: 9倍）。 */
+  advantage:(rare?[1,1.25,1.7,2.15]:[1,1.2,1.6,2.0])[stage],
   /* guard は「自分が有利な属性の敵から受ける倍率」。
      .05/.04 は被ダメ95%減で、3個(.85)からの落差も17倍と段差が異常だった。
      danger(1.15/1.25/1.30) と対称になる幅に戻す。 */
@@ -1706,7 +1718,10 @@ function resonance(gear=S.gear){const counts={};for(const it of Object.values(ge
    本物の resonance() に「同じ属性をn個着けた装備」を渡して聞く。 */
 const resonanceStageInfo=n=>resonance(Object.fromEntries(SLOTK.map((k,i)=>[k,i<n?{element:"fire"}:null])));
 function elementMultiplier(attacker,defender){if(!attacker||!defender||attacker==="neutral"||defender==="neutral")return 1;if(attacker==="light"||attacker==="dark")return defender===(attacker==="light"?"dark":"light")?1.3:1;const beats={fire:"wood",wood:"water",water:"fire"};return beats[attacker]===defender?1.5:beats[defender]===attacker?.5:1;}
-const disadvantageMultiplier=fl=>.5+.15*clamp((Math.max(100,fl)-100)/100,0,1);
+/* 不利な相手への与ダメージ。旧値は0.5（深度200で0.65）。
+   有利側の上限を6.0→2.0に下げたので、0.5のままだと「合わせても+0層、外すと-15層」
+   という、属性に触るだけ損な形になった（実測）。下振れも同じだけ浅くする。 */
+const disadvantageMultiplier=fl=>.8+.08*clamp((Math.max(100,fl)-100)/100,0,1);
 function resonanceDamageMultiplier(r,defender,fl){if(r.element==="neutral")return 1;const affinity=elementMultiplier(r.element,defender);return affinity>1?r.advantage:affinity<1?disadvantageMultiplier(fl):1;}
 /* 被ダメージは「相手に勝てるなら軽く受ける」で決めるが、光と闇だけは互いに1.3倍で
    対称なため、その判定だと光も闇も相手を軽減してしまい、どちらにも弱点が無くなる。
@@ -1717,8 +1732,11 @@ function resonanceIncomingMultiplier(r,attacker){if(r.element==="neutral")return
   if(LIGHT_DARK.has(r.element)){
     if(LIGHT_DARK.has(attacker)&&r.element!==attacker)return r.danger;
     /* 光闇は有利帯が少ない代わりに固定運用で弱点帯も少ない。三すくみ属性からの
-       被害を少し増やし、希少属性を着けっぱなしにすることが最適解にならないようにする。 */
-    if(!LIGHT_DARK.has(attacker))return 1.15;}
+       被害を少し増やし、希少属性を着けっぱなしにすることが最適解にならないようにする。
+       1.15 → 1.05。有利倍率を 5.0/6.5 → 1.7/2.15 に下げたら、8帯に1度しかない
+       上振れでは常時1.15の被害を取り返せず、光の固定運用が火水木最高より
+       10層も浅くなった（実測 25 対 35）。歯止めは残すが、幅を上乗せの縮小に合わせる。 */
+    if(!LIGHT_DARK.has(attacker))return 1.05;}
   const affinity=elementMultiplier(r.element,attacker);return affinity>1?r.guard:affinity<1?r.danger:1;}
 const ACLS=["warrior","mage"];
 const BASEN={weapon:null,
@@ -2226,6 +2244,12 @@ function makeItem(fl,mf,luk,forceRar){
    ただしこれは「無属性ビルドだけ」の調整値ではない。属性ビルドも一部の部位に
    無属性を混ぜるため、ここを動かすとすべてのビルドの地力が動く。全体の強さを
    動かしたくない場合は、この値ではなく敵側か属性倍率で調整すること。 */
+/* 無属性装備の上乗せ。値は1.15のまま据え置き、かかる範囲を主ステータスだけに絞った。
+   有利倍率を6.0→2.0にしたぶん、オプションにも1.15が乗ったままでは無属性が常に
+   最適解になり（実測: 帯に合わせても到達深度が無属性と同じ44層）、属性をそろえる
+   理由が消える。値そのものを下げると、クリティカル率25%のような
+   「100層厳選の上限」まで一緒に下がってしまう（無属性装備で測っているため）。
+   上限を動かさずに無属性の総取りだけを削るには、範囲を絞るのが正しい。 */
 const NEUTRAL_BASE=1.15;
 const itemBaseMultiplier=it=>it&&it.element==="neutral"?NEUTRAL_BASE:1;
 const mainV=it=>Math.round(it.main.v*(1+(it.lv-1)*ENHANCE_PER_LV)*((it.ac&&it.ac!==S.cls)?.6:1)*itemBaseMultiplier(it)); // 無属性は共鳴しない代わりに基礎値を上乗せ（NEUTRAL_BASE）
@@ -2308,12 +2332,15 @@ const weekKey=()=>{const d=dailyClock(),first=new Date(d.getFullYear(),0,1),day=
 function buyWeeklyCore(n=1){const key=weekKey();if(S.weeklyCore.week!==key)S.weeklyCore={week:key,bought:0};n=Math.min(n,CFG.CORE_WEEKLY_PURCHASE_CAP-S.weeklyCore.bought,CFG.CORE_HOLD_CAP-materialCount("core"));const cost=n*100;if(n<=0||S.premium<cost)return 0;S.premium-=cost;S.weeklyCore.bought+=n;return addMat("core",materialTier(S.deepest),n);}
 const beginnerTarget=()=>CFG.ENEMY_ACCEL_START;
 function progressionDaysToContent(divePerDay,lateStartDays=0){const coreDays=Math.ceil(500/CFG.CORE_DAILY_CAP),xpDays=Math.ceil(750/Math.max(1,divePerDay));const days=Math.max(coreDays,xpDays);return lateStartDays?Math.min(300,days+Math.ceil(lateStartDays/4)):days;}
-function claimBeginnerMission(){if(S.beginnerClaimed)return false;const target=beginnerTarget();
-  /* 後発組の底上げが目的。受け取りボタンは未受領のあいだ出続けるので、
-     基準を追い越してから押した既存プレイヤーが降格していた（forceLevel は
-     管理者モード用に下げる方向も持つ）。上げる時だけ呼ぶ。 */
-  const boost=Math.max(1,Math.floor(target*.6));if(boost>S.base.lv)forceLevel(boost);
-  for(const slot of SLOTK){let it;do it=makeItem(target*.6,0,0,2);while(it.slot!==slot||(it.ac&&it.ac!==S.cls));S.stash.push(it);}S.beginnerClaimed=true;save();return true;}
+/* 出だしの手ぶらを埋めるだけの支援。深度1相当・最低等級の装備を7部位。
+   以前はレベルを一気に60（ENEMY_ACCEL_START の6割）まで上げ、深度60の希少装備を
+   7部位配っていた。押した瞬間に中盤の強さが手に入り、そこまでの層が全部
+   消化試合になっていた。レベルも装備の深度も上げない。 */
+function claimBeginnerMission(){if(S.beginnerClaimed)return false;
+  /* makeItem の第4引数は「最低これ以上の等級」なので、0を渡しても運次第で上の等級が出る。
+     最低等級ちょうどが欲しいので、rar===0 が出るまで引き直す。 */
+  for(const slot of SLOTK){let it,n=0;do it=makeItem(1,0,0,0);while(++n<900&&(it.slot!==slot||it.rar!==0||(it.ac&&it.ac!==S.cls)));if(it.slot===slot&&it.rar===0)S.stash.push(it);}
+  S.beginnerClaimed=true;save();return true;}
 
 /* 到達報酬は初心者支援とは別物。表示側だけでなく受領口でも最深到達を検査する。 */
 const REACH_MISSIONS=[
@@ -2417,7 +2444,9 @@ function derive(){
   const pw=[],pwN={};
   for(const k of SLOTK){const it=S.gear[k];if(!it)continue;
     if(it.main)t[it.main.id]=(t[it.main.id]||0)+mainV(it);
-    for(const a of it.affs)t[a.id]=(t[a.id]||0)+a.v*itemBaseMultiplier(it);
+    /* オプションには無属性の上乗せを掛けない。掛けると、無属性がオプションでも
+       総取りになるうえ、100層厳選の上限値そのものが無属性かどうかで動いてしまう。 */
+    for(const a of it.affs)t[a.id]=(t[a.id]||0)+a.v;
     /* 同じ固有効果を重ねたぶんは数える。以前は2個目以降を捨てていたので、
        伝説を2個そろえても片方が完全に無駄になっていた。 */
     if(it.pw){if(!pw.includes(it.pw))pw.push(it.pw);pwN[it.pw]=(pwN[it.pw]||0)+1;}}
@@ -4723,7 +4752,12 @@ function showGachaResult(title,html,repeat){hideTutorial();const c=$("itC");c.in
 
 /* 通常プレイの開始地点は 1,6,11... のみ。管理者・デバッグは任意階を許可する。 */
 const unrestrictedFloor=()=>S.admin||S.debug;
-const legalStartFloor=v=>unrestrictedFloor()?Math.floor(+v||1):Math.floor((Math.max(1,+v||1)-1)/CFG.SKIP_STEP)*CFG.SKIP_STEP+1;
+/* 開始階層は 1, 6, 11 … の 1+5n 刻みだけ。それ以外の数を入れたら切り下げる。
+   以前は管理者・デバッグ中だけ刻みを外していたが、出撃バーの自由入力から
+   1階層単位で潜れてしまい、5層ごとの属性帯もボス床も飛ばせていた。
+   1階層単位のテストは管理者パネルの「1階層単位のテスト潜入」から行う
+   （confirmDive の exact）。刻みは誰に対しても外さない。 */
+const legalStartFloor=v=>Math.floor((Math.max(1,+v||1)-1)/CFG.SKIP_STEP)*CFG.SKIP_STEP+1;
 function maxStartFloor(){const deepest=Math.max(1,Math.floor(S.deepest||1));return unrestrictedFloor()?deepest:legalStartFloor(deepest);}
 function setDiveFloor(v){const mx=maxStartFloor();S.diveFloor=clamp(legalStartFloor(v),1,mx);save();}
 /* 旧一覧入口。通常は固定出撃バーの自由入力と±5から選ぶ。 */
@@ -4773,7 +4807,9 @@ function renderPrepTab(b){
   const ready=[0,1,2].filter(i=>dailyDone(i)&&!ensureDaily().claimed[i]).length
     +REACH_MISSIONS.filter(m=>S.deepest>=m.floor&&!(S.reachClaims||{})[m.floor]).length;
   const mission=document.createElement("div");mission.className="btn gh missionButton";
-  mission.innerHTML=`<b>ミッション</b><em>${ready?`受取可能 ${ready}件`:"デイリー・恒常・到達報酬"}</em>`;
+  /* 名前は「ミッション」だけにする。「デイリー・恒常・到達報酬」を並べると
+     ボタンの名前が中身の目次になり、何のボタンか一目で読めない。 */
+  mission.innerHTML=`<b>ミッション</b><em>${ready?`受取可能 ${ready}件`:""}</em>`;
   tapEl(mission,()=>openMissions("daily"));
   const records=document.createElement("div");records.className="btn gh";
   records.innerHTML=`<b>プレイ記録</b><em>最深 ${S.deepest}F</em>`;
@@ -4793,7 +4829,7 @@ function openMissions(sub){
 function renderPermanentMissions(b){
   const h=document.createElement("div");h.className="qhead";h.innerHTML='<b>恒常ミッション</b><em>期限なし</em>';b.appendChild(h);
   const d=document.createElement("div");d.className="card reachRow"+(S.beginnerClaimed?" claimed":"");
-  d.innerHTML=`<div><div class="nm">はじめての支援</div><div class="st">到達条件のない後発向け支援。Lv${Math.floor(beginnerTarget()*.6)}までの底上げと希少装備一式。</div></div>`;
+  d.innerHTML=`<div><div class="nm">はじめての支援</div><div class="st">到達条件なし。深度1相当・${CFG.RARITY[0][0]}の装備を7部位。レベルは上がらない。</div></div>`;
   const x=document.createElement("div");x.className="btn "+(S.beginnerClaimed?"no":"gold");x.textContent=S.beginnerClaimed?"受取済み":"受け取る";if(!S.beginnerClaimed)tapEl(x,()=>{if(claimBeginnerMission()){SFX.chest();openMissions("permanent");}});d.appendChild(x);b.appendChild(d);
 }
 function renderReachMissions(b){
@@ -4996,7 +5032,7 @@ function renderSettings(b,after,inDungeon){
   for(const [k,n] of STATDEF)action(n,()=>number(n,S.base[k],v=>S.base[k]=v));
   action("装備獲得",()=>{const count=clamp(Math.floor(+(prompt("生成数","1")||0)),1,500),rar=clamp(Math.floor(+(prompt("レア度 0〜4","2")||0)),0,4),fl=clamp(Math.floor(+(prompt("装備深度",String(S.deepest))||1)),1,999999);for(let i=0;i<count;i++)S.stash.push(makeItem(fl,0,0,rar));SFX.chest();save();after();});
   action("倉庫を空に",()=>{S.stash=[];save();after();});action("HP/MP回復",()=>{S.p.hp=S.p.max;S.p.mp=S.p.d.mpMax;save();after();});action("全階層解放",()=>{S.deepest=999999;save();after();});
-  const fh=document.createElement("h3");fh.textContent="1階層単位のテスト潜入";b.appendChild(fh);const floor=document.createElement("input");floor.type="number";floor.min=1;floor.max=999999;floor.value=S.debugFloor||1;floor.style.cssText="width:100%;padding:9px;background:#0a0810;border:1px solid var(--gold);color:var(--ink)";floor.addEventListener("change",()=>{S.debugFloor=clamp(Math.floor(+floor.value||1),1,999999);floor.value=S.debugFloor;save();});b.appendChild(floor);const dive=document.createElement("div");dive.className="btn gold";dive.textContent="指定階層へ潜る";tapEl(dive,()=>confirmDive(S.debugFloor||1));b.appendChild(dive);
+  const fh=document.createElement("h3");fh.textContent="1階層単位のテスト潜入";b.appendChild(fh);const floor=document.createElement("input");floor.type="number";floor.min=1;floor.max=999999;floor.value=S.debugFloor||1;floor.style.cssText="width:100%;padding:9px;background:#0a0810;border:1px solid var(--gold);color:var(--ink)";floor.addEventListener("change",()=>{S.debugFloor=clamp(Math.floor(+floor.value||1),1,999999);floor.value=S.debugFloor;save();});b.appendChild(floor);const dive=document.createElement("div");dive.className="btn gold";dive.textContent="指定階層へ潜る";tapEl(dive,()=>confirmDive(S.debugFloor||1,true));b.appendChild(dive);
   const oh=document.createElement("h3");oh.textContent="全装備オプション（自由入力）";oh.style.color="var(--gold)";b.appendChild(oh);const og=document.createElement("div");og.className="adminGrid";b.appendChild(og);
   const opts=[...AFF],seen=new Set();for(const a of opts){if(seen.has(a.id))continue;seen.add(a.id);const d=document.createElement("div");d.className="btn gh";d.textContent=`${a.n} ${S.adminOpts[a.id]||0}${a.p?"%":""}`;tapEl(d,()=>number(a.n,S.adminOpts[a.id]||0,v=>S.adminOpts[a.id]=v));og.appendChild(d);}
   organizeSettingsPages(b,after);
@@ -5211,9 +5247,12 @@ function openElementHelp(after=openTown){
       +`<div class="row">${elIc("neutral",14)}<span>無属性は共鳴しない代わりに、主ステータスが ×${NEUTRAL_BASE.toFixed(2)} 高い。</span></div>`
       +`<div><b>同じ属性をそろえると共鳴する。</b><br>`
       +[3,5,7].map(n=>{const r=st(n);return `${elIc("fire",12)}×${n} … 与ダメ ×${r.advantage.toFixed(2)} ／ 有利な相手からの被ダメ ×${r.guard.toFixed(2)}`;}).join("<br>")+`</div>`
+      /* 相性は「有利か不利か」だけを書く。elementMultiplier の 1.5／0.5／1.3 は
+         有利不利を決める判定にしか使っておらず、実際に掛かるのは上の共鳴倍率と
+         下の不利倍率。ここに 1.5 と書くと「共鳴倍率にさらに1.5倍が乗る」と読まれる。 */
       +`<div><b>相性</b><div class="beats">`
-      +`<span>${elIc("fire",14)}→${elIc("wood",14)}→${elIc("water",14)}→${elIc("fire",14)}</span><span>矢印の向きに ×1.5、逆向きに ×0.5</span>`
-      +`<span>${elIc("light",14)}⇄${elIc("dark",14)}</span><span>互いに ×1.3。それ以外には等倍</span>`
+      +`<span>${elIc("fire",14)}→${elIc("wood",14)}→${elIc("water",14)}→${elIc("fire",14)}</span><span>矢印の向きが有利（上の倍率）、逆向きが不利（与ダメ ×${disadvantageMultiplier(S.floor||1).toFixed(2)}）</span>`
+      +`<span>${elIc("light",14)}⇄${elIc("dark",14)}</span><span>互いに有利。それ以外の相手には等倍</span>`
       +`</div></div>`
       +`<div><b>敵の優勢属性は5層ごとに変わる。</b>8帯で一巡する。<div class="cyc">${cyc}</div>`
       +`潜る階層の優勢属性に対して<b>有利な属性</b>でそろえるのが基本。深度表示の横と、出撃バーの「次のボス」に出ている属性がそれ。</div>`;
@@ -5977,9 +6016,10 @@ function openClass(){
       S.p=newPlayer();$("scClass").classList.remove("on");save();openTown();});
     c.appendChild(d);}
   $("scClass").classList.add("on");}
-function confirmDive(fl){
+function confirmDive(fl,exact){
   if(!S.formation||!S.formation.length){toast("キャラクターを1人以上編成してください","ng");return;}
-  fl=clamp(legalStartFloor(fl),1,maxStartFloor());S.diveFloor=fl;
+  /* exact は管理者パネルの1階層単位テスト専用。通常の入口はすべて 1+5n に切り下げる。 */
+  fl=exact&&unrestrictedFloor()?Math.max(1,Math.floor(+fl||1)):clamp(legalStartFloor(fl),1,maxStartFloor());S.diveFloor=fl;
   const fit=gearFitText(fl);
   ask("ダンジョンに潜る",
     "深度 "+fl+" から開始します。\n危険度: "+dangerOf(fl).n

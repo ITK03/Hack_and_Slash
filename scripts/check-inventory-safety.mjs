@@ -67,16 +67,20 @@ const beforeReload = game.run(function () {
   for (const pool of Object.values(SKILL_POOL)) for (const skill of pool) if (skill.mul > 0) damagingSkills.push(skill.mul);
   for (const { ch } of allRoster()) if (ch.uniq && ch.uniq.mul > 0) damagingSkills.push(ch.uniq.mul);
 
+  /* 開始階層は誰に対しても 1+5n へ切り下げる。以前はデバッグ・管理者だけ刻みを
+     外していたが、出撃バーの自由入力から1階層単位で潜れてしまっていた。
+     1階層単位のテストは管理者パネル専用の入口（confirmDive の exact）に残す。 */
   S.deepest = 100; setDiveFloor(77);
   const legalFloor = S.diveFloor;
-  S.debug = true; setDiveFloor(77); const debugFloor = S.diveFloor; S.debug = false;
+  S.debug = true; setDiveFloor(77); const debugFloor = S.diveFloor;
+  S.formation = ['warrior:gai']; confirmDive(77, true); const debugExactFloor = S.diveFloor; S.debug = false;
   save();
   return {
     extractedSlots, gloveLocked: glove.locked, protectedExcluded,
     transferAsked, stayedBeforeConfirm, movedAfterConfirm,
     leaveAsked, unequippedOnLeave,
     noPotionWithoutLoadout, basicPotionWithLoadout,
-    boostedItemDrop, legalFloor, debugFloor, maxSkill: Math.max(...damagingSkills),
+    boostedItemDrop, legalFloor, debugFloor, debugExactFloor, maxSkill: Math.max(...damagingSkills),
     gloveUid: glove.uid,
   };
 });
@@ -94,7 +98,8 @@ assert.equal(beforeReload.basicPotionWithLoadout, true, '癒血の雫を持ち�
 assert.equal(beforeReload.boostedItemDrop, 0.06, 'ドロップ率25%が装備抽選にも共通倍率で乗る');
 assert.ok(beforeReload.maxSkill <= 2, `攻撃技の最大倍率は2倍以下（実値 ${beforeReload.maxSkill}）`);
 assert.equal(beforeReload.legalFloor, 76, '通常プレイの開始階層を1+5nへ丸める');
-assert.equal(beforeReload.debugFloor, 77, 'デバッグモードは任意階を指定できる');
+assert.equal(beforeReload.debugFloor, 76, 'デバッグモードでも出撃バーからは1+5nへ丸める');
+assert.equal(beforeReload.debugExactFloor, 77, '管理者パネルの1階層単位テストだけは任意階を指定できる');
 
 game.reload();
 const afterReload = game.run(function (uid) {

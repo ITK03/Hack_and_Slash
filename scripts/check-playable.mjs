@@ -664,6 +664,67 @@ await page.goto(base); await page.waitForTimeout(500);
   notes.push(`  潜行中の深度表示 属性アイコン${el.floorHudIcon}個＋「${el.floorHud.trim()}」（火でそろえて木優勢の31階）`);
 }
 
+/* 2p5. 拠点まわりの作業性。倉庫のタブ固定・開始階層の刻み・ミッションの名前・
+   はじめての支援が「押した瞬間に中盤の強さ」にならないこと。 */
+{
+  const town = await page.evaluate(async () => {
+    const out = {};
+    for (const p of document.querySelectorAll('.pop')) p.classList.remove('on');
+    S.tutorial = { phase: 'done', gearIndex: 0 }; S.deepest = 137; S.base.lv = 12;
+    S.admin = false; S.debug = false;
+    /* 倉庫のタブ（装備/道具/素材/調合）は、下へスクロールしても上に残ること。 */
+    S.stash = []; for (let i = 0; i < 60; i++) S.stash.push(makeItem(30, .5, 0, i % 5));
+    S.tab = 'inv'; S.invSub = 'gear'; openTown();
+    const body = document.querySelector('#scTown>.sbody'), tabs = body.querySelector(':scope>.innerTabs');
+    out.tabsFound = !!tabs;
+    if (tabs) {
+      const top0 = tabs.getBoundingClientRect().top;
+      body.scrollTop = 400; await new Promise(r => requestAnimationFrame(r));
+      out.scrolled = body.scrollTop;
+      out.tabDrift = Math.round(top0 - tabs.getBoundingClientRect().top);
+      body.scrollTop = 0;
+    }
+    /* 開始階層は 1+5n だけ。管理者でも出撃バーからは刻みを外せないこと。 */
+    const snap = v => { setDiveFloor(v); return S.diveFloor; };
+    out.snapPlain = [1, 2, 5, 6, 23, 100].map(snap);
+    S.admin = true; out.snapAdmin = [23, 44].map(snap);
+    /* 管理者パネルの1階層単位テストだけは刻みを外せること */
+    S.formation = ['warrior:gai']; confirmDive(23, true); out.exactAdmin = S.diveFloor;
+    document.getElementById('askPop').classList.remove('on');
+    S.admin = false; confirmDive(23); out.confirmPlain = S.diveFloor;
+    document.getElementById('askPop').classList.remove('on');
+    /* 拠点のミッションのボタンは名前だけ。中身の目次を並べない。 */
+    S.tab = 'prep'; openTown();
+    const mission = [...document.querySelectorAll('#scTown .fold,#scTown .card,#scTown [data-tap]')]
+      .find(e => (e.textContent || '').startsWith('ミッション'));
+    out.missionLabel = mission ? mission.textContent.replace(/\s+/g, ' ').trim() : null;
+    /* はじめての支援。レベルは上がらず、深度1の最低等級が7部位。 */
+    S.beginnerClaimed = false; S.stash = []; const lvBefore = S.base.lv;
+    claimBeginnerMission();
+    out.gift = { lvBefore, lvAfter: S.base.lv, n: S.stash.length,
+      maxIlvl: Math.max(0, ...S.stash.map(x => x.ilvl)), maxRar: Math.max(0, ...S.stash.map(x => x.rar)),
+      slots: new Set(S.stash.map(x => x.slot)).size };
+    return out;
+  });
+  if (!town.tabsFound) problems.push('倉庫のタブが .sbody の直下に無い（固定できない）');
+  else if (town.tabDrift > 1) problems.push(`倉庫のタブが中身と一緒に流れる（${town.scrolled}px スクロールで ${town.tabDrift}px 動いた）`);
+  if (town.snapPlain.join(',') !== '1,1,1,6,21,96') problems.push(`開始階層が1+5nに切り下がらない（${town.snapPlain.join(',')}）`);
+  if (town.snapAdmin.join(',') !== '21,41') problems.push(`管理者だと出撃バーから1階層単位で潜れる（${town.snapAdmin.join(',')}）`);
+  if (town.exactAdmin !== 23) problems.push(`管理者パネルの1階層単位テストまで刻まれている（${town.exactAdmin}）`);
+  if (town.confirmPlain !== 21) problems.push(`潜る確認で刻みが外れる（${town.confirmPlain}）`);
+  /* 名前は「ミッション」。受取可能の件数は他の折りたたみ（プレイ記録 最深60F）と
+     同じ形の状態表示なので残す。消したかったのは中身の目次のほう。 */
+  if (!town.missionLabel || !town.missionLabel.startsWith('ミッション')) problems.push(`拠点のミッションのボタンが見つからない（「${town.missionLabel}」）`);
+  if (/デイリー|恒常|到達報酬/.test(town.missionLabel || '')) problems.push(`拠点のミッションのボタン名に中身の目次が並んでいる（「${town.missionLabel}」）`);
+  const g = town.gift;
+  if (g.lvAfter !== g.lvBefore) problems.push(`はじめての支援でレベルが上がる（${g.lvBefore}→${g.lvAfter}）`);
+  if (g.n !== 7 || g.slots !== 7) problems.push(`はじめての支援が7部位ぶんでない（${g.n}個 / ${g.slots}部位）`);
+  if (g.maxIlvl !== 1) problems.push(`はじめての支援の装備が深度1でない（最大${g.maxIlvl}）`);
+  if (g.maxRar !== 0) problems.push(`はじめての支援の装備が最低等級でない（最大レア${g.maxRar}）`);
+  notes.push(`拠点: 倉庫タブ固定(${town.scrolled}pxで${town.tabDrift}px) / 階層 ${town.snapPlain.join(',')}（管理者も${town.snapAdmin.join(',')}・専用入力だけ${town.exactAdmin}） / ボタン名「${town.missionLabel}」`);
+  notes.push(`  はじめての支援: Lv${g.lvBefore}→${g.lvAfter} / 深度${g.maxIlvl}・レア${g.maxRar} を${g.n}部位`);
+}
+
 /* 2p3. 操作を任せるほど与ダメージが下がること。手動 ＞ 片手 ＞ オート。
    切替は3つを必ず一巡すること（最深で潜っている間もオートに手が届く）。 */
 {
