@@ -180,6 +180,11 @@ const regressionSnippets = [
   '.diveFit{',
   'const bossRageMul=',            // ボスは長引くほど強くなる
   'BOSS_REGEN_AT:',                // 火力が足りないと傷が塞がって倒し切れない
+  'el_fire:', 'el_water:', 'el_wood:', 'el_light:', 'el_dark:', 'el_neutral:',  // 属性は輪郭で見分ける
+  'const elIc=',                   // 属性アイコンだけの表示
+  'const elTag=',                  // 属性アイコン＋名前
+  'function openElementHelp',      // 属性と共鳴の説明
+  'function floorMatchTag',        // その階層に対して有利か不利か
   'ENEMY_DMG_MUL:',
   'id="hurtVig"',
   'min-height:44px',

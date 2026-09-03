@@ -605,6 +605,65 @@ await page.goto(base); await page.waitForTimeout(500);
   notes.push(`  地図: 開始 ${hud.roomsSeen}/${hud.roomsTotal}部屋（床の${Math.round(hud.seenAtStart / hud.floorTiles * 100)}%）→ 入室で ${hud.roomsSeenAfter}部屋 / 押すと ${hud.small}→${hud.big}px`);
 }
 
+/* 2p4. 属性がアイコンだけで見分けられること。
+   装備には属性が付いているのに、画面のどこにも形として出ていなかった。
+   詳細は等級/部位/深度しか出さず、装備枠は絵を属性色で塗るだけで、
+   色は等級の枠色・強化値の水色と混ざって読めなかった。 */
+{
+  const el = await page.evaluate(() => {
+    const keys = ['fire', 'water', 'wood', 'light', 'dark', 'neutral'];
+    /* 6属性が別々の輪郭を持つこと。色を落としても見分けられるのが要件なので、
+       同じパスを色違いで使い回していないかを見る。 */
+    const paths = keys.map(k => ICONP['el_' + k] || '');
+    const out = { missing: keys.filter((k, i) => !paths[i]), dup: paths.length - new Set(paths).size };
+    /* 実画面に出ていること。装備枠・倉庫の格子・装備の詳細の3か所。 */
+    S.tutorial = { phase: 'done', gearIndex: 0 }; S.deepest = 60; S.base.lv = 60;
+    S.stash = []; S.gear = emptyGear(); _s = 4242;
+    SLOTK.forEach((k, i) => { let it, n = 0; do it = makeItem(40, 0, 0, 2); while (++n < 900 && it.slot !== k); if (it.slot === k) { it.element = keys[i % 5]; S.gear[k] = it; } });
+    for (let i = 0; i < 6; i++) S.stash.push(makeItem(40, .5, 0, 2));
+    for (const p of document.querySelectorAll('.pop')) p.classList.remove('on');
+    S.tab = 'gear'; S.scene = 'town'; openTown();
+    out.slotIcons = document.querySelectorAll('#scTown .slot .slotTop .elIc').length;
+    out.resoIcons = document.querySelectorAll('#scTown .gearStatsHead .reso .elIc').length;
+    S.tab = 'inv'; S.inv.tab = 'gear'; openTown();
+    out.cellIcons = document.querySelectorAll('#scTown .cell .cellBtm .elIc').length;
+    out.cells = document.querySelectorAll('#scTown .cell').length;
+    showItem(S.stash[0], false);
+    out.detailIcon = document.querySelectorAll('#itC .elItemLine .elIc').length;
+    /* 説明が開き、倍率を本体から取っていること（写した数字だと本体を変えても古いまま） */
+    openElementHelp(openTown);
+    out.helpText = document.getElementById('itC').textContent;
+    out.helpOpen = document.getElementById('itPop').classList.contains('on');
+    out.helpIcons = document.querySelectorAll('#itC .elGuide .elIc').length;
+    const r5 = resonanceStageInfo(5);
+    out.helpShowsReal = out.helpText.includes('×' + r5.advantage.toFixed(2));
+    document.getElementById('itPop').classList.remove('on');
+    /* 潜ったら「この階層で自分は有利か」が出ること */
+    SLOTK.forEach(k => { if (S.gear[k]) S.gear[k].element = 'fire'; });
+    beginRun(31); S.paused = false; updHUD();
+    out.floorHud = document.getElementById('floorElement').textContent;
+    out.floorHudIcon = document.querySelectorAll('#floorElement .elIc').length;
+    /* 幅が足りずに省略記号で消えていないこと */
+    const meta = document.querySelector('#meta>div:first-child');
+    out.metaClipped = meta.scrollWidth > meta.clientWidth + 1;
+    endRun(true); S.scene = 'town'; openTown();
+    return out;
+  });
+  if (el.missing.length) problems.push(`属性アイコンが無い: ${el.missing.join(',')}`);
+  if (el.dup) problems.push(`属性アイコンの輪郭が${el.dup}組かぶっている（色でしか見分けられない）`);
+  if (el.slotIcons !== 7) problems.push(`装備枠7つのうち属性アイコンが出ているのは${el.slotIcons}枠`);
+  if (el.resoIcons !== 7) problems.push(`共鳴の行に7部位ぶんの属性が並んでいない（${el.resoIcons}個）`);
+  if (el.cellIcons !== el.cells) problems.push(`倉庫の格子${el.cells}件のうち属性アイコンは${el.cellIcons}件`);
+  if (!el.detailIcon) problems.push('装備の詳細に属性が出ていない');
+  if (!el.helpOpen || el.helpIcons < 6) problems.push(`属性の説明が開かない、または属性が出ていない（${el.helpIcons}個）`);
+  if (!el.helpShowsReal) problems.push('属性の説明の倍率が本体の resonance() と一致しない（数字を写している）');
+  if (!el.floorHudIcon) problems.push('潜行中の深度表示に階層の属性アイコンが無い');
+  if (!el.floorHud.includes('有利')) problems.push(`火でそろえて木優勢の31階へ入ったのに「有利」が出ない（${el.floorHud}）`);
+  if (el.metaClipped) problems.push('潜行中の深度の行が幅に収まらず省略記号で切れている');
+  notes.push(`属性: 6種とも別の輪郭 / 装備枠${el.slotIcons} 共鳴の行${el.resoIcons} 倉庫${el.cellIcons}/${el.cells} 詳細${el.detailIcon} 説明${el.helpIcons}`);
+  notes.push(`  潜行中の深度表示 属性アイコン${el.floorHudIcon}個＋「${el.floorHud.trim()}」（火でそろえて木優勢の31階）`);
+}
+
 /* 2p3. 操作を任せるほど与ダメージが下がること。手動 ＞ 片手 ＞ オート。
    切替は3つを必ず一巡すること（最深で潜っている間もオートに手が届く）。 */
 {

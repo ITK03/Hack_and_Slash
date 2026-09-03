@@ -574,6 +574,35 @@ body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
 .cell .enh{font-size:12px;font-weight:900;color:#7ad0ff}
 
 .cell .lvl{font-size:12px;color:var(--ink2);font-weight:700}
+
+/* 属性のアイコン。色は属性色を継ぐが、色が見えなくても輪郭で分かる形にしてある。
+   置き場所は必ず既存の帯（cellBtm / slotTop）の中で、絶対配置で角に重ねない。
+   角に重ねると、印が増えたときに必ずぶつかる（▲・E・+N・深度で実際にぶつけた）。 */
+.elIc{display:inline-flex;align-items:center;justify-content:center;line-height:0}
+.elIc svg{display:block}
+.elTag{display:inline-flex;align-items:center;gap:3px;font-weight:800}
+.elTag b{font-size:12px;font-weight:800}
+.cell .cellBtm .elIc,.slot .slotTop .elIc{opacity:.95}
+.gearCandidate .elIc{position:absolute;left:2px;bottom:1px}
+/* 属性の説明。共鳴の行を押すと開く。 */
+.elGuide{display:flex;flex-direction:column;gap:8px;font-size:13px;line-height:1.6}
+.elGuide .row{display:flex;align-items:center;gap:8px}
+.elGuide .beats{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center}
+.elGuide .cyc{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.elGuide .cyc i{color:var(--ink3);font-style:normal;font-size:12px}
+/* 共鳴の行は押すと属性の説明が開く。見た目は1行のままでいいが、当たり判定は
+   44pxいる。行そのものを44pxにすると全ステータスの見出しが間延びするので、
+   小さな印と同じく透明な疑似要素で広げる（profileIcon と同じ手）。 */
+.gearStatsHead .reso{position:relative;display:inline-flex;align-items:center;gap:4px;
+  padding:4px 8px;margin:-4px -4px;border-radius:3px;min-height:24px}
+.gearStatsHead .reso::after{content:"";position:absolute;left:50%;top:50%;
+  width:100%;min-width:44px;height:44px;transform:translate(-50%,-50%)}
+.gearStatsHead .reso:active{background:#1c1728}
+.elMatch{font-size:12px;font-weight:900;padding:0 4px;border-radius:2px}
+.elMatch.good{color:#7ad04e}
+.elMatch.bad{color:#ff7a6a}
+.elItemLine{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px}
+.elItemLine .sub{font-size:12px}
 #sellBar{position:sticky;bottom:-20px;background:var(--bg2);border-top:1px solid var(--line);
   margin:10px -15px -20px;padding:10px 15px calc(env(safe-area-inset-bottom) + 12px);z-index:5;
   box-shadow:0 -10px 20px rgba(8,7,12,.9)}
@@ -864,7 +893,8 @@ h3::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,var(--li
 .bar{border-radius:999px;background:#090d13;box-shadow:inset 0 0 0 1px #303a48,inset 0 2px 5px rgba(0,0,0,.72)}
 .hval{color:#d8dbe2;font-size:12px;text-shadow:0 1px 3px #000}
 #meta{color:#979eaa;font-size:12px;text-shadow:0 1px 3px #000;display:grid;
-  grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) auto;gap:6px}
+  grid-template-columns:minmax(0,1.55fr) minmax(0,.85fr) minmax(0,.9fr) auto;gap:6px}
+#meta>div:first-child{display:flex;align-items:center;gap:3px}
 #meta>div{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #goldT,#dpsT{text-align:center}#tmT{text-align:right}
 #pauseB{border-radius:var(--r-sm);border-color:#46536a;background:rgba(14,20,29,.9);box-shadow:0 6px 16px rgba(0,0,0,.3)}
@@ -980,7 +1010,7 @@ h3::before{content:"◆";font-size:8px;color:var(--gold);filter:drop-shadow(0 0 
   background:#121923;color:#f2eadc;text-align:center;font-size:17px;font-weight:900;font-variant-numeric:tabular-nums}
 #diveBar .go{grid-area:go;align-self:stretch;min-height:46px;padding:0 4px;font-size:13px;letter-spacing:.12em;display:flex;align-items:center;justify-content:center}
 .diveFit{grid-area:fit;order:0;min-width:0;margin:0;font-size:11px;line-height:1.25;display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:8px}
-.diveFit b{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.diveFit small{font-size:11px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.diveFit b{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.diveFit small{font-size:11px;color:var(--ink2);white-space:nowrap;flex:0 0 auto;display:inline-flex;align-items:center;gap:2px}
 
 /* 装備。装備と全能力値は同じ作業面に置く。能力タブはポイント割り振り専用。 */
 .gearHead{min-height:74px;max-height:78px;grid-template-columns:48px minmax(0,1fr);padding:5px;margin-bottom:5px}
@@ -1657,6 +1687,13 @@ const SLOTN=k=>(SLOTS.find(s=>s.k===k)||{n:"?"}).n;
 const ELEMENTS={fire:{n:"火",col:"#ff684e"},water:{n:"水",col:"#55aaff"},wood:{n:"木",col:"#68c96b"},light:{n:"光",col:"#f4dc72"},dark:{n:"闇",col:"#b681e8"},neutral:{n:"無",col:"#aaa4b5"}};
 const ELEMENT_KEYS=["fire","water","wood","light","dark"];
 const elementName=k=>(ELEMENTS[k]||ELEMENTS.neutral).n;
+/* 属性は必ずアイコンで出す。漢字1文字（火/水/木/光/闇/無）は小さく並ぶと潰れて
+   読めず、色だけでは等級の枠色や強化値の水色と混ざって「何属性か」が伝わらない。
+   elIc = アイコンだけ。elTag = アイコン＋名前で、初めて見る画面用。 */
+const elIc=(k,sz)=>{const e=ELEMENTS[k]||ELEMENTS.neutral;
+  return `<span class="elIc" style="color:${e.col}" role="img" aria-label="${e.n}属性">${icon("el_"+(ELEMENTS[k]?k:"neutral"),sz||14)}</span>`;};
+const elTag=(k,sz)=>{const e=ELEMENTS[k]||ELEMENTS.neutral;
+  return `<span class="elTag" style="color:${e.col}">${elIc(k,sz||13)}<b>${e.n}</b></span>`;};
 // 5層帯ごとに優勢属性を固定し、8帯で火水木を2回、光闇を1回ずつ巡回する。
 const dominantElement=fl=>["fire","water","wood","light","fire","water","wood","dark"][Math.floor((Math.max(1,fl)-1)/5)%8];
 const bossElement=fl=>ELEMENT_KEYS[(Math.floor(Math.max(5,fl)/5)-1)%5];
@@ -1665,6 +1702,9 @@ function resonance(gear=S.gear){const counts={};for(const it of Object.values(ge
      .05/.04 は被ダメ95%減で、3個(.85)からの落差も17倍と段差が異常だった。
      danger(1.15/1.25/1.30) と対称になる幅に戻す。 */
   guard:[1,.85,.75,.70][stage],danger:[1,1.15,1.25,1.30][stage]};}
+/* n個そろえたときの共鳴の効き。説明画面が数字を写さずに済むよう、
+   本物の resonance() に「同じ属性をn個着けた装備」を渡して聞く。 */
+const resonanceStageInfo=n=>resonance(Object.fromEntries(SLOTK.map((k,i)=>[k,i<n?{element:"fire"}:null])));
 function elementMultiplier(attacker,defender){if(!attacker||!defender||attacker==="neutral"||defender==="neutral")return 1;if(attacker==="light"||attacker==="dark")return defender===(attacker==="light"?"dark":"light")?1.3:1;const beats={fire:"wood",wood:"water",water:"fire"};return beats[attacker]===defender?1.5:beats[defender]===attacker?.5:1;}
 const disadvantageMultiplier=fl=>.5+.15*clamp((Math.max(100,fl)-100)/100,0,1);
 function resonanceDamageMultiplier(r,defender,fl){if(r.element==="neutral")return 1;const affinity=elementMultiplier(r.element,defender);return affinity>1?r.advantage:affinity<1?disadvantageMultiplier(fl):1;}
@@ -1735,6 +1775,15 @@ const ICONP={
      どちらも 24x24・stroke 2 で、小さくしても潰れない線数に抑えている。 */
   ch_warrior:'M12 2 A3 3 0 1 0 12 8 A3 3 0 1 0 12 2 Z M6 22 L6 14 Q6 9 12 9 Q18 9 18 14 L18 22 M18 13 L21 10 M19.5 11.5 L22 14',
   ch_mage:'M12 1 Q7 3 7 8 L17 8 Q17 3 12 1 Z M8 8 A4 4 0 0 0 16 8 M7 22 L7 15 Q7 11 12 11 Q17 11 17 15 L17 22 M4 22 L4 6 M4 5 A1.6 1.6 0 1 0 4 2 A1.6 1.6 0 1 0 4 5',
+  /* 属性。色だけで分けていたが、色は等級の枠色・強化値の水色とぶつかるうえ、
+     小さく並ぶと似た明度の火(赤)と闇(紫)が見分けられない。輪郭で分ける。
+     炎／雫／葉／陽／月／横棒入りの丸 と、5つとも外形が違う。 */
+  el_fire:'M14.5 2 C14.5 6 12 7.5 10 9.5 C9.4 8.6 9.2 7.6 9.3 6.4 C6.7 8.6 5.2 11.4 5.2 14.2 A6.8 6.8 0 0 0 18.8 14.2 C18.8 9.4 16.6 5.2 14.5 2 Z M12 12.6 C13.6 14.4 14.2 15.4 14.2 16.6 A2.2 2.2 0 0 1 9.8 16.6 C9.8 15.4 10.4 14.4 12 12.6 Z',
+  el_water:'M12 2 L5.6 11.6 A7.6 7.6 0 1 0 18.4 11.6 Z M6.6 14.4 Q9.3 12.5 12 14.4 T17.4 14.4',
+  el_wood:'M20.5 3.5 C11 4 4 11 3.5 20.5 C13 20 20 13 20.5 3.5 Z M5 19 L15.5 8.5',
+  el_light:'M12 8 A4 4 0 1 0 12 16 A4 4 0 1 0 12 8 Z M12 1.5 L12 4 M12 20 L12 22.5 M1.5 12 L4 12 M20 12 L22.5 12 M4.6 4.6 L6.4 6.4 M17.6 17.6 L19.4 19.4 M19.4 4.6 L17.6 6.4 M6.4 17.6 L4.6 19.4',
+  el_dark:'M15.5 2.6 A9.7 9.7 0 1 0 15.5 21.4 A7.8 7.8 0 0 1 15.5 2.6 Z',
+  el_neutral:'M12 3 A9 9 0 1 0 12 21 A9 9 0 1 0 12 3 Z M7.5 12 L16.5 12',
   /* 画面操作用。文字・絵文字を記号代わりにせず、装備と同じ線幅・角処理で揃える。 */
   ui_filter:'M4 5 L20 5 L14 12 L14 19 L10 21 L10 12 Z',
   ui_sort:'M8 4 L8 20 M4 8 L8 4 L12 8 M16 20 L16 4 M12 16 L16 20 L20 16',
@@ -2650,8 +2699,21 @@ function enterFloor(fl){S.tactical.trap=null;S.tactical.reveal=false;
     const ok=rooms.map((r,i)=>i).filter(i=>!bad.has(i));
     if(ok.length){const rm=rooms[pick(ok)];
       S.props.push({t:"shrine",x:rm.cx+.5,y:rm.cy+.5,used:0,s:pick(SHRINES),tm:0});}}
-  const shown=isBoss?bossElement(fl):dominantElement(fl),fe=$("floorElement");fe.textContent="["+elementName(shown)+"]";fe.style.color=ELEMENTS[shown].col;
+  const shown=isBoss?bossElement(fl):dominantElement(fl),fe=$("floorElement");
+  /* 優勢属性だけ出しても「で、自分は有利なのか」が分からない。
+     共鳴している属性との相性をその場で出す。共鳴していなければ何も出さない
+     （属性をそろえていない人に「等倍」と出しても、読む理由が無い）。 */
+  /* ここは HUD の狭い列なので漢字は省いてアイコンだけにする。
+     「火/水/木」の1文字を足すと深度・危険度・装備適合と並んで列からはみ出し、
+     省略記号で属性ごと消えてしまう（実際に消えた）。 */
+  fe.innerHTML=elIc(shown,13)+floorMatchTag(shown);
   toast("深度 "+fl+" — "+dangerOf(fl).n+" / "+elementName(shown)+"属性優勢"+(isBoss?"ボス":""));}
+function floorMatchTag(floorEl){
+  const r=resonance();if(!r.stage)return"";
+  const m=elementMultiplier(r.element,floorEl);
+  if(m>1)return` <b class="elMatch good">有利</b>`;
+  if(m<1)return` <b class="elMatch bad">不利</b>`;
+  return"";}
 
 function dangerOf(fl){
   const gap=fl-(S.base.lv*.55+1);
@@ -4281,8 +4343,11 @@ function gearGrid(host,inDungeon){
     /* 印は上段の帯に「左＝更新できる / 右＝強化値」で並べる。
        絶対配置で角に置くと、印が増えたときに必ず重なる。 */
     d.innerHTML=`<div class="slotTop"><span class="up">${up?"▲":""}</span>`
+      +(it?elIc(it.element,13):"")
       +`<span class="enh">${it&&(it.lv||1)>1?"+"+((it.lv||1)-1):""}</span></div>`
-      +`<div class="ic ${it?RC[it.rar]:"e"}" style="${it?`color:${ELEMENTS[it.element||"neutral"].col}`:""}">${icon(it?iconKey(it):s.k,22)}</div>`
+      /* 装備の絵そのものを属性色で塗るのはやめた。等級の枠色と二重に色が乗って、
+         どちらの色を見ているのか分からなくなる。属性は上の帯のアイコンで出す。 */
+      +`<div class="ic ${it?RC[it.rar]:"e"}">${icon(it?iconKey(it):s.k,22)}</div>`
             +`<div class="si ${it?RC[it.rar]:""}" title="${it?it.name:""}">${it?it.base:"—"}</div>`
       +`<div class="sd">${it?`深度${it.ilvl}`:""}</div>`;
     tapEl(d,()=>{const t=S.tutorial||{};if(!inDungeon&&t.phase==="equip"&&TUTORIAL_SLOTS[t.gearIndex]===s.k){
@@ -4322,12 +4387,19 @@ function statLine(nm,total,opt,pct){
   return `<div class="stat"><span>${nm}</span><b>${pct?total.toFixed(1)+"%":Math.round(total)}${Math.abs(opt)>0.01?` <small style="color:var(--gold)">+${pct?opt.toFixed(1):Math.round(opt)}</small>`:""}</b></div>`;}
 function statBlock(host){
   const d=derive(),c=document.createElement("div");c.className="card gearStats";
-  const resonanceNow=resonance();c.innerHTML=`<div class="gearStatsHead"><b>全ステータス</b>`+
-    `<small style="color:${ELEMENTS[resonanceNow.element].col}">共鳴 ${elementName(resonanceNow.element)} ${["なし","弱","中","強"][resonanceNow.stage]}・${resonanceNow.count}/7</small></div>`+
+  /* 共鳴の行は、7部位それぞれの属性アイコンを並べて出す。
+     「火 弱・3/7」だけでは、どの部位が数に入っているのかが分からず、
+     そろえるという行動につながらない。押すと属性の説明が開く。 */
+  const resonanceNow=resonance();
+  const wornEls=SLOTK.map(k=>S.gear[k]?elIc(S.gear[k].element,12):`<span class="elIc" style="opacity:.25">${icon("el_neutral",12)}</span>`).join("");
+  c.innerHTML=`<div class="gearStatsHead"><b>全ステータス</b>`+
+    `<small class="reso" data-tap="reso" style="color:${ELEMENTS[resonanceNow.element].col}">${wornEls}`+
+    `<span>共鳴 ${elementName(resonanceNow.element)} ${["なし","弱","中","強"][resonanceNow.stage]}・${resonanceNow.count}/7</span>${icon("ui_help",13)}</small></div>`+
     DSHOW.map(([k,nm,mode])=>{const v=k==="dodge"?dodgeRateFor(d):(d[k]||0),
       shown=mode===1?v*100:v,dec=mode===1||mode===2?1:mode===3?2:0,
       pre=mode===3?"×":"",suf=mode===1?"%":mode===2?"/s":"";
       return `<div class="stat"><span>${nm}</span><b>${pre}${shown.toFixed(dec)}${suf}</b></div>`;}).join("");
+  {const reso=c.querySelector(".reso");if(reso)tapEl(reso,()=>openElementHelp(openTown));}
   host.appendChild(c);
   if(d.pw.length){const box=document.createElement("details");box.className="gearPowers";
     const unique=[...new Set(d.pw)],summary=document.createElement("summary");
@@ -4665,7 +4737,7 @@ function openFloorPick(after){
     const grid=document.createElement("div");grid.className="floorGrid";c.appendChild(grid);
     for(let f=mx;f>=1;f-=CFG.SKIP_STEP){const el=dominantElement(f),d=document.createElement("div");
       d.className="fbtn"+(f===S.diveFloor?" on":"");
-      d.innerHTML=`<b>${f}F</b><small style="color:${ELEMENTS[el].col}">${elementName(el)}</small>`;
+      d.innerHTML=`<b>${f}F</b><small>${elTag(el,12)}</small>`;
       tapEl(d,()=>{setDiveFloor(f);$("itPop").classList.remove("on");after();});grid.appendChild(d);}
   },after);}
 /* タブバーの上に常駐する出撃バー。適性と、階層入力・出撃を二段に集約する。 */
@@ -4686,7 +4758,9 @@ function renderDiveBar(){
   const paintFit=()=>{const f=gearFitText(S.diveFloor);
     const nextBoss=Math.ceil(S.diveFloor/5)*5,boss=bossElement(nextBoss);
     fit.style.color=f.c;
-    fit.innerHTML=`<b>${f.line}</b><small>次のボス ${nextBoss}F・<span style="color:${ELEMENTS[boss].col}">${elementName(boss)}属性</span></small>`;};
+    /* 属性は行の先頭に置く。この行は横幅が足りず両側とも省略記号で切れるので、
+       末尾に置くと属性ごと消える（実際に「次のボス 35F・…」まで縮んだ）。 */
+    fit.innerHTML=`<b>${f.line}</b><small>${elTag(boss,13)}${floorMatchTag(boss)} ${nextBoss}Fボス</small>`;};
   paintFit();bar.appendChild(fit);
   const go=document.createElement("div");go.className="btn pri go";go.textContent="潜る";
   tapEl(go,()=>confirmDive(S.diveFloor));bar.appendChild(go);
@@ -5124,6 +5198,27 @@ function openInvLegend(){
       +`<span><b>枠の色</b> ${CFG.RARITY.map((r,i)=>`<i class="${RC[i]}">${r[0]}</i>`).join(" / ")}</span>`;
     c.appendChild(legend);},openTown);
 }
+/* 属性の説明。装備の詳細と、装備タブの共鳴の行から開く。
+   数字は CFG や resonance() から取り、ここに書き写さない。書き写すと本体を
+   変えても説明だけ古いままになり、嘘を表示することになる。 */
+function openElementHelp(after=openTown){
+  const st=n=>resonanceStageInfo(n);
+  invMenu("属性と共鳴",c=>{
+    const g=document.createElement("div");g.className="elGuide";
+    const cyc=[...Array(8)].map((_,i)=>elIc(dominantElement(i*5+1),14)).join('<i>›</i>');
+    g.innerHTML=
+      `<div>装備は7部位それぞれが属性を持つ。${ELEMENT_KEYS.map(k=>elTag(k,13)).join(" ")} と ${elTag("neutral",13)} の6種類。</div>`
+      +`<div class="row">${elIc("neutral",14)}<span>無属性は共鳴しない代わりに、主ステータスが ×${NEUTRAL_BASE.toFixed(2)} 高い。</span></div>`
+      +`<div><b>同じ属性をそろえると共鳴する。</b><br>`
+      +[3,5,7].map(n=>{const r=st(n);return `${elIc("fire",12)}×${n} … 与ダメ ×${r.advantage.toFixed(2)} ／ 有利な相手からの被ダメ ×${r.guard.toFixed(2)}`;}).join("<br>")+`</div>`
+      +`<div><b>相性</b><div class="beats">`
+      +`<span>${elIc("fire",14)}→${elIc("wood",14)}→${elIc("water",14)}→${elIc("fire",14)}</span><span>矢印の向きに ×1.5、逆向きに ×0.5</span>`
+      +`<span>${elIc("light",14)}⇄${elIc("dark",14)}</span><span>互いに ×1.3。それ以外には等倍</span>`
+      +`</div></div>`
+      +`<div><b>敵の優勢属性は5層ごとに変わる。</b>8帯で一巡する。<div class="cyc">${cyc}</div>`
+      +`潜る階層の優勢属性に対して<b>有利な属性</b>でそろえるのが基本。深度表示の横と、出撃バーの「次のボス」に出ている属性がそれ。</div>`;
+    c.appendChild(g);},after);
+}
 function openInvSell(){const F=S.inv;F.sellSel=F.sellSel||[];
   invMenu("レア度で一括選択",c=>{
     const note=document.createElement("div");note.className="sub";note.textContent="選んだ等級以下をまとめて選択します。装備中・保護中の品は選ばれません。";c.appendChild(note);
@@ -5464,6 +5559,7 @@ function renderInv(b){
       +`<span class="mk">${equipped?'<b class="e">E</b>':(better?'<b class="u">▲</b>':"")}</span></div>`
       +`<div class="cellIc">${icon(iconKey(it),26)}</div>`
       +`<div class="cellBtm"><span class="enh">${(it.lv||1)>1?"+"+((it.lv||1)-1):""}</span>`
+      +elIc(it.element,13)
       +`<span class="lvl">${it.ilvl}</span></div>`;
     tapEl(c,()=>{if(!equipped&&!it.locked&&(F.sellMode||F.dismantleMode)){const i=F.sellSel.indexOf(it);if(i>=0)F.sellSel.splice(i,1);else F.sellSel.push(it);openTown();}else showItem(it,false);});
     c.addEventListener("touchstart",()=>{}, {passive:true});
@@ -5484,6 +5580,12 @@ function showItem(it,inDungeon){
     <div style="font-size:18px;font-weight:900;text-align:center" class="${RC[it.rar]}">${it.name}</div>
     <div class="sub" style="text-align:center;margin:5px 0 14px">
       ${CFG.RARITY[it.rar][0]} / ${SLOTN(it.slot)} / 深度${it.ilvl}</div>`;
+  /* 属性は詳細のいちばん上に置く。ここに無いと、装備に属性があること自体に
+     気付けない（枠色＝等級、+N＝強化と、他の印はすべて別の意味を持っている）。
+     押すと属性の説明が開く。 */
+  {const el=document.createElement("div");el.className="btn gh elItemLine";
+    el.innerHTML=`${elTag(it.element,15)}<span class="sub">${it.element==="neutral"?"共鳴しない":"7部位で3個そろえると共鳴"}</span>${icon("ui_help",14)}`;
+    tapEl(el,()=>openElementHelp(()=>showItem(it,inDungeon)));c.appendChild(el);}
   const mk=(t,cls,fn,host=c)=>{const d=document.createElement("div");d.className="btn "+cls;d.textContent=t;
     tapEl(d,fn);c.appendChild(d);};
   if(owner&&owner!==activeCharacterKey()){
@@ -5664,14 +5766,14 @@ function renderGearWorkspace(host,slotK){
   let list=allOwnedGear().filter(x=>gearCandidateAllowed(x,slotK));if(S.gearCandidateRare)list=list.filter(x=>x.rar>=2);
   list.sort((a,z)=>S.gearCandidateSort==="score"?powerWith(slotK,z)-powerWith(slotK,a):z.ilvl-a.ilvl);
   if(!list.length){const empty=document.createElement("div");empty.className="card";empty.innerHTML='<div class="st">装備できる物がありません。</div>';wrap.appendChild(empty);}
-  else{const grid=document.createElement("div");grid.className="gearCandidates";for(const x of list){const owner=equippedOwner(x),d=document.createElement("div");d.className=`gearCandidate ${RC[x.rar]}`;d.style.borderColor=x.rar===4?"#ff8adf":CFG.RARITY[x.rar][3];d.setAttribute("aria-label",x.name+(owner?` ${characterName(owner)}が装備中`:""));d.innerHTML=(owner?'<i class="ownerMark">E</i>':"")+icon(iconKey(x),32)+`<small>${x.ilvl}</small>`;tapEl(d,()=>{S.gearCompareChoice=x;openTown();});grid.appendChild(d);}wrap.appendChild(grid);}
+  else{const grid=document.createElement("div");grid.className="gearCandidates";for(const x of list){const owner=equippedOwner(x),d=document.createElement("div");d.className=`gearCandidate ${RC[x.rar]}`;d.style.borderColor=x.rar===4?"#ff8adf":CFG.RARITY[x.rar][3];d.setAttribute("aria-label",x.name+(owner?` ${characterName(owner)}が装備中`:""));d.innerHTML=(owner?'<i class="ownerMark">E</i>':"")+icon(iconKey(x),32)+elIc(x.element,12)+`<small>${x.ilvl}</small>`;tapEl(d,()=>{S.gearCompareChoice=x;openTown();});grid.appendChild(d);}wrap.appendChild(grid);}
   host.appendChild(wrap);
 }
 function renderGearComparePage(host,slotK,it){
   if(!gearCandidateAllowed(it,slotK)){S.gearCompareChoice=null;return renderGearWorkspace(host,slotK);}
   const old=S.gear[slotK],before=combatPower(),after=powerWith(slotK,it),delta=after-before;
   const page=document.createElement("div");page.className="gearComparePage";
-  const box=(x,label)=>`<div class="compareItem"><div class="ty">${label}</div><div class="${x?RC[x.rar]:""}">${icon(x?iconKey(x):slotK,36)}</div><div class="nm ${x?RC[x.rar]:""}">${x?x.name:"装備なし"}</div><div class="st">${compareItemStats(x,null,false)}</div></div>`;
+  const box=(x,label)=>`<div class="compareItem"><div class="ty">${label}</div><div class="${x?RC[x.rar]:""}">${icon(x?iconKey(x):slotK,36)}</div><div class="nm ${x?RC[x.rar]:""}">${x?x.name:"装備なし"}</div>${x?`<div class="st">${elTag(x.element,13)}</div>`:""}<div class="st">${compareItemStats(x,null,false)}</div></div>`;
   page.innerHTML=`<div class="nm">${SLOTN(slotK)}の比較</div><div class="compareHead">${box(old,"変更前")}${box(it,"変更後")}</div>${gearDerivedDeltaHTML(slotK,it)}`;
   const owner=equippedOwner(it);if(owner){const note=document.createElement("div");note.className="ownerNote";note.textContent=`E ${characterName(owner)}が装備中`;page.appendChild(note);}
   const acts=document.createElement("div");acts.className="gearCompareActions";const equipB=document.createElement("div");equipB.className="btn pri";equipB.textContent=owner?"付け替える":"装備";tapEl(equipB,()=>requestEquipItem(it,slotK,()=>{S.gearCompareChoice=null;openTown();}));const back=document.createElement("div");back.className="btn gh";back.textContent="戻る";tapEl(back,()=>{S.gearCompareChoice=null;openTown();});acts.append(equipB,back);page.appendChild(acts);host.appendChild(page);
