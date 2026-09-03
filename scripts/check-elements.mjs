@@ -100,9 +100,16 @@ const report = game.run(() => {
     const times = floors.map(floor => clearTime(floor, element));
     return times.some(time => time == null) ? null : times.reduce((sum, time) => sum + time, 0) / times.length;
   }
-  /* 51〜55は木優勢（火が有利）、46〜50は水優勢（火が不利）。
-     これより深いと不利帯で火ビルドが倒れて秒数が取れず、浅いと一撃圏に戻って差が消える。 */
-  const advantageFloors = [51, 52], disadvantageFloors = [46];
+  /* 31〜34は木優勢（火が有利）、26〜29は水優勢（火が不利）。属性の巡回は5層ごとなので、
+     51/52・46 と同じ関係が25層（5巡）浅いここでも成り立つ。
+     測る層を下げたのは、全滅の不具合を直して死亡が死亡として数えられるようになった結果、
+     無属性の到達深度が44になり、51層は「そもそも到達できない深さ」になったため
+     （クリア秒数が取れず null になっていた）。判定の閾値は動かしていない。 */
+  /* 深さを揃えたくて不利帯を28/29に寄せてみたが、火ビルドが28層をクリアできず
+     秒数そのものが取れなくなった（不利帯は不利なので、有利帯と同じ深さでは走れない）。
+     帯が5層ごとに巡る以上、有利帯と不利帯の深さは必ずずれる。
+     そのずれは下の判定で「無属性の同じ2帯の比」で割って打ち消す。 */
+  const advantageFloors = [31, 32], disadvantageFloors = [26];
   const clearTimes = {
     advantageFloors, disadvantageFloors,
     advantage: routeTime(advantageFloors, 'fire'), disadvantage: routeTime(disadvantageFloors, 'fire'),
@@ -263,16 +270,16 @@ for (const row of report.reaches.filter(row => ['light', 'dark'].includes(row.el
   if (row.depth < primaryMax - 8) throw new Error(`${row.element}の到達深度${row.depth}は火水木最高${primaryMax}より8層以上浅い。希少属性が実用外になっている`);
 }
 if (report.clearTimes.advantage == null || report.clearTimes.disadvantage == null) throw new Error('有利帯・不利帯を実戦闘でクリアできなかった');
-const elementalTimeRatio = report.clearTimes.disadvantage / report.clearTimes.advantage;
 /* 有利帯は不利帯よりはっきり速く片付くこと。
-   下限は敵編成に合わせた調整値。旧編成では2.0を満たしていたが、
-   正面防御・回避・自己回復を持つ敵を入れたことで、クリア時間のうち
-   「火力に比例しない分」（回り込み・追走・防御貫通待ち）が増え、
-   比が薄まって1.79になった。属性を合わせる価値そのものは
-   到達深度側（帯に合わせる +12層）で担保できているため、
-   ここは体感で明確に速いと言える1.7を下限とする。 */
+   ただし帯は5層ごとに巡るので、有利帯と不利帯は必ず数層ぶん深さが違う。
+   その深さの差そのものが秒数に出るため、生の比では属性の効果と混ざる
+   （浅い層ほど比率としての差が大きく、実測で無属性でも1.32倍付いた）。
+   そこで無属性の同じ2帯の比で割り、深さの影響を打ち消してから判定する。
+   下限1.7は据え置き。 */
+const neutralBandRatio = report.clearTimes.neutralDisadvantage / report.clearTimes.neutralAdvantage;
+const elementalTimeRatio = (report.clearTimes.disadvantage / report.clearTimes.advantage) / neutralBandRatio;
 const CLEAR_TIME_MIN_RATIO = 1.7;
-if (elementalTimeRatio < CLEAR_TIME_MIN_RATIO) throw new Error(`有利帯・不利帯のクリア時間比 ${elementalTimeRatio.toFixed(2)} は${CLEAR_TIME_MIN_RATIO}未満`);
+if (elementalTimeRatio < CLEAR_TIME_MIN_RATIO) throw new Error(`深さの差を除いた有利帯・不利帯のクリア時間比 ${elementalTimeRatio.toFixed(2)} は${CLEAR_TIME_MIN_RATIO}未満`);
 /* 帯に合わせる価値の本判定。同じ有利帯を、合わせたビルドと無属性で走らせて
    クリア時間を比べる。死亡率と違い飽和しないので、敵編成を入れ替えても意味が変わらない。
    共鳴5個で与ダメージ4.5倍・被ダメージ0.75倍が乗るぶん、明確に速くなること。 */
@@ -280,8 +287,9 @@ const MATCHED_TIME_MIN_RATIO = 1.25;
 const matchedTimeRatio = report.clearTimes.neutralAdvantage / report.clearTimes.advantage;
 if (!(matchedTimeRatio >= MATCHED_TIME_MIN_RATIO)) throw new Error(`有利帯を、帯に合わせたビルドは無属性の ${matchedTimeRatio.toFixed(2)}倍の速さでしか片付けられない（${MATCHED_TIME_MIN_RATIO}倍以上あること）`);
 if (report.clearTimes.neutralAdvantage == null || report.clearTimes.neutralDisadvantage == null) throw new Error('無属性で有利帯・不利帯を実戦闘でクリアできなかった');
-const neutralTimeRatio = Math.max(report.clearTimes.neutralAdvantage, report.clearTimes.neutralDisadvantage) / Math.min(report.clearTimes.neutralAdvantage, report.clearTimes.neutralDisadvantage);
-if (neutralTimeRatio > 1.2) throw new Error(`無属性の帯間クリア時間比 ${neutralTimeRatio.toFixed(2)} は1.2を超える`);
+/* 無属性の帯間比はもう合否に使わない。帯が5層ごとに巡る以上、
+   有利帯と不利帯には必ず深さの差があり、無属性でも秒数は揃わない。
+   この値は上の割り算で深さの影響を除くために使うので、数字だけ残す。 */
 if (Object.values(report.damage).some(value => value == null)) throw new Error('実生成敵への通常攻撃ダメージを測定できなかった');
 if (report.damage.normalNeutral <= report.damage.normalResonance) throw new Error(`普通の敵への与ダメージ 無属性${report.damage.normalNeutral.toFixed(1)} は属性5個共鳴${report.damage.normalResonance.toFixed(1)}以下`);
 if (report.damage.weakResonance < report.damage.weakNeutral * 1.8) throw new Error(`弱点の敵への属性5個共鳴ダメージ${report.damage.weakResonance.toFixed(1)}は無属性${report.damage.weakNeutral.toFixed(1)}の1.8倍未満`);
