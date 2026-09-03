@@ -179,7 +179,7 @@ const regressionSnippets = [
   'function gearFitText',          // 追いつき具合を隠さない
   '.diveFit{',
   'const bossRageMul=',            // ボスは長引くほど強くなる
-  'BOSS_ENRAGE_REGEN:',
+  'BOSS_REGEN_AT:',                // 火力が足りないと傷が塞がって倒し切れない
   'ENEMY_DMG_MUL:',
   'id="hurtVig"',
   'min-height:44px',

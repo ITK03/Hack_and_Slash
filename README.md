@@ -76,7 +76,7 @@ wrangler.jsonc        配信設定（public/ だけを公開する。docs/ を�
 過去の統合範囲を確認する互換検査は `npm run check:pr12` で実行する。現在の作業では通常検査とあわせて使う。
 
 ```bash
-npm run check          # 8種。うち check-balance と check-bundle-b は各15〜20分かかる
+npm run check          # 12種。うち check-balance と check-bundle-b は各15〜20分かかる
 npm run check:pr12     # PR #12 の引き継ぎマーカーと競合印を確認
 npm run check:layout   # 枠の重なり・切れ・画面外（要 Playwright）
 npm run check:ui       # 枠の不揃い・はみ出し・44px・コントラスト（要 Playwright）

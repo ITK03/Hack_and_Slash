@@ -649,8 +649,14 @@ await page.goto(base); await page.waitForTimeout(500);
       beginRun(12); S.paused = false; S.partyIndex = 0;
     };
     /* 次の番手がいるうちは、同じフロアで交代して続くこと（PR#40 の狙い） */
-    setup(2); S.p.hp = 0; endRun(false, 'テスト');
-    out.swap = { scene: S.scene, who: currentCharacter().n, idx: S.partyIndex };
+    setup(2); S.p.hp = 0;
+    /* 交代した次の番手が「倒れた場所」から始まること。
+       selectCharacter が交代の途中で S.p を作り直すので、控えておかないと
+       地図の隅(0,0)＝壁の中から再開してしまう。 */
+    const fell = { x: S.p.x, y: S.p.y };
+    endRun(false, 'テスト');
+    out.swap = { scene: S.scene, who: currentCharacter().n, idx: S.partyIndex,
+      ずれ: +Math.hypot(S.p.x - fell.x, S.p.y - fell.y).toFixed(2) };
     /* 最後の1人が倒れたら全滅。死亡画面が出て、戻ると拠点へ行けること */
     S.p.hp = 0; endRun(false, 'テスト');
     out.wipeShown = document.getElementById('scEnd').classList.contains('on');
@@ -663,6 +669,7 @@ await page.goto(base); await page.waitForTimeout(500);
     return out;
   });
   if (wipe.swap.scene !== 'dungeon' || wipe.swap.idx !== 1) problems.push(`次の番手がいるのに潜行が続かない（${JSON.stringify(wipe.swap)}）`);
+  if (wipe.swap.ずれ > .01) problems.push(`交代した番手が倒れた場所から始まらない（${wipe.swap.ずれ}マスずれた）`);
   if (!wipe.wipeShown) problems.push('全滅しても死亡画面が出ない（同じ場所で復活を繰り返している）');
   if (wipe.wipeScene !== 'town') problems.push(`全滅から拠点へ戻れない（${wipe.wipeScene}）`);
   if (!wipe.giveShown) problems.push('「ここで力尽きる」で死亡画面が出ない');

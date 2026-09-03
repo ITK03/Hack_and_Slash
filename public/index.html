@@ -1305,18 +1305,37 @@ const CFG={
      さらに、敵HPを1.15倍にしたら属性を合わせる価値が落ちた（実測: 有利帯を
      合わせたビルドで片付ける速さが 無属性の1.50倍 → 1.25倍）。一撃で倒せていた
      相手が倒せなくなり、共鳴の4.5倍が「もう一振り」に吸われるため。
-     攻撃力だけを上げれば属性の価値は 1.50倍のまま動かない（実測で確認）。 */
-  ENEMY_HP_MUL:1.00, ENEMY_DMG_MUL:1.80,
+     攻撃力だけを上げれば属性の価値は 1.50倍のまま動かない（実測で確認）。
+
+     1.80 → 2.00。「もう少し難しく」という指示による。
+     ボスの再生（BOSS_REGEN_AT）は、階層に見合わない装備でボスに挑んだ時だけ
+     効く関門なので、普通に潜っている間の手ごたえは1ミリも変わらなかった
+     （実測: 50%死亡深度・通常床の死亡率とも変更前と完全に同値）。
+     全体を動かすならこのつまみしかない。 */
+  ENEMY_HP_MUL:1.00, ENEMY_DMG_MUL:2.00,
   /* ボスの激昂。一定時間を過ぎると与ダメージが上がり続ける。
      これが無いと、当たらないように立ち回るだけで、どんな装備でも
      時間をかければ必ず削り切れる（実測: 無傷なら深度20の装備でも
      50階ボスを45秒で88%削れた）。長引かせる選択そのものを潰す。 */
   BOSS_ENRAGE_AT:45, BOSS_ENRAGE_RATE:.035,
-  /* 激昂したボスは傷が塞がり始める。攻撃力を上げるだけでは、被弾しない
-     立ち回りができる人には何の歯止めにもならない（実測: 無傷なら深度20の
-     装備でも87秒で倒し切れた）。回復が上回れば、火力が足りない装備では
-     何時間かけても倒せない。避ける腕ではなく装備が関門になる。 */
-  BOSS_ENRAGE_REGEN:.019,
+  /* ボスの傷が塞がる速さ。攻撃力を上げるだけでは、被弾しない立ち回りが
+     できる人には何の歯止めにもならない（実測: 無傷なら深度20の装備でも
+     87秒で倒し切れた）。回復が上回れば、火力が足りない装備では何時間
+     かけても倒せない。避ける腕ではなく装備が関門になる。
+
+     以前はこの回復を激昂（BOSS_ENRAGE_AT=45秒）に結び付けていたが、
+     それでは関門にならなかった。火力が足りない装備でも45秒より前に
+     削り切ってしまうためで、実測でも深度25の装備が31秒で3/3勝っていた。
+     回復は激昂と切り離し、もっと早く（15秒）始まるようにする。
+     秒あたりの回復量は「戦い始めてからの秒数」に比例して増えるので、
+     火力が足りなければどこかで回復が上回り、そこで削りが止まる。
+
+     50階ボスに、被弾を無視して200秒殴り続ける条件で、装備ロール8通りの実測:
+       深度20 → 0/8（最大41%まで削って止まる）
+       深度25 → 0/8（最大95%。あと一歩まで行っても回復に追い越される）
+       深度35 → 7/8（23秒）  深度50 → 8/8（8秒）
+     階層の7割の装備があれば通り、半分では何時間かけても通らない。 */
+  BOSS_REGEN_AT:15, BOSS_REGEN_RATE:.0012,
 };
 
 const TAU=Math.PI*2;
@@ -3049,9 +3068,11 @@ function update(dt){
      時間を味方にできる限り、装備を整える理由も、間合いを詰める理由も無くなる。 */
   if(S.boss&&S.boss.hp>0&&S.boss.agro){
     const b=S.boss;b.rageT+=dt;
-    const m=bossRageMul(b.rageT);
-    b.dmg=b.dmg0*m;
-    if(m>1)b.hp=Math.min(b.max,b.hp+b.max*CFG.BOSS_ENRAGE_REGEN*(m-1)*dt);}
+    b.dmg=b.dmg0*bossRageMul(b.rageT);
+    /* 傷が塞がる速さは、戦い始めてからの秒数に比例して増える。
+       激昂（攻撃力）とは別の時計で動かす。理由は CFG.BOSS_REGEN_AT に書いた。 */
+    const rg=(b.rageT-CFG.BOSS_REGEN_AT)*CFG.BOSS_REGEN_RATE;
+    if(rg>0)b.hp=Math.min(b.max,b.hp+b.max*rg*dt);}
   if(S.shakeT>0){S.shakeT-=dt;if(S.shakeT<=0)S.shake=0;}
   if(S.flash>0)S.flash-=dt;
   if(p.hurtT>0)p.hurtT-=dt;p.lastHit=(p.lastHit||0)+dt;
@@ -4125,8 +4146,11 @@ function clearRunVisuals(){
   S.boss=null;$("bossBar").style.display="none";}
 /* 死亡はフロアの作り直しではない。敵・開封済み宝箱・毒床・ボスHP・戦利品を残し、
    倒れた地点へ戻る。編成交代でも enterFloor を呼ばないことが重要。 */
-function resumeFloorAfterDeath(label){
-  const x=S.p.x,y=S.p.y;
+/* px,py を渡すとそこから再開する。交代のときは呼び出し側が控えた
+   「倒れた場所」を渡す。selectCharacter が先に S.p を作り直してしまうので、
+   ここで S.p を見ても、もう倒れた場所は残っていない。 */
+function resumeFloorAfterDeath(label,px,py){
+  const x=px==null?S.p.x:px,y=py==null?S.p.y:py;
   S.p=newPlayer();S.p.x=x;S.p.y=y;S.p.hp=S.p.max*.55;S.p.invulT=2.2;
   S.paused=false;refreshSkillButtons();renderRail();updBuffs();updHUD();
   save();toast(label+" — 同じ場所から再開","ok");
@@ -4138,8 +4162,11 @@ function leaveEnd(){clearTimeout(deathReturnTimer);clearInterval(deathCountdownT
 function endRun(alive,cause){
   S.paused=true;
   if(!alive&&S.formation&&S.partyIndex+1<S.formation.length){
+    /* 倒れた場所を先に控える。selectCharacter が交代の途中で S.p を作り直すため、
+       控えずにいると次の番手が地図の隅(0,0)＝壁の中から始まってしまう。 */
+    const dx=S.p?S.p.x:0,dy=S.p?S.p.y:0;
     S.partyIndex++;const [k,id]=S.formation[S.partyIndex].split(":");
-    selectCharacter(k,id,()=>resumeFloorAfterDeath(`${currentCharacter().n}に交代`));return;}
+    selectCharacter(k,id,()=>resumeFloorAfterDeath(`${currentCharacter().n}に交代`,dx,dy));return;}
   /* ここから先は「編成に次の番手がいない」＝全滅。フロアを再開してはいけない。
      以前ここでも resumeFloorAfterDeath を呼んでいたため、最後の1人が倒れても
      同じ場所でHP55%の復活を繰り返し、ダンジョンから永久に出られなくなっていた。

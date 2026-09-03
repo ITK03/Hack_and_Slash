@@ -92,9 +92,17 @@ const report = game.run(() => {
      敵HP250〜530に対して通常攻撃が505〜666と、どのビルドも全敵を一撃で倒していた。
      属性倍率は過剰火力に吸われ、有利でも不利でも同じ秒数になる（実測の差は1.10倍）。
      装備とフロアを揃えると本来の差が出る（同1.32倍、深度71では1.57倍）。 */
+  /* ここで測りたいのは「片付く速さ」だけ。倒れるかどうかは到達深度の項で別に測る。
+     被弾を受けたままだと、敵の攻撃力を上げた（ENEMY_DMG_MUL 1.80→2.00）とたんに
+     不利帯でボットが倒れ、秒数そのものが取れなくなった。倒れた回を除くと
+     「たまたま生き残った回」だけの平均になり、比の意味も変わってしまう。
+     被弾を無視して、与ダメージ側だけを見る。 */
   function clearTime(floor, element) {
     prepare(); _s = 0x51f15e; equip(floor, element); S.p = newPlayer(); _s = 0xdecafbad; enterFloor(floor);
-    const result = runCombat(90); if (!result.cleared) return null; return result.elapsed;
+    S.returnInvulnerable = true;
+    const result = runCombat(90);
+    S.returnInvulnerable = false;
+    if (!result.cleared) return null; return result.elapsed;
   }
   function routeTime(floors, element) {
     const times = floors.map(floor => clearTime(floor, element));

@@ -1,9 +1,18 @@
 import assert from 'node:assert/strict';
 import { loadGame } from './game-env.mjs';
 
+/* 「倒れてもフロアはそのまま続く」の検査。
+   以前は編成1人で endRun を呼び、その場で復活することを確かめていたが、
+   それは今は全滅であって、拠点に戻るのが正しい（同じ場所でHP55%の復活を
+   繰り返してダンジョンから出られない不具合だった）。
+   フロアが保たれるのは「次の番手に交代したとき」なので、編成を2人にして
+   1人目が倒れる形に変える。確かめたい中身（同じボス個体・同じ敵HP・
+   同じ座標で続くこと）は変えていない。 */
 const game = await loadGame();
 const result = game.run(() => {
-  S.cls = 'warrior'; S.avatars.warrior = 'gai'; S.formation = ['warrior:gai'];
+  S.unlockedCharacters = allRoster().map(x => x.k + ':' + x.ch.id);
+  S.cls = 'warrior'; S.avatars.warrior = 'gai'; S.formation = ['warrior:gai', 'warrior:leon'];
+  S.partyIndex = 0;
   S.gear = emptyGear(); S.p = newPlayer(); S.scene = 'dungeon'; S.paused = false;
   enterFloor(5);
   const boss = S.boss; boss.hp = boss.max * .37;

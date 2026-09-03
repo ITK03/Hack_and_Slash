@@ -24,9 +24,13 @@ const report = game.run((sampleScale) => {
        厳選97層で50.6%）。ボス床は別項目で測る。
        帯の値は「難易度を根本的に上げる」という指示を受けて引き下げた
        （旧: 標準55〜70 / 厳選95〜115）。緩めて通したのではなく、
-       狙う手ごたえそのものを変えている。 */
+       狙う手ごたえそのものを変えている。
+       標準の下限は「もう少し難しく」という次の指示でさらに下げた
+       （旧38〜55 → 34〜52）。敵の攻撃力を1.80→2.00にした実測では
+       深度38のまま動かなかったが、38は旧下限の真上で、
+       次に少しでも厳しくすると数字が正しくても失敗する位置にある。 */
     { name: '素手', level: 10, rarity: null, quality: null, enhance: 0, range: [5, 14] },
-    { name: '標準', level: 60, rarity: 2, quality: 1, enhance: .5, range: [38, 55] },
+    { name: '標準', level: 60, rarity: 2, quality: 1, enhance: .5, range: [34, 52] },
     { name: '厳選', level: 90, rarity: 4, quality: 1.3, enhance: 1, range: [88, 108] },
   ];
   const slots = ['weapon', 'helm', 'armor', 'glove', 'boot', 'ring', 'amulet'];
@@ -152,7 +156,12 @@ for (const row of report.combat) if (row.depth < row.range[0] || row.depth > row
 /* 素手は数字を出すだけで判定しない。測れる深度が 6〜9 しかなく、
    深度差ペナルティが効き始める GEAR_GAP_FREE(8) をまたぐので、
    「ペナルティ前」と「ペナルティ後」が1つの平均に混ざって意味を持たない。 */
-const plainTarget = { 標準: [.42, .70], 厳選: [.25, .55] };
+/* 標準の帯は「もう少し難しく」という指示で 42〜70% から 50〜80% へ上げた。
+   敵の攻撃力を 1.80→2.00 にした実測が 66.7% → 72.5%。
+   下限を上げているのが本体で、これは「また流せる手ごたえに戻ったら失敗させる」
+   ための線。上限を70→80に動かしたのは、狙った72.5%を収めるため。
+   厳選は 37.0% → 39.6% とほぼ動かず、旧帯の真ん中のままなので触らない。 */
+const plainTarget = { 標準: [.50, .80], 厳選: [.25, .55] };
 for (const row of report.plain) {
   const target = plainTarget[row.name]; if (!target) continue;
   const [lo, hi] = target;
