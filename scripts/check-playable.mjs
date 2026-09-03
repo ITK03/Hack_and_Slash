@@ -632,6 +632,44 @@ await page.goto(base); await page.waitForTimeout(500);
   notes.push(`与ダメージ: 手動${d.manual} / 片手${d.onehand}（${(r1 * 100).toFixed(0)}%）/ オート${d.auto}（${(r2 * 100).toFixed(0)}%）— 切替 手動→${modes.cycle.join('→')}`);
 }
 
+/* 2m2. 全滅と「ここで力尽きる」で必ず拠点へ戻れること。
+   PR#40 の「死んでもフロアを再生成せず同じ場所から再開」が、次の番手がいない
+   全滅の場合にも効いてしまい、最後の1人が倒れてもHP55%で復活を繰り返して
+   ダンジョンから永久に出られなくなっていた。「ここで力尽きる」も
+   partyIndex を末尾へ送って同じ経路を通るため、同様に出られなかった。
+   さらにこの不具合は計測も壊していた（ボットが死なないので死亡率が低く出て、
+   50%死亡深度が 45 相当から 107 まで跳ね上がっていた）。 */
+{
+  const wipe = await page.evaluate(() => {
+    const out = {};
+    const setup = n => {
+      S.unlockedCharacters = allRoster().map(x => x.k + ':' + x.ch.id);
+      S.formation = ['warrior:leon', 'warrior:gai'].slice(0, n);
+      S.cls = 'warrior'; S.avatars.warrior = 'leon'; S.base.lv = 30;
+      beginRun(12); S.paused = false; S.partyIndex = 0;
+    };
+    /* 次の番手がいるうちは、同じフロアで交代して続くこと（PR#40 の狙い） */
+    setup(2); S.p.hp = 0; endRun(false, 'テスト');
+    out.swap = { scene: S.scene, who: currentCharacter().n, idx: S.partyIndex };
+    /* 最後の1人が倒れたら全滅。死亡画面が出て、戻ると拠点へ行けること */
+    S.p.hp = 0; endRun(false, 'テスト');
+    out.wipeShown = document.getElementById('scEnd').classList.contains('on');
+    out.wipeTitle = document.getElementById('endT').textContent;
+    leaveEnd(); out.wipeScene = S.scene;
+    /* 「ここで力尽きる」も同じく拠点へ戻れること */
+    setup(2); S.partyIndex = S.formation.length; endRun(false, '探索を断念した');
+    out.giveShown = document.getElementById('scEnd').classList.contains('on');
+    leaveEnd(); out.giveScene = S.scene;
+    return out;
+  });
+  if (wipe.swap.scene !== 'dungeon' || wipe.swap.idx !== 1) problems.push(`次の番手がいるのに潜行が続かない（${JSON.stringify(wipe.swap)}）`);
+  if (!wipe.wipeShown) problems.push('全滅しても死亡画面が出ない（同じ場所で復活を繰り返している）');
+  if (wipe.wipeScene !== 'town') problems.push(`全滅から拠点へ戻れない（${wipe.wipeScene}）`);
+  if (!wipe.giveShown) problems.push('「ここで力尽きる」で死亡画面が出ない');
+  if (wipe.giveScene !== 'town') problems.push(`「ここで力尽きる」で拠点へ戻れない（${wipe.giveScene}）`);
+  notes.push(`全滅の始末: 交代(${wipe.swap.who}) → 全滅で「${wipe.wipeTitle}」 → 拠点 / 力尽きる → 拠点`);
+}
+
 /* 2p3b. 装備の深度差。階層に見合わない装備では通らないこと。
    実測で「Lv60・深度20の拾い物・3段目の道具」が50階のボスに92%勝てていた。
    レベルと消耗品だけで勝ててしまい、装備で潜るゲームになっていなかった。 */

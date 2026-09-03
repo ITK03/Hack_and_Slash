@@ -4140,7 +4140,10 @@ function endRun(alive,cause){
   if(!alive&&S.formation&&S.partyIndex+1<S.formation.length){
     S.partyIndex++;const [k,id]=S.formation[S.partyIndex].split(":");
     selectCharacter(k,id,()=>resumeFloorAfterDeath(`${currentCharacter().n}に交代`));return;}
-  if(!alive){resumeFloorAfterDeath("力尽きた");return;}
+  /* ここから先は「編成に次の番手がいない」＝全滅。フロアを再開してはいけない。
+     以前ここでも resumeFloorAfterDeath を呼んでいたため、最後の1人が倒れても
+     同じ場所でHP55%の復活を繰り返し、ダンジョンから永久に出られなくなっていた。
+     「ここで力尽きる」も partyIndex を末尾へ送ってここへ来るので、同じく出られなかった。 */
   /* 潜行専用の表示と場の状態をここで必ず片付ける。updHUD は潜行中しか回らないので、
      戦闘HUDを消す責任を updHUD に持たせると、拠点へ戻っても出たままになる。 */
   clearRunVisuals();
