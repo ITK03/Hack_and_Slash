@@ -868,6 +868,14 @@ h3::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,var(--li
 .gearHero{border-color:#45536a;border-radius:var(--r-sm);background:radial-gradient(circle at 35% 25%,#293548,#101720)}
 .gearCurrent,.gearDelta,.compareItem,.gearCandidate,.qd,.bagRow,.matCell,.matLine{border-radius:var(--r-sm)!important;
   background:#111821;border-color:#303b4c}
+/* 伝説(.c4)の虹色は「背景を文字の形に切り抜く」小技で、文字自体は color:transparent。
+   自前の背景を持つ枠にそのまま付けると、あとから来る background 指定で
+   グラデーションも background-clip も上書きされ、透明な文字だけが残る。
+   実測: 潜行中の戦利品一覧で伝説の行だけ computed color が rgba(0,0,0,0)、
+   背景画像 none、clip border-box。つまり行が空白のまま出ていた。
+   装備候補の右下の深度も同じ理由で消えていた。
+   自前の背景を持つ枠では虹をやめ、単色（--c4）に戻す。 */
+.bagRow.c4,.gearCandidate.c4,.cell.c4{color:var(--c4)}
 .gearDelta .up,.compareStats .after.up,.quickDelta .up{color:#72dfb8}
 .gearDelta .dn,.compareStats .after.dn,.quickDelta .dn{color:#ff7b83}
 
@@ -2782,7 +2790,7 @@ function enterFloor(fl){S.tactical.trap=null;S.tactical.reveal=false;
      「火/水/木」の1文字を足すと深度・危険度・装備適合と並んで列からはみ出し、
      省略記号で属性ごと消えてしまう（実際に消えた）。 */
   fe.innerHTML=elIc(shown,13)+floorMatchTag(shown);
-  toast("深度 "+fl+" — "+dangerOf(fl).n+" / "+elementName(shown)+"属性優勢"+(isBoss?"ボス":""));}
+  toast("深度 "+fl+" — "+elementName(shown)+"属性優勢"+(isBoss?"ボス":""));}
 function floorMatchTag(floorEl){
   const r=resonance();if(!r.stage)return"";
   const m=elementMultiplier(r.element,floorEl);
@@ -2790,13 +2798,10 @@ function floorMatchTag(floorEl){
   if(m<1)return` <b class="elMatch bad">不利</b>`;
   return"";}
 
-function dangerOf(fl){
-  const gap=fl-(S.base.lv*.55+1);
-  if(gap<-3)return{i:0,n:"余裕",c:"#6bbf5a"};
-  if(gap<0) return{i:1,n:"適正",c:"#c8c04a"};
-  if(gap<2) return{i:2,n:"危険",c:"#e08830"};
-  if(gap<4) return{i:3,n:"高危険",c:"#e0503a"};
-  return      {i:4,n:"致命的",c:"#d040c0"};}
+/* 危険度（余裕/適正/危険/高危険/致命的）は削除した。
+   レベルと階層の差だけで出す古い指標で、装備の深度差が難易度の本体になった今は
+   実態と合わない。装備の追いつき（gearFitText）が与被ダメージそのものを出しており、
+   二つ並ぶとどちらを見ればいいのか分からない。 */
 const enemyNear=(x,y,d)=>S.enemies.some(e=>d2(e.x,e.y,x,y)<d*d);
 
 /* ---------- 戦闘 ---------- */
@@ -3637,7 +3642,7 @@ function updAction(){
     if(S.training){a.className="no";a.textContent="練習部屋では階段を使えない";a.dataset.a="";}
     else if(S.boss){a.className="no";a.textContent="ボスを倒せ";a.dataset.a="";}
     else if(!clear){a.className="no";a.textContent="周囲に敵がいる（10m以内）";a.dataset.a="";}
-    else{a.className="down";a.textContent="深度 "+(S.floor+1)+" へ — "+dangerOf(S.floor+1).n;a.dataset.a="down";}}
+    else{a.className="down";a.textContent="深度 "+(S.floor+1)+" へ";a.dataset.a="down";}}
   else if(onP){a.style.display="block";
     if(!clear){a.className="no";a.textContent="周囲に敵がいる（10m以内）";a.dataset.a="";}
     else{a.className="up";a.textContent="拠点へ帰還 ("+S.bag.length+"個)";a.dataset.a="up";}}
@@ -3645,8 +3650,11 @@ function updAction(){
 function doAction(){
   const a=$("act").dataset.a,p=S.p;
   if(!a)return;
+  /* 危険度（余裕/適正/危険/高危険/致命的）はレベルと階層の差だけで出していた古い指標。
+     装備の追いつき（gearFitText）のほうが実際の与被ダメージそのもので、
+     二つ並ぶと どちらを見ればいいのか分からない。危険度の表示はやめる。 */
   if(a==="down"){ask("深度 "+(S.floor+1)+" へ進む",
-    "危険度: "+dangerOf(S.floor+1).n,()=>enterFloor(S.floor+1));}
+    gearFitText(S.floor+1).line,()=>enterFloor(S.floor+1));}
   else if(a==="up"){ask("拠点へ帰還する",
     S.bag.length+"個を持ち帰る（ここで確定します）",()=>{if(S.training){S.training=false;S.tutorial.phase="tour_prep";}S.returnInvulnerable=false;endRun(true);});}
   else if(a==="shrine"){
@@ -4196,10 +4204,9 @@ function updHUD(){
   const b=S.base;
   $("xpF").style.width=(b.xp/xpNeed(b.lv)*100)+"%";
   $("lvT").textContent="Lv"+b.lv;
-  const dg=dangerOf(S.floor);
   /* 潜っている間も装備の追いつきは階を下るごとに落ちる。深度の隣に出す。 */
   const fit=gearFitText(S.floor);
-  $("flT").innerHTML=S.floor+' <span style="color:'+dg.c+';font-size:11px">'+dg.n+'</span>'
+  $("flT").innerHTML=S.floor
     +(fit.reach<1?' <span style="color:'+fit.c+';font-size:11px">装備'+fit.n+'</span>':"");
   // 潜行中は所持金の総額より「今回いくら拾ったか」の方が意味がある。
   $("goldT").textContent="+"+S.runGold+" G";
@@ -4252,6 +4259,11 @@ function updBuffs(){const p=S.p,c=$("buffs");c.innerHTML="";
   for(const k in p.itemBuffs){const b=p.itemBuffs[k],d=document.createElement("div");d.className="buff";
     d.style.borderLeftColor=(b.def&&b.def.col)||"var(--gold)";
     d.textContent=((b.def&&b.def.n)||k)+" "+Math.ceil(b.t)+"s";c.appendChild(d);}
+  /* 継続回復は p.itemBuffs ではなく p.hot / p.hotT に直接入るので、上のループに
+     出てこない。効いているのか、あと何秒残っているのかが画面のどこにも無かった。 */
+  if(p&&p.hotT>0){const d=document.createElement("div");d.className="buff";
+    d.style.borderLeftColor="#6ae0a0";
+    d.textContent=`継続回復 +${Math.round(p.hot)} 残り${Math.ceil(p.hotT)}s`;c.appendChild(d);}
   /* 自己強化の技は効果時間が見えないと切れ目が分からず、置き直す判断ができない */
   if(p&&p.buffT>0){const d=document.createElement("div");d.className="buff";
     d.style.borderLeftColor="#65db78";
@@ -6071,7 +6083,7 @@ function confirmDive(fl,exact){
   fl=exact&&unrestrictedFloor()?Math.max(1,Math.floor(+fl||1)):clamp(legalStartFloor(fl),1,maxStartFloor());S.diveFloor=fl;
   const fit=gearFitText(fl);
   ask("ダンジョンに潜る",
-    "深度 "+fl+" から開始します。\n危険度: "+dangerOf(fl).n
+    "深度 "+fl+" から開始します。"
     +"\n"+fit.line+(fit.reach<1?"\n深度 "+fl+" 相当の装備にするほど通りやすくなります。":"")
     +"\n未鑑定品は帰還するまで確定しません。",
     ()=>beginRun(fl));}
@@ -6098,7 +6110,7 @@ function startDive(){
   tapEl(older,()=>{if(S.startPage>=maxPage)return;S.startPage++;startDive();});nav.appendChild(older);c.appendChild(nav);
   for(const fl of page.reverse()){
     const d=document.createElement("div");d.className="btn"+(fl===maxStart?" pri":"");
-    d.textContent="深度 "+fl+" — "+dangerOf(fl).n;
+    d.textContent="深度 "+fl;
     tapEl(d,()=>{$("itPop").classList.remove("on");confirmDive(fl);});c.appendChild(d);}
   const x=document.createElement("div");x.className="btn popClose";x.textContent="やめる";
   tapEl(x,()=>$("itPop").classList.remove("on"));c.appendChild(x);$("itPop").classList.add("on");}

@@ -668,6 +668,68 @@ await page.goto(base); await page.waitForTimeout(500);
   notes.push(`  潜行中の深度表示 属性アイコン${el.floorHudIcon}個＋「${el.floorHud.trim()}」（火でそろえて木優勢の31階）`);
 }
 
+/* 2p6. 潜行中に見えなければならないもの。
+   伝説を拾っても戦利品一覧が空白のままだった（.c4 は虹色を出すために
+   color:transparent にしており、自前の背景を持つ行に付くと
+   グラデーションだけ上書きされて透明な文字が残る）。
+   継続回復も、効いているのか残り何秒なのかが画面のどこにも出ていなかった。 */
+{
+  const run = await page.evaluate(() => {
+    const out = {};
+    for (const p of document.querySelectorAll('.pop')) p.classList.remove('on');
+    S.tutorial = { phase: 'done', gearIndex: 0 }; S.deepest = 60;
+    beginRun(40); S.paused = false;
+    S.bag.length = 0; S.drops.length = 0;
+    /* 5等級ぶんを実際にドロップさせ、実際に拾わせる */
+    for (let rar = 0; rar < 5; rar++) {
+      let it, n = 0; do it = makeItem(40, 0, 0, rar); while (++n < 900 && it.rar !== rar);
+      S.drops.push({ it, x: S.p.x, y: S.p.y, t: 9, vx: 0, vy: 0 });
+    }
+    for (let i = 0; i < 40; i++) update(.05);
+    out.picked = S.bag.map(x => x.rar).sort().join(',');
+    S.ptab = 'drops'; openPause();
+    const alpha = c => { const m = /rgba?\(([^)]+)\)/.exec(c); if (!m) return 1; const p = m[1].split(','); return p.length > 3 ? parseFloat(p[3]) : 1; };
+    out.rows = [...document.querySelectorAll('#scPause .bagRow')].map(el => {
+      const sp = el.querySelector('span');
+      return { cls: el.className.replace('bagRow ', ''), text: (el.textContent || '').trim(),
+        a: alpha(getComputedStyle(el).color), sa: sp ? alpha(getComputedStyle(sp).color) : 1 };
+    });
+    /* 装備候補の右下の深度も同じ理由で消えていた */
+    S.stash = []; for (let rar = 0; rar < 5; rar++) { let it, n = 0; do it = makeItem(40, 0, 0, rar); while (++n < 900 && (it.rar !== rar || it.slot !== 'helm')); if (it.rar === rar && it.slot === 'helm') S.stash.push(it); }
+    document.getElementById('scPause').classList.remove('on'); S.paused = false; S.scene = 'town'; S.tab = 'gear'; S.gearSlot = 'helm'; S.gearCompareChoice = null; openTown();
+    out.cands = [...document.querySelectorAll('#scTown .gearCandidate')].map(el => {
+      const sm = el.querySelector('small');
+      return { cls: el.className.replace('gearCandidate ', ''), a: sm ? alpha(getComputedStyle(sm).color) : 1 };
+    });
+    /* 継続回復は残り時間が出ること */
+    S.scene = 'dungeon'; beginRun(40); S.paused = false;
+    const hotKey = CONSUMABLE_KEYS.find(k => CONSUMABLES[k].hot);
+    out.hotKey = hotKey || null;
+    if (hotKey) {
+      S.p.hp = S.p.max * .3; S.consumables[hotKey] = 5; S.loadout = [hotKey, null, null, null]; S.runItems = [5, 0, 0, 0];
+      out.used = useItem(0); update(.05); updBuffs();
+      out.buffs = [...document.querySelectorAll('#buffs .buff')].map(e => e.textContent.trim());
+      out.hotT = +S.p.hotT.toFixed(2);
+    }
+    /* 危険度の表示が残っていないこと */
+    updHUD(); out.depthLine = (document.querySelector('#meta>div:first-child') || {}).textContent || '';
+    out.hasDanger = typeof dangerOf !== 'undefined';
+    endRun(true); S.scene = 'town';
+    return out;
+  });
+  if (run.picked !== '0,1,2,3,4') problems.push(`拾った装備が5等級そろわない（${run.picked}）`);
+  const invisible = run.rows.filter(r => r.a === 0 || r.sa === 0 || !r.text);
+  if (invisible.length) problems.push(`潜行中の戦利品一覧で文字が見えない行がある: ${invisible.map(r => r.cls).join(' / ')}`);
+  const candInvisible = run.cands.filter(r => r.a === 0);
+  if (candInvisible.length) problems.push(`装備候補の深度が見えない: ${candInvisible.map(r => r.cls).join(' / ')}`);
+  if (!run.hotKey) problems.push('継続回復の道具が存在しない');
+  else if (!run.buffs.some(t => /継続回復/.test(t) && /\d+s/.test(t))) problems.push(`継続回復を使っても残り時間が出ない（${JSON.stringify(run.buffs)}）`);
+  if (/余裕|適正|危険|高危険|致命的/.test(run.depthLine)) problems.push(`潜行中の深度表示に危険度が残っている（${run.depthLine.trim()}）`);
+  if (run.hasDanger) problems.push('dangerOf が残っている（危険度の表示は消した）');
+  notes.push(`潜行中の戦利品: ${run.rows.map(r => r.cls + (r.a ? '' : '(透明)')).join(' ')} / 装備候補 ${run.cands.length}件`);
+  notes.push(`  継続回復: ${JSON.stringify(run.buffs)} 残り${run.hotT}s / 深度表示「${run.depthLine.trim()}」`);
+}
+
 /* 2p5. 拠点まわりの作業性。倉庫のタブ固定・開始階層の刻み・ミッションの名前・
    はじめての支援が「押した瞬間に中盤の強さ」にならないこと。 */
 {
