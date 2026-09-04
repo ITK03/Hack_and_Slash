@@ -635,10 +635,28 @@ await page.goto(base); await page.waitForTimeout(500);
     /* 塗りは #rrggbb+透明度の8桁で書いており、計算後は rgba(r, g, b, a) になる。
        透明度は問わないので rgba の頭だけで照合する。 */
     const rgbaHead = hex => { const n = parseInt(hex.slice(1), 16); return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`; };
+    const rgbHead = hex => { const n = parseInt(hex.slice(1), 16); return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`; };
     out.cellTinted = cells.filter(c => c.dataset.el
       && getComputedStyle(c).backgroundImage.includes(rgbaHead(ELEMENTS[c.dataset.el].col))).length;
     out.cellIconsLeft = document.querySelectorAll('#scTown .cell .elIc').length;
     out.cellBorders = cells.filter(c => c.style.borderColor).length;
+    /* レア度は枠の豪華さでも出す。上の等級ほど線が太く、角飾りと発光が付くこと。
+       色だけで5段を見分けるのは小さな格子では無理があるので、形が変わることを見る。 */
+    S.stash = []; for (let r = 0; r < 5; r++) { let it, n = 0; do it = makeItem(40, 0, 0, r); while (++n < 900 && it.rar !== r); it.element = 'fire'; S.stash.push(it); }
+    S.inv.sort = 'rar'; openTown();
+    /* 装備中の品も一覧に出るので、レア度ごとに1件だけ拾う。 */
+    const seen = new Map();
+    for (const c of document.querySelectorAll('#scTown .cell')) {
+      const rar = [...c.classList].find(x => /^rr\d$/.test(x));
+      if (!rar || seen.has(rar)) continue;
+      const cs = getComputedStyle(c), before = getComputedStyle(c, '::before');
+      seen.set(rar, { rar, w: Math.round(parseFloat(cs.borderTopWidth)),
+        /* どの枠にも元から落ち影が付いているので、影があるかでは段が出ない。
+           レア度の色そのもので光っているかを見る。 */
+        glow: (cs.boxShadow || '').includes(rgbHead(getComputedStyle(c).getPropertyValue('--rarGlow').trim())),
+        corner: before.content !== 'none' && before.backgroundImage !== 'none' });
+    }
+    out.frames = [...seen.values()].sort((a, b) => a.rar.localeCompare(b.rar));
     /* 数字が枠からはみ出さないこと（深度999999の検証装備で隣の枠に重なっていた） */
     S.stash.forEach(x => { x.ilvl = 999999; }); openTown();
     out.numOverflow = [...document.querySelectorAll('#scTown .cell .lvl')]
@@ -675,6 +693,15 @@ await page.goto(base); await page.waitForTimeout(500);
   if (el.cellBorders !== el.cells) problems.push(`倉庫の格子${el.cells}件のうちレア度の枠色が入っているのは${el.cellBorders}件`);
   if (el.cellIconsLeft) problems.push(`倉庫の格子に属性アイコンが${el.cellIconsLeft}個残っている（塗りで示すので置かない）`);
   if (el.numOverflow) problems.push(`倉庫の格子${el.numOverflow}件で深度の数字が枠からはみ出している`);
+  const F = el.frames || [];
+  if (F.length !== 5) problems.push(`レア度5段ぶんの枠を作れなかった（${F.length}件）`);
+  else {
+    const w = F.map(f => f.w);
+    if (!(w[0] <= w[2] && w[2] < w[4] || w[0] < w[4])) problems.push(`レア度が上でも枠が太くならない（${w.join('/')}px）`);
+    if (F[0].corner || F[1].corner) problems.push('低レア度にも角飾りが付いている（豪華さの段が出ない）');
+    if (!F[3].corner || !F[4].corner) problems.push(`秀逸・伝説に角飾りが付いていない（${F[3].corner}/${F[4].corner}）`);
+    if (!F[4].glow) problems.push('伝説の枠が発光していない');
+  }
   if (!el.detailIcon) problems.push('装備の詳細に属性が出ていない');
   if (!el.helpOpen || el.helpIcons < 6) problems.push(`属性の説明が開かない、または属性が出ていない（${el.helpIcons}個）`);
   if (!el.helpShowsReal) problems.push(`属性の説明の倍率が本体の resonance() と一致しない（${el.helpWant} が出ていない。数字を写している）`);
@@ -682,7 +709,8 @@ await page.goto(base); await page.waitForTimeout(500);
   if (!el.floorHudIcon) problems.push('潜行中の深度表示に階層の属性アイコンが無い');
   if (!el.floorHud.includes('有利')) problems.push(`火でそろえて木優勢の31階へ入ったのに「有利」が出ない（${el.floorHud}）`);
   if (el.metaClipped) problems.push('潜行中の深度の行が幅に収まらず省略記号で切れている');
-  notes.push(`属性: 6種とも別の輪郭 / 装備枠${el.slotIcons} 共鳴の行${el.resoIcons} 詳細${el.detailIcon} 説明${el.helpIcons} / 倉庫は塗り${el.cellTinted}・枠${el.cellBorders}（${el.cells}件）`);
+  notes.push(`属性: 6種とも別の輪郭 / 装備枠${el.slotIcons} 共鳴の行${el.resoIcons} 詳細${el.detailIcon} 説明${el.helpIcons} / 倉庫は背景${el.cellTinted}・枠${el.cellBorders}（${el.cells}件）`);
+  notes.push(`  レア度の枠: ${(el.frames || []).map(f => `${f.rar} ${f.w}px${f.corner ? '+角' : ''}${f.glow ? '+光' : ''}`).join(' / ')}`);
   notes.push(`  潜行中の深度表示 属性アイコン${el.floorHudIcon}個＋「${el.floorHud.trim()}」（火でそろえて木優勢の31階）`);
 }
 
