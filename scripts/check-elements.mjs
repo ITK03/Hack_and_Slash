@@ -13,7 +13,10 @@ const report = game.run(() => {
     S.formation = ['warrior:gai']; S.settings.controlMode = 'manual'; S.base = { ...base };
   }
 
-  function equip(depth, element, resonanceCount = 5) {
+  /* 既定は7部位そろえた「属性に振り切ったビルド」。以前は5個だったが、
+     共鳴の区切りが 3/5/7 から 4/6/7 に変わり、5個は「属性は乗るが上乗せ0」の
+     中途半端な段になった。属性の価値を測るなら振り切った側で測る。 */
+  function equip(depth, element, resonanceCount = 7) {
     S.gear = Object.fromEntries(slots.map(slot => [slot, null]));
     for (let index = 0; index < slots.length; index++) {
       const slot = slots[index]; let item;
@@ -77,7 +80,7 @@ const report = game.run(() => {
   const matchup = [];
   for (const attacker of [...elements, 'neutral']) for (const defender of [...elements, 'neutral']) matchup.push({ attacker, defender, multiplier: elementMultiplier(attacker, defender) });
   const resonanceRows = elements.map(element => { prepare(); equip(50, element); return { element, ...resonance() }; });
-  const resonanceStages = elements.flatMap(element => [3, 5, 7].map(count => {
+  const resonanceStages = elements.flatMap(element => [4, 6, 7].map(count => {
     prepare(); equip(50, element, count); const current = resonance();
     const favorableDefender = element === 'fire' ? 'wood' : element === 'water' ? 'fire' : element === 'wood' ? 'water' : element === 'light' ? 'dark' : 'light';
     return { element, count, stage: current.stage, dealt: resonanceDamageMultiplier(current, favorableDefender, 50), takenAdvantageous: resonanceIncomingMultiplier(current, favorableDefender), takenDisadvantageous: current.danger };
@@ -209,11 +212,13 @@ for (const row of report.distribution) for (const element of ['light', 'dark']) 
 for (const row of report.floorRatios) if (row.ratio < .60 || row.ratio > .70) throw new Error(`深度${row.floor}: 優勢比率 ${(row.ratio * 100).toFixed(1)}% は60〜70%の範囲外`);
 const expected = { fire: { wood: 1.5, water: .5 }, water: { fire: 1.5, wood: .5 }, wood: { water: 1.5, fire: .5 }, light: { dark: 1.3, fire: 1 }, dark: { light: 1.3, fire: 1 } };
 for (const [attacker, defenders] of Object.entries(expected)) for (const [defender, multiplier] of Object.entries(defenders)) if (report.matchup.find(row => row.attacker === attacker && row.defender === defender).multiplier !== multiplier) throw new Error(`${attacker}→${defender} の倍率が${multiplier}ではない`);
-for (const row of report.resonanceRows) if (row.stage !== 2 || row.count !== 5) throw new Error(`${row.element}の5個共鳴が中共鳴にならない`);
+for (const row of report.resonanceRows) if (row.stage !== 3 || row.count !== 7) throw new Error(`${row.element}の7個共鳴が強共鳴にならない`);
 for (const element of elementKeys) {
   const stages = report.resonanceStages.filter(row => row.element === element);
-  if (stages.some((row, index) => row.stage !== index + 1)) throw new Error(`${element}の3/5/7個共鳴段階が不正`);
-  if (!(stages[0].dealt < stages[1].dealt && stages[1].dealt < stages[2].dealt)) throw new Error(`${element}の有利与ダメージ倍率が3個 < 5個 < 7個ではない（${stages.map(row => row.dealt).join(' / ')}）`);
+  if (stages.some((row, index) => row.stage !== index + 1)) throw new Error(`${element}の4/6/7個共鳴段階が不正`);
+  /* 4個は「属性が乗るだけ（共鳴の上乗せ0）」の段なので、4個 < 6個 の関係だけを見る。
+     4個と6個が同値になっていたら上乗せが効いていない。 */
+  if (!(stages[0].dealt < stages[1].dealt && stages[1].dealt < stages[2].dealt)) throw new Error(`${element}の有利与ダメージ倍率が4個 < 6個 < 7個ではない（${stages.map(row => row.dealt).join(' / ')}）`);
   /* 被ダメージ側も段階が進むほど一貫させる。片側だけ調整して段差が逆転するのを防ぐ。
      火水木は「勝てる相手からは軽く受ける」ので段階が進むほど下がる。
      光闇は互いに与ダメージも被ダメージも上がる高リスク高リターンなので、逆に上がる。
@@ -221,29 +226,29 @@ for (const element of elementKeys) {
   const taken = stages.map(row => row.takenAdvantageous);
   const resists = taken[1] < 1;
   if (resists) {
-    if (!(taken[0] > taken[1] && taken[1] > taken[2])) throw new Error(`${element}の有利被ダメージ倍率が3個 > 5個 > 7個ではない（${taken.join(' / ')}）`);
+    if (!(taken[0] > taken[1] && taken[1] > taken[2])) throw new Error(`${element}の有利被ダメージ倍率が4個 > 6個 > 7個ではない（${taken.join(' / ')}）`);
   } else {
-    if (!(taken[0] < taken[1] && taken[1] < taken[2])) throw new Error(`${element}の対面被ダメージ倍率が3個 < 5個 < 7個ではない（${taken.join(' / ')}）`);
+    if (!(taken[0] < taken[1] && taken[1] < taken[2])) throw new Error(`${element}の対面被ダメージ倍率が4個 < 6個 < 7個ではない（${taken.join(' / ')}）`);
   }
   for (let index = 1; index < taken.length; index++) {
     const ratio = Math.max(taken[index - 1] / taken[index], taken[index] / taken[index - 1]);
-    if (ratio > 1.5) throw new Error(`${element}の被ダメージ倍率が${index * 2 + 1}個→${index * 2 + 3}個で${ratio.toFixed(1)}倍も跳ねる（${taken.join(' / ')}）`);
+    if (ratio > 1.5) throw new Error(`${element}の被ダメージ倍率が${[4, 6, 7][index - 1]}個→${[4, 6, 7][index]}個で${ratio.toFixed(1)}倍も跳ねる（${taken.join(' / ')}）`);
   }
 }
 // 火水木は必ず「軽く受ける相手」を持ち、光闇は互いに不利を負う（どの属性にも弱点がある）。
 for (const element of ['fire', 'water', 'wood']) {
-  const middle = report.resonanceStages.find(row => row.element === element && row.count === 5);
+  const middle = report.resonanceStages.find(row => row.element === element && row.count === 7);
   if (!(middle.takenAdvantageous < 1)) throw new Error(`${element}は有利相手からの被ダメージが軽減されていない（${middle.takenAdvantageous}）`);
 }
 for (const element of ['light', 'dark']) {
-  const middle = report.resonanceStages.find(row => row.element === element && row.count === 5);
+  const middle = report.resonanceStages.find(row => row.element === element && row.count === 7);
   if (!(middle.takenAdvantageous > 1)) throw new Error(`${element}は対の属性から不利を受けていない（${middle.takenAdvantageous}）。弱点の無い属性を作らない`);
 }
 // 被ダメージ補正は有利側(guard)と不利側(danger)が対称の幅に収まっていること。
 // 数値を1点で固定すると調整のたびにテストを書き換える羽目になるので、幅と段差で縛る。
 for (const row of report.incoming) {
-  if (!(row.advantageous >= .6 && row.advantageous <= .8)) throw new Error(`${row.element}の5個共鳴 有利被ダメージ倍率 ${row.advantageous} は0.60〜0.80の範囲外`);
-  if (!(row.disadvantageous >= 1.2 && row.disadvantageous <= 1.4)) throw new Error(`${row.element}の5個共鳴 不利被ダメージ倍率 ${row.disadvantageous} は1.20〜1.40の範囲外`);
+  if (!(row.advantageous >= .6 && row.advantageous <= .8)) throw new Error(`${row.element}の7個共鳴 有利被ダメージ倍率 ${row.advantageous} は0.60〜0.80の範囲外`);
+  if (!(row.disadvantageous >= 1.2 && row.disadvantageous <= 1.4)) throw new Error(`${row.element}の7個共鳴 不利被ダメージ倍率 ${row.disadvantageous} は1.20〜1.40の範囲外`);
   const advantageGain = 1 - row.advantageous, dangerLoss = row.disadvantageous - 1;
   if (advantageGain > dangerLoss * 1.5) throw new Error(`${row.element}: 有利時の軽減 ${(advantageGain * 100).toFixed(0)}% が不利時の増加 ${(dangerLoss * 100).toFixed(0)}% に対して大きすぎる`);
 }
@@ -314,11 +319,11 @@ if (Object.values(report.damage).some(value => value == null)) throw new Error('
    主ステータスが効かない組み合わせ（魔力の杖を持った戦士など、この計測の乱数で
    実際に引いた）では両者が同値になる。上乗せ1.15そのものは、同じ装備の属性だけを
    変えて主ステータスを比べる判定（上の neutralBonus）で直接見ている。 */
-if (report.damage.normalNeutral < report.damage.normalResonance) throw new Error(`普通の敵への与ダメージ 無属性${report.damage.normalNeutral.toFixed(1)} が属性5個共鳴${report.damage.normalResonance.toFixed(1)}を下回る`);
-/* 1.8 → 1.4。有利倍率 4.5 → 1.6（5個共鳴）にしたぶん、4.12倍 → 1.60倍 になった。
+if (report.damage.normalNeutral < report.damage.normalResonance) throw new Error(`普通の敵への与ダメージ 無属性${report.damage.normalNeutral.toFixed(1)} が属性7個共鳴${report.damage.normalResonance.toFixed(1)}を下回る`);
+/* 1.8 → 1.4。有利倍率を「相性+50% × 共鳴+30%」の1.95までに抑えたため。
    「7個で6倍は大きすぎる、2倍でも悩む」という指示に伴う変更。 */
 const WEAK_MIN_RATIO = 1.4;
-if (report.damage.weakResonance < report.damage.weakNeutral * WEAK_MIN_RATIO) throw new Error(`弱点の敵への属性5個共鳴ダメージ${report.damage.weakResonance.toFixed(1)}は無属性${report.damage.weakNeutral.toFixed(1)}の${WEAK_MIN_RATIO}倍未満`);
+if (report.damage.weakResonance < report.damage.weakNeutral * WEAK_MIN_RATIO) throw new Error(`弱点の敵への属性7個共鳴ダメージ${report.damage.weakResonance.toFixed(1)}は無属性${report.damage.weakNeutral.toFixed(1)}の${WEAK_MIN_RATIO}倍未満`);
 if (report.adverseProgress.progressed === 0) throw new Error(`深度${report.adverseProgress.floor}の不利帯で属性ビルドが24/24回、一体も倒せず進行不能`);
 if (legacy !== 'neutral') throw new Error('既存セーブ装備が無属性へ移行されない');
 console.log('既存セーブ移行', legacy);

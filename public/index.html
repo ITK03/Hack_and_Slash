@@ -1698,6 +1698,10 @@ const elementName=k=>(ELEMENTS[k]||ELEMENTS.neutral).n;
    elIc = アイコンだけ。elTag = アイコン＋名前で、初めて見る画面用。 */
 const elIc=(k,sz)=>{const e=ELEMENTS[k]||ELEMENTS.neutral;
   return `<span class="elIc" style="color:${e.col}" role="img" aria-label="${e.n}属性">${icon("el_"+(ELEMENTS[k]?k:"neutral"),sz||14)}</span>`;};
+/* 「1.0を基準にした倍率」は +N% / -N% で出す。×1.30 より +30% のほうが
+   どれだけ増えるのかが直に読める。基準そのものが倍率のもの（技の◯倍、
+   結晶2倍など「通常攻撃の何回ぶんか」を表す数）はここでは扱わない。 */
+const pctOf=m=>`${m>=1?"+":"−"}${Math.round(Math.abs(m-1)*100)}%`;
 const elTag=(k,sz)=>{const e=ELEMENTS[k]||ELEMENTS.neutral;
   return `<span class="elTag" style="color:${e.col}">${elIc(k,sz||13)}<b>${e.n}</b></span>`;};
 // 5層帯ごとに優勢属性を固定し、8帯で火水木を2回、光闇を1回ずつ巡回する。
@@ -1706,11 +1710,19 @@ const bossElement=fl=>ELEMENT_KEYS[(Math.floor(Math.max(5,fl)/5)-1)%5];
 /* 属性の効きは「相性」と「共鳴」の2階建てにする。
    相性(AFFINITY_ADV)＝その階層に対して正しい属性を選んだことへの倍率。これが主役。
    共鳴(RESONANCE_BONUS)＝同じ属性を何個そろえたかへの上乗せ。おまけで、上を目指す人向け。
-   合計は 3個1.575 / 5個1.725 / 7個1.95（光闇 1.62/1.80/2.10）。 */
+
+   区切りは 4個 / 6個 / 7個。
+     4個 … ここで属性攻撃になる。相性ぶん(+50%)が丸ごと入る。
+     6個 … 共鳴 +10%
+     7個 … 共鳴 +30%
+   旧区切りは 3/5/7 だった。3個は7部位のうち半分にも満たず、
+   ドロップを並べていれば勝手に成立してしまう（6種から引くので偶然3個そろう）。
+   選んだと言える個数まで上げる。5個も、4個と6個の間で意味の無い段だったので畳んだ。
+   合計は 4個1.50 / 6個1.65 / 7個1.95（光闇 1.50/1.725/2.10）。 */
 const AFFINITY_ADV=1.5;
-const RESONANCE_BONUS=[1,1.05,1.15,1.30];
-const RESONANCE_BONUS_RARE=[1,1.08,1.20,1.40];   // 光闇は出現帯が少ないぶん上乗せを厚く
-function resonance(gear=S.gear){const counts={};for(const it of Object.values(gear||{}))if(it&&it.element&&it.element!=="neutral")counts[it.element]=(counts[it.element]||0)+1;let element="neutral",count=0;for(const k of ELEMENT_KEYS)if((counts[k]||0)>count){element=k;count=counts[k];}const stage=count>=7?3:count>=5?2:count>=3?1:0,rare=element==="light"||element==="dark";
+const RESONANCE_BONUS=[1,1,1.10,1.30];
+const RESONANCE_BONUS_RARE=[1,1,1.15,1.40];   // 光闇は出現帯が少ないぶん上乗せを厚く
+function resonance(gear=S.gear){const counts={};for(const it of Object.values(gear||{}))if(it&&it.element&&it.element!=="neutral")counts[it.element]=(counts[it.element]||0)+1;let element="neutral",count=0;for(const k of ELEMENT_KEYS)if((counts[k]||0)>count){element=k;count=counts[k];}const stage=count>=7?3:count>=6?2:count>=4?1:0,rare=element==="light"||element==="dark";
   const affinity=stage?AFFINITY_ADV:1,bonus=(rare?RESONANCE_BONUS_RARE:RESONANCE_BONUS)[stage];
   return{element:stage?element:"neutral",count,stage,affinity,bonus,
   /* 有利な相手への与ダメージ倍率＝「相性」×「共鳴のおまけ」。
@@ -1736,7 +1748,20 @@ function elementMultiplier(attacker,defender){if(!attacker||!defender||attacker=
    有利側の上限を6.0→2.0に下げたので、0.5のままだと「合わせても+0層、外すと-15層」
    という、属性に触るだけ損な形になった（実測）。下振れも同じだけ浅くする。 */
 const disadvantageMultiplier=fl=>.8+.08*clamp((Math.max(100,fl)-100)/100,0,1);
-function resonanceDamageMultiplier(r,defender,fl){if(r.element==="neutral")return 1;const affinity=elementMultiplier(r.element,defender);return affinity>1?r.advantage:affinity<1?disadvantageMultiplier(fl):1;}
+/* 光闇が三すくみの相手（火水木）に通す倍率。等倍ではなく、少しだけ通る。
+   光闇は優勢属性の巡り（火水木火水木＋光＋闇）で上振れが8帯に1度しか来ず、
+   残り7帯は等倍のまま無属性の主ステ+15%だけを失う。実測で固定運用の到達深度が
+   30と、火水木最高39にも無属性39にも9層届かなかった。
+   被ダメージ側を1.15→0.92まで動かしても到達深度は30のまま1層も動かない。
+   届かない原因は「倒しきれずに時間切れ」で、受けの軽減では埋まらないため。
+   上振れを厚くすると上限2.0前後という決めごとを壊すので、
+   7帯ぶんのわずかな上乗せで埋める。 */
+const RARE_NEUTRAL_EDGE=1.10;
+function resonanceDamageMultiplier(r,defender,fl){if(r.element==="neutral")return 1;
+  const affinity=elementMultiplier(r.element,defender);
+  if(affinity>1)return r.advantage;
+  if(affinity<1)return disadvantageMultiplier(fl);
+  return LIGHT_DARK.has(r.element)?RARE_NEUTRAL_EDGE:1;}
 /* 被ダメージは「相手に勝てるなら軽く受ける」で決めるが、光と闇だけは互いに1.3倍で
    対称なため、その判定だと光も闇も相手を軽減してしまい、どちらにも弱点が無くなる。
    結果、光闇ビルドは8帯すべてで不利無しとなり火水木より到達深度が伸びていた。
@@ -1747,10 +1772,17 @@ function resonanceIncomingMultiplier(r,attacker){if(r.element==="neutral")return
     if(LIGHT_DARK.has(attacker)&&r.element!==attacker)return r.danger;
     /* 光闇は有利帯が少ない代わりに固定運用で弱点帯も少ない。三すくみ属性からの
        被害を少し増やし、希少属性を着けっぱなしにすることが最適解にならないようにする。
-       1.15 → 1.05。有利倍率を 5.0/6.5 → 1.7/2.15 に下げたら、8帯に1度しかない
-       上振れでは常時1.15の被害を取り返せず、光の固定運用が火水木最高より
-       10層も浅くなった（実測 25 対 35）。歯止めは残すが、幅を上乗せの縮小に合わせる。 */
-    if(!LIGHT_DARK.has(attacker))return 1.05;}
+       1.15 → 1.05 → 1.0（歯止めを外した）。この割増は、有利倍率が5.0/6.5だった頃に
+       「光闇を着けっぱなしにするのが最適解」になるのを止めるために置いたもの。
+       いまは上乗せが +40% までしかなく、しかも上振れは8帯に1度しか来ない。
+       常時の割増を少しでも乗せると取り返せず、光の固定運用が火水木最高より
+       9〜10層も浅くなった（実測 1.15で25対35、1.05で30対39）。
+       「着けっぱなしが得すぎないか」は、光闇の到達深度が無属性+5層未満に
+       収まっているかで検査しているので、そちらに任せる。
+
+       光闇が7帯ぶん損をしている件は与ダメージ側（RARE_NEUTRAL_EDGE）で埋める。
+       受けを軽くしても到達深度は1層も動かなかった（原因は時間切れ）。 */
+    if(!LIGHT_DARK.has(attacker))return 1;}
   const affinity=elementMultiplier(r.element,attacker);return affinity>1?r.guard:affinity<1?r.danger:1;}
 const ACLS=["warrior","mage"];
 const BASEN={weapon:null,
@@ -2280,7 +2312,7 @@ function statsHTML(it,cmp){
     return `${AFN(a.id)} +${a.v}${AFP(a.id)?"%":""}${qc}`;}).join("<br>");
   if(it.pw){const p=POWER(it.pw);if(p){h+=`<div class="leg">◆ ${p.n} — ${p.d}</div>`;
     const worn=SLOTK.reduce((n,k)=>n+((S.gear[k]&&S.gear[k]!==it&&S.gear[k].pw===it.pw)?1:0),0);
-    if(worn)h+=`<div class="ty">装備中に同じ効果が${worn}個。これを足すと効果 ${pwStack(worn+1).toFixed(2)}倍（重ねるほど伸びは小さくなります）。</div>`;}}
+    if(worn)h+=`<div class="ty">装備中に同じ効果が${worn}個。これを足すと効果 ${pctOf(pwStack(worn+1))}（重ねるほど伸びは小さくなります）。</div>`;}}
   return h;}
 const sellV=it=>Math.max(1,Math.round((8+it.ilvl*4)*[1,2,5,14,60][it.rar]/CFG.SELL_DIV));
 function setItemLocked(it,value){if(!it)return;it.locked=!!value;
@@ -4209,7 +4241,7 @@ function updHUD(){
     const m=bossRageMul(S.boss.rageT),n=$("bossN");
     if(n){const left=Math.ceil(CFG.BOSS_ENRAGE_AT-(S.boss.rageT||0));
       n.innerHTML=S.boss.n+(m>1
-        ?` <span style="color:#ff6a4a">激昂 ×${m.toFixed(1)} — 傷が塞がる</span>`
+        ?` <span style="color:#ff6a4a">激昂 ${pctOf(m)} — 傷が塞がる</span>`
         :(S.boss.agro&&left<=20?` <span style="color:#e0a53c">激昂まで ${left}秒</span>`:""));}}}
 function updBuffs(){const p=S.p,c=$("buffs");c.innerHTML="";
   if(p&&p.shrine){const d=document.createElement("div");d.className="buff";
@@ -4437,7 +4469,7 @@ function statBlock(host){
   const wornEls=SLOTK.map(k=>S.gear[k]?elIc(S.gear[k].element,12):`<span class="elIc" style="opacity:.25">${icon("el_neutral",12)}</span>`).join("");
   c.innerHTML=`<div class="gearStatsHead"><b>全ステータス</b>`+
     `<small class="reso" data-tap="reso" style="color:${ELEMENTS[resonanceNow.element].col}">${wornEls}`+
-    `<span>共鳴 ${elementName(resonanceNow.element)} ${["なし","弱","中","強"][resonanceNow.stage]}・${resonanceNow.count}/7</span>${icon("ui_help",13)}</small></div>`+
+    `<span>${resonanceNow.stage?`${elementName(resonanceNow.element)}属性 ${pctOf(resonanceNow.advantage)}`:"属性なし"}・${resonanceNow.count}/7</span>${icon("ui_help",13)}</small></div>`+
     DSHOW.map(([k,nm,mode])=>{const v=k==="dodge"?dodgeRateFor(d):(d[k]||0),
       shown=mode===1?v*100:v,dec=mode===1||mode===2?1:mode===3?2:0,
       pre=mode===3?"×":"",suf=mode===1?"%":mode===2?"/s":"";
@@ -4449,10 +4481,10 @@ function statBlock(host){
     summary.innerHTML=`<span>装備中の固有効果</span><b>${unique.length}種</b>`;box.appendChild(summary);
     const body=document.createElement("div");body.className="gearPowersBody";
     if(d.pw.some(id=>pwCount(d,id)>1)){const note=document.createElement("div");note.className="st";
-      note.textContent="同じ効果は重ねるほど伸びが半減します（上限2.00倍）。";body.appendChild(note);}
+      note.textContent="同じ効果は重ねるほど伸びが半減します（上限 +100%）。";body.appendChild(note);}
     for(const id of unique){const P=POWER(id);if(!P)continue;const n=pwCount(d,id),mul=pwStack(n),e=document.createElement("div");e.className="stat";
       /* 重ねた数と実効倍率を出す。2個目以降の伸びが小さいことを数字で見せる。 */
-      e.innerHTML=`<span>${P.n}<br>${P.d}</span><b>${n>1?`×${n}・${mul.toFixed(2)}倍`:"発動中"}</b>`;body.appendChild(e);}
+      e.innerHTML=`<span>${P.n}<br>${P.d}</span><b>${n>1?`×${n}・${pctOf(mul)}`:"発動中"}</b>`;body.appendChild(e);}
     box.appendChild(body);host.appendChild(box);}}
 function renderGearTab(host,inDungeon){
   const panel=document.createElement("div");panel.className="gearPanel";
@@ -4479,7 +4511,7 @@ function renderCombinedGear(host,inDungeon,after){
 function renderBreakthroughTab(host){
   const lv=breakthroughLevel(activeCharacterKey()),d=document.createElement("div");d.className="card breakSummary";
   d.innerHTML=`<div><div class="nm">${currentCharacter().n}　${lv}凸 / 5凸</div><div class="st">${lv<5?"同じ仲間 0/1":"最大突破"}</div></div>`
-    +`<div class="breakSteps"><b>1凸</b> 基礎1.06倍　<b>2凸</b> 特性強化　<b>3凸</b> 基礎1.12倍<br><b>4凸</b> 特性強化　<b>5凸</b> 基礎1.20倍＋全能力</div>`;
+    +`<div class="breakSteps"><b>1凸</b> 基礎+6%　<b>2凸</b> 特性強化　<b>3凸</b> 基礎+12%<br><b>4凸</b> 特性強化　<b>5凸</b> 基礎+20%＋全能力</div>`;
   host.appendChild(d);
 }
 /* 技の編成。3枠それぞれに、解放済みの技から好きなものを差す。 */
@@ -5258,18 +5290,18 @@ function openElementHelp(after=openTown){
     const cyc=[...Array(8)].map((_,i)=>elIc(dominantElement(i*5+1),14)).join('<i>›</i>');
     g.innerHTML=
       `<div>装備は7部位それぞれが属性を持つ。${ELEMENT_KEYS.map(k=>elTag(k,13)).join(" ")} と ${elTag("neutral",13)} の6種類。</div>`
-      +`<div class="row">${elIc("neutral",14)}<span>無属性は共鳴しない代わりに、主ステータスが ×${NEUTRAL_BASE.toFixed(2)} 高い。</span></div>`
+      +`<div class="row">${elIc("neutral",14)}<span>無属性は共鳴しない代わりに、主ステータスが ${pctOf(NEUTRAL_BASE)} 高い。</span></div>`
       +`<div><b>効きは2階建て。</b><br>`
-      +`<b>相性</b>が主役 … 階層に対して<b>有利な属性</b>をそろえた時点で 与ダメ ×${st(3).affinity.toFixed(2)}。<br>`
-      +`<b>共鳴</b>はおまけ … 同じ属性を何個そろえたかで、その上に少し積む。<br>`
-      +[3,5,7].map(n=>{const r=st(n);
-        return `${elIc("fire",12)}×${n} … ${r.affinity.toFixed(2)} × 共鳴${r.bonus.toFixed(2)} = <b>与ダメ ×${r.advantage.toFixed(2)}</b> ／ 有利な相手からの被ダメ ×${r.guard.toFixed(2)}`;}).join("<br>")+`</div>`
+      +`<b>相性</b>が主役 … 階層に対して<b>有利な属性</b>を4個そろえた時点で 与ダメ ${pctOf(st(4).affinity)}。<br>`
+      +`<b>共鳴</b>はおまけ … さらに個数をそろえると、その上に積む。<br>`
+      +[4,6,7].map(n=>{const r=st(n);
+        return `${elIc("fire",12)}×${n} … 相性${pctOf(r.affinity)}${r.bonus>1?` ＋ 共鳴${pctOf(r.bonus)}`:""} = <b>与ダメ ${pctOf(r.advantage)}</b> ／ 有利な相手からの被ダメ ${pctOf(r.guard)}`;}).join("<br>")+`</div>`
       /* 相性は「有利か不利か」だけを書く。elementMultiplier の 1.5／0.5／1.3 は
          有利不利を決める判定にしか使っておらず、実際に掛かるのは上の共鳴倍率と
          下の不利倍率。ここに 1.5 と書くと「共鳴倍率にさらに1.5倍が乗る」と読まれる。 */
       +`<div><b>相性</b><div class="beats">`
-      +`<span>${elIc("fire",14)}→${elIc("wood",14)}→${elIc("water",14)}→${elIc("fire",14)}</span><span>矢印の向きが有利（上の倍率）、逆向きが不利（与ダメ ×${disadvantageMultiplier(S.floor||1).toFixed(2)}）</span>`
-      +`<span>${elIc("light",14)}⇄${elIc("dark",14)}</span><span>互いに有利。それ以外の相手には等倍</span>`
+      +`<span>${elIc("fire",14)}→${elIc("wood",14)}→${elIc("water",14)}→${elIc("fire",14)}</span><span>矢印の向きが有利（上の値）、逆向きが不利（与ダメ ${pctOf(disadvantageMultiplier(S.floor||1))}）</span>`
+      +`<span>${elIc("light",14)}⇄${elIc("dark",14)}</span><span>互いに有利。${elIc("fire",12)}${elIc("water",12)}${elIc("wood",12)} には有利不利が無い代わり、いつでも 与ダメ ${pctOf(RARE_NEUTRAL_EDGE)}</span>`
       +`</div></div>`
       +`<div><b>敵の優勢属性は5層ごとに変わる。</b>8帯で一巡する。<div class="cyc">${cyc}</div>`
       +`潜る階層の優勢属性に対して<b>有利な属性</b>でそろえるのが基本。深度表示の横と、出撃バーの「次のボス」に出ている属性がそれ。</div>`;
@@ -5640,7 +5672,7 @@ function showItem(it,inDungeon){
      気付けない（枠色＝等級、+N＝強化と、他の印はすべて別の意味を持っている）。
      押すと属性の説明が開く。 */
   {const el=document.createElement("div");el.className="btn gh elItemLine";
-    el.innerHTML=`${elTag(it.element,15)}<span class="sub">${it.element==="neutral"?"共鳴しない":"7部位で3個そろえると共鳴"}</span>${icon("ui_help",14)}`;
+    el.innerHTML=`${elTag(it.element,15)}<span class="sub">${it.element==="neutral"?"共鳴しない":"7部位で4個そろえると属性攻撃"}</span>${icon("ui_help",14)}`;
     tapEl(el,()=>openElementHelp(()=>showItem(it,inDungeon)));c.appendChild(el);}
   const mk=(t,cls,fn,host=c)=>{const d=document.createElement("div");d.className="btn "+cls;d.textContent=t;
     tapEl(d,fn);c.appendChild(d);};
@@ -5924,7 +5956,7 @@ function compareItemStats(it,other,isAfter){if(!it)return "効果なし";
   }
   if(it.pw){const p=POWER(it.pw);if(p){h+=`<div class="leg">◆ ${p.n} — ${p.d}</div>`;
     const worn=SLOTK.reduce((n,k)=>n+((S.gear[k]&&S.gear[k]!==it&&S.gear[k].pw===it.pw)?1:0),0);
-    if(worn)h+=`<div class="ty">装備中に同じ効果が${worn}個。これを足すと効果 ${pwStack(worn+1).toFixed(2)}倍（重ねるほど伸びは小さくなります）。</div>`;}}return h;}
+    if(worn)h+=`<div class="ty">装備中に同じ効果が${worn}個。これを足すと効果 ${pctOf(pwStack(worn+1))}（重ねるほど伸びは小さくなります）。</div>`;}}return h;}
 function gearDerivedDeltaHTML(slot,item){
   const before=derive(),after=deriveWith(slot,item),rows=[];
   for(const [k,nm,mode] of DSHOW){const get=(d,key)=>key==="dodge"?dodgeRateFor(d):(d[key]||0),scale=mode===1?100:1;

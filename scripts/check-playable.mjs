@@ -635,8 +635,11 @@ await page.goto(base); await page.waitForTimeout(500);
     out.helpText = document.getElementById('itC').textContent;
     out.helpOpen = document.getElementById('itPop').classList.contains('on');
     out.helpIcons = document.querySelectorAll('#itC .elGuide .elIc').length;
-    const r5 = resonanceStageInfo(5);
-    out.helpShowsReal = out.helpText.includes('×' + r5.advantage.toFixed(2));
+    /* 説明の倍率は本体から取っていること。表示は「×1.95」ではなく「+95%」。
+       区切りも 3/5/7 から 4/6/7 に変わったので、振り切った7個で照合する。 */
+    const r7 = resonanceStageInfo(7);
+    out.helpWant = `+${Math.round((r7.advantage - 1) * 100)}%`;
+    out.helpShowsReal = out.helpText.includes(out.helpWant);
     document.getElementById('itPop').classList.remove('on');
     /* 潜ったら「この階層で自分は有利か」が出ること */
     SLOTK.forEach(k => { if (S.gear[k]) S.gear[k].element = 'fire'; });
@@ -656,7 +659,8 @@ await page.goto(base); await page.waitForTimeout(500);
   if (el.cellIcons !== el.cells) problems.push(`倉庫の格子${el.cells}件のうち属性アイコンは${el.cellIcons}件`);
   if (!el.detailIcon) problems.push('装備の詳細に属性が出ていない');
   if (!el.helpOpen || el.helpIcons < 6) problems.push(`属性の説明が開かない、または属性が出ていない（${el.helpIcons}個）`);
-  if (!el.helpShowsReal) problems.push('属性の説明の倍率が本体の resonance() と一致しない（数字を写している）');
+  if (!el.helpShowsReal) problems.push(`属性の説明の倍率が本体の resonance() と一致しない（${el.helpWant} が出ていない。数字を写している）`);
+  if (/×[0-9]+\.[0-9]/.test(el.helpText)) problems.push(`属性の説明に「×1.95」形式が残っている（+95% 表記に統一する）`);
   if (!el.floorHudIcon) problems.push('潜行中の深度表示に階層の属性アイコンが無い');
   if (!el.floorHud.includes('有利')) problems.push(`火でそろえて木優勢の31階へ入ったのに「有利」が出ない（${el.floorHud}）`);
   if (el.metaClipped) problems.push('潜行中の深度の行が幅に収まらず省略記号で切れている');
