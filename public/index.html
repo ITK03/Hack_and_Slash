@@ -320,8 +320,12 @@ h3{font-size:11px;font-weight:800;color:var(--ink3);margin:18px 0 8px;letter-spa
    一緒に流れていくと、格子を見ている間はタブへ戻るのに一度上まで戻ることになる。
    box-shadow の広がりで左右と上の余白ぶんを地の色で塗り、下を流れる中身を隠す。
    .sbody の直下にある時だけ効かせる（装備タブのタブは見出しの中なので対象外）。 */
+/* 影は「柔らかい落ち影」だけにする。以前は 0 0 0 15px の不透明な縁取りで
+   上下左右を地の色に塗っていたが、下15pxぶんが操作列(#invBar)の上に乗り、
+   黒い帯となって中身を隠していた。タブ自身が不透明な背景を持っているので、
+   下を流れる中身はそれだけで隠れる。縁取りは要らなかった。 */
 .sbody>.innerTabs{position:sticky;top:0;z-index:6;
-  box-shadow:0 0 0 15px var(--bg),0 12px 12px -9px rgba(4,6,10,.85)}
+  box-shadow:0 7px 10px -9px rgba(4,6,10,.9)}
 .innerTabs .btn{flex:1;margin:0;padding:0 2px;font-size:11px;white-space:nowrap}
 /* 絞込などの操作列も、タブのすぐ下に固定して同じ扱いにする。 */
 #invBar{position:sticky;top:57px;z-index:5;background:var(--bg);padding-bottom:6px}
@@ -567,8 +571,11 @@ body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
   display:flex;align-items:center;justify-content:center;
   background:linear-gradient(180deg,var(--panel),var(--panel2))}
 .cell:active{filter:brightness(1.5)}
-/* 選択中。レア度の金と見分けが付かなかったので水色の縁にする。 */
-.cell.sel{outline:2px solid #6ad8ff;outline-offset:-2px;background:rgba(106,216,255,.10)}
+/* 選択中。レア度の金と見分けが付かなかったので水色の縁にする。
+   塗りは属性色を直接 style に入れているので、選択中だけはそれより強くする。 */
+.cell.sel{outline:2px solid #6ad8ff;outline-offset:-2px}
+.cell.sel{background:linear-gradient(180deg,rgba(106,216,255,.22),rgba(106,216,255,.10)),
+  linear-gradient(180deg,#1b2431,#101720)!important}
 .cell{display:flex;flex-direction:column;justify-content:space-between;padding:2px 3px}
 .cell .cellTop,.cell .cellBtm{display:flex;justify-content:space-between;align-items:center;
   width:100%;height:14px;line-height:1}
@@ -579,7 +586,14 @@ body.tutBar #mmW{top:calc(env(safe-area-inset-top) + 112px)}
 .cell .mk.sel{color:#6ad8ff}
 .cell .enh{font-size:12px;font-weight:900;color:#7ad0ff}
 
-.cell .lvl{font-size:12px;color:var(--ink2);font-weight:700}
+/* 見かたの色見本。枠＝レア度・塗り＝属性を、実物と同じ描き方で並べる。 */
+.legendSwatch{display:flex;flex-wrap:wrap;gap:4px 9px;align-items:center}
+.legendSwatch .sw{width:18px;height:18px;border:1px solid var(--line);border-radius:3px;
+  background:linear-gradient(180deg,#1b2431,#101720);flex:0 0 auto}
+.legendSwatch em{font-style:normal;font-size:11px;font-weight:800;margin-right:3px}
+.cell .lvl{font-size:12px;color:var(--ink2);font-weight:700;
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cell .cellTop,.cell .cellBtm{overflow:hidden}
 
 /* 属性のアイコン。色は属性色を継ぐが、色が見えなくても輪郭で分かる形にしてある。
    置き場所は必ず既存の帯（cellBtm / slotTop）の中で、絶対配置で角に重ねない。
@@ -1710,6 +1724,18 @@ const elIc=(k,sz)=>{const e=ELEMENTS[k]||ELEMENTS.neutral;
    どれだけ増えるのかが直に読める。基準そのものが倍率のもの（技の◯倍、
    結晶2倍など「通常攻撃の何回ぶんか」を表す数）はここでは扱わない。 */
 const pctOf=m=>`${m>=1?"+":"−"}${Math.round(Math.abs(m-1)*100)}%`;
+/* 装備の箱は「枠＝レア度／塗り＝属性」で分ける。
+   格子に並ぶ枠はアイコンを足すと、印(▲/E/選択)・強化値・深度と合わせて
+   小さな面に5つも要素が乗り、数字がはみ出すほど詰まる。色で分ければ足りる。
+   枠をレア度に割り当てたのは、枠の色＝レア度がすでに全画面の決めごとで、
+   倉庫の「見かた」にもそう書いてあるため。入れ替えると全部作り直しになる。
+   アイコンは、面積のある場所（装備枠の帯・装備の詳細・比較・共鳴の行・説明）に残す。 */
+/* 深度は数万まで伸びうる（管理者モードの検証装備で999999まで見た）。
+   そのまま出すと格子の枠から数字がはみ出し、隣の枠に重なる。 */
+const depthText=v=>v>=10000?Math.round(v/1000)+"k":String(v);
+const elFill=(el,base)=>{const c=(ELEMENTS[el]||ELEMENTS.neutral).col;
+  return `linear-gradient(180deg,${c}66,${c}1f),${base}`;};
+const CELL_BASE="linear-gradient(180deg,#1b2431,#101720)";
 const elTag=(k,sz)=>{const e=ELEMENTS[k]||ELEMENTS.neutral;
   return `<span class="elTag" style="color:${e.col}">${elIc(k,sz||13)}<b>${e.n}</b></span>`;};
 // 5層帯ごとに優勢属性を固定し、8帯で火水木を2回、光闇を1回ずつ巡回する。
@@ -4426,7 +4452,8 @@ function gearGrid(host,inDungeon){
     const up=hasUpgrade(s.k);
     /* レア度は倉庫と同じ「枠の色」で示す。装備タブだけ文字色だと、
        同じ持ち物なのに画面ごとに見分け方が変わってしまう。 */
-    if(it)d.style.borderColor=it.rar===4?"#ff8adf":CFG.RARITY[it.rar][3];
+    if(it){d.style.borderColor=it.rar===4?"#ff8adf":CFG.RARITY[it.rar][3];
+      d.style.background=elFill(it.element,"linear-gradient(180deg,#1a2330,#111821)");d.dataset.el=it.element||"neutral";}
     /* 印は上段の帯に「左＝更新できる / 右＝強化値」で並べる。
        絶対配置で角に置くと、印が増えたときに必ず重なる。 */
     d.innerHTML=`<div class="slotTop"><span class="up">${up?"▲":""}</span>`
@@ -5289,7 +5316,11 @@ function openInvLegend(){
     legend.innerHTML=`<span><b style="color:#7ad04e">▲</b> 装備中より強い（職業・属性補正込み）</span><span><b style="color:var(--gold)">E</b> いずれかのキャラが装備中</span>`
       +`<span>${icon("ui_lock",12)} 保護中（素材・売却・分解の対象外）</span>`
       +`<span><b>右下の数字</b> 装備の深度</span><span><b style="color:#7ad0ff">左下の +N</b> 強化レベル</span>`
-      +`<span><b>枠の色</b> ${CFG.RARITY.map((r,i)=>`<i class="${RC[i]}">${r[0]}</i>`).join(" / ")}</span>`;
+      /* 枠と塗りで別のことを言っている。並べて見せないと、どちらが何なのか伝わらない。 */
+      +`<span><b>枠の色</b> ＝ レア度</span>`
+      +`<span class="legendSwatch">${CFG.RARITY.map((r,i)=>`<i class="sw" style="border-color:${i===4?"#ff8adf":r[3]}"></i><em class="${RC[i]}">${r[0]}</em>`).join("")}</span>`
+      +`<span><b>塗りの色</b> ＝ 属性</span>`
+      +`<span class="legendSwatch">${[...ELEMENT_KEYS,"neutral"].map(k=>`<i class="sw" style="background:${elFill(k,CELL_BASE)}"></i><em style="color:${ELEMENTS[k].col}">${ELEMENTS[k].n}</em>`).join("")}</span>`;
     c.appendChild(legend);},openTown);
 }
 /* 属性の説明。装備の詳細と、装備タブの共鳴の行から開く。
@@ -5652,15 +5683,16 @@ function renderInv(b){
   for(const it of list){
     const cur=S.gear[it.slot],better=effScore(it)>effScore(cur),equipped=isEquipped(it),sel=F.sellSel.includes(it);
     const c=document.createElement("div");c.className="cell "+RC[it.rar]+(sel?" sel":"");
+    /* 枠＝レア度、塗り＝属性 */
     c.style.borderColor=it.rar===4?"#ff8adf":CFG.RARITY[it.rar][3];
+    c.style.background=elFill(it.element,CELL_BASE);c.dataset.el=it.element||"neutral";
     /* 印は上段の帯に「左＝選択 / 右＝装備中か更新できるか」で並べる。
        以前は選択の印と▲が同じ左上に出て重なっていた。 */
     c.innerHTML=`<div class="cellTop"><span class="mk sel">${sel?(F.dismantleMode?"分":"売"):it.locked?icon("ui_lock",12):""}</span>`
       +`<span class="mk">${equipped?'<b class="e">E</b>':(better?'<b class="u">▲</b>':"")}</span></div>`
       +`<div class="cellIc">${icon(iconKey(it),26)}</div>`
       +`<div class="cellBtm"><span class="enh">${(it.lv||1)>1?"+"+((it.lv||1)-1):""}</span>`
-      +elIc(it.element,13)
-      +`<span class="lvl">${it.ilvl}</span></div>`;
+      +`<span class="lvl">${depthText(it.ilvl)}</span></div>`;
     tapEl(c,()=>{if(!equipped&&!it.locked&&(F.sellMode||F.dismantleMode)){const i=F.sellSel.indexOf(it);if(i>=0)F.sellSel.splice(i,1);else F.sellSel.push(it);openTown();}else showItem(it,false);});
     c.addEventListener("touchstart",()=>{}, {passive:true});
     c.addEventListener("contextmenu",e=>{e.preventDefault();if(equipped||it.locked||!selecting)return;const i=F.sellSel.indexOf(it);if(i>=0)F.sellSel.splice(i,1);else F.sellSel.push(it);openTown();});
@@ -5866,7 +5898,8 @@ function renderGearWorkspace(host,slotK){
   let list=allOwnedGear().filter(x=>gearCandidateAllowed(x,slotK));if(S.gearCandidateRare)list=list.filter(x=>x.rar>=2);
   list.sort((a,z)=>S.gearCandidateSort==="score"?powerWith(slotK,z)-powerWith(slotK,a):z.ilvl-a.ilvl);
   if(!list.length){const empty=document.createElement("div");empty.className="card";empty.innerHTML='<div class="st">装備できる物がありません。</div>';wrap.appendChild(empty);}
-  else{const grid=document.createElement("div");grid.className="gearCandidates";for(const x of list){const owner=equippedOwner(x),d=document.createElement("div");d.className=`gearCandidate ${RC[x.rar]}`;d.style.borderColor=x.rar===4?"#ff8adf":CFG.RARITY[x.rar][3];d.setAttribute("aria-label",x.name+(owner?` ${characterName(owner)}が装備中`:""));d.innerHTML=(owner?'<i class="ownerMark">E</i>':"")+icon(iconKey(x),32)+elIc(x.element,12)+`<small>${x.ilvl}</small>`;tapEl(d,()=>{S.gearCompareChoice=x;openTown();});grid.appendChild(d);}wrap.appendChild(grid);}
+  else{const grid=document.createElement("div");grid.className="gearCandidates";for(const x of list){const owner=equippedOwner(x),d=document.createElement("div");d.className=`gearCandidate ${RC[x.rar]}`;d.style.borderColor=x.rar===4?"#ff8adf":CFG.RARITY[x.rar][3];d.setAttribute("aria-label",x.name+(owner?` ${characterName(owner)}が装備中`:""));d.style.background=elFill(x.element,"#111821");d.dataset.el=x.element||"neutral";
+      d.innerHTML=(owner?'<i class="ownerMark">E</i>':"")+icon(iconKey(x),32)+`<small>${depthText(x.ilvl)}</small>`;tapEl(d,()=>{S.gearCompareChoice=x;openTown();});grid.appendChild(d);}wrap.appendChild(grid);}
   host.appendChild(wrap);
 }
 function renderGearComparePage(host,slotK,it){

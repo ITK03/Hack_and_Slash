@@ -625,9 +625,24 @@ await page.goto(base); await page.waitForTimeout(500);
     S.tab = 'gear'; S.scene = 'town'; openTown();
     out.slotIcons = document.querySelectorAll('#scTown .slot .slotTop .elIc').length;
     out.resoIcons = document.querySelectorAll('#scTown .gearStatsHead .reso .elIc').length;
-    S.tab = 'inv'; S.inv.tab = 'gear'; openTown();
-    out.cellIcons = document.querySelectorAll('#scTown .cell .cellBtm .elIc').length;
-    out.cells = document.querySelectorAll('#scTown .cell').length;
+    S.tab = 'inv'; S.invSub = 'gear'; openTown();
+    /* 格子は「枠＝レア度／塗り＝属性」。アイコンは面積が無いので置かない。
+       塗りに属性の色が実際に入っているかを、素の style 文字列で見る。 */
+    const cells = [...document.querySelectorAll('#scTown .cell')];
+    out.cells = cells.length;
+    /* インラインの #rrggbb はブラウザが rgb(r, g, b) に正規化するので、
+       文字列の比較はその形に直してから行う。 */
+    /* 塗りは #rrggbb+透明度の8桁で書いており、計算後は rgba(r, g, b, a) になる。
+       透明度は問わないので rgba の頭だけで照合する。 */
+    const rgbaHead = hex => { const n = parseInt(hex.slice(1), 16); return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`; };
+    out.cellTinted = cells.filter(c => c.dataset.el
+      && getComputedStyle(c).backgroundImage.includes(rgbaHead(ELEMENTS[c.dataset.el].col))).length;
+    out.cellIconsLeft = document.querySelectorAll('#scTown .cell .elIc').length;
+    out.cellBorders = cells.filter(c => c.style.borderColor).length;
+    /* 数字が枠からはみ出さないこと（深度999999の検証装備で隣の枠に重なっていた） */
+    S.stash.forEach(x => { x.ilvl = 999999; }); openTown();
+    out.numOverflow = [...document.querySelectorAll('#scTown .cell .lvl')]
+      .filter(e => e.scrollWidth > e.clientWidth + 1).length;
     showItem(S.stash[0], false);
     out.detailIcon = document.querySelectorAll('#itC .elItemLine .elIc').length;
     /* 説明が開き、倍率を本体から取っていること（写した数字だと本体を変えても古いまま） */
@@ -656,7 +671,10 @@ await page.goto(base); await page.waitForTimeout(500);
   if (el.dup) problems.push(`属性アイコンの輪郭が${el.dup}組かぶっている（色でしか見分けられない）`);
   if (el.slotIcons !== 7) problems.push(`装備枠7つのうち属性アイコンが出ているのは${el.slotIcons}枠`);
   if (el.resoIcons !== 7) problems.push(`共鳴の行に7部位ぶんの属性が並んでいない（${el.resoIcons}個）`);
-  if (el.cellIcons !== el.cells) problems.push(`倉庫の格子${el.cells}件のうち属性アイコンは${el.cellIcons}件`);
+  if (el.cellTinted !== el.cells) problems.push(`倉庫の格子${el.cells}件のうち属性の塗りが入っているのは${el.cellTinted}件`);
+  if (el.cellBorders !== el.cells) problems.push(`倉庫の格子${el.cells}件のうちレア度の枠色が入っているのは${el.cellBorders}件`);
+  if (el.cellIconsLeft) problems.push(`倉庫の格子に属性アイコンが${el.cellIconsLeft}個残っている（塗りで示すので置かない）`);
+  if (el.numOverflow) problems.push(`倉庫の格子${el.numOverflow}件で深度の数字が枠からはみ出している`);
   if (!el.detailIcon) problems.push('装備の詳細に属性が出ていない');
   if (!el.helpOpen || el.helpIcons < 6) problems.push(`属性の説明が開かない、または属性が出ていない（${el.helpIcons}個）`);
   if (!el.helpShowsReal) problems.push(`属性の説明の倍率が本体の resonance() と一致しない（${el.helpWant} が出ていない。数字を写している）`);
@@ -664,7 +682,7 @@ await page.goto(base); await page.waitForTimeout(500);
   if (!el.floorHudIcon) problems.push('潜行中の深度表示に階層の属性アイコンが無い');
   if (!el.floorHud.includes('有利')) problems.push(`火でそろえて木優勢の31階へ入ったのに「有利」が出ない（${el.floorHud}）`);
   if (el.metaClipped) problems.push('潜行中の深度の行が幅に収まらず省略記号で切れている');
-  notes.push(`属性: 6種とも別の輪郭 / 装備枠${el.slotIcons} 共鳴の行${el.resoIcons} 倉庫${el.cellIcons}/${el.cells} 詳細${el.detailIcon} 説明${el.helpIcons}`);
+  notes.push(`属性: 6種とも別の輪郭 / 装備枠${el.slotIcons} 共鳴の行${el.resoIcons} 詳細${el.detailIcon} 説明${el.helpIcons} / 倉庫は塗り${el.cellTinted}・枠${el.cellBorders}（${el.cells}件）`);
   notes.push(`  潜行中の深度表示 属性アイコン${el.floorHudIcon}個＋「${el.floorHud.trim()}」（火でそろえて木優勢の31階）`);
 }
 
@@ -748,6 +766,19 @@ await page.goto(base); await page.waitForTimeout(500);
       body.scrollTop = 400; await new Promise(r => requestAnimationFrame(r));
       out.scrolled = body.scrollTop;
       out.tabDrift = Math.round(top0 - tabs.getBoundingClientRect().top);
+      /* 固定したタブの影で下の行を塗りつぶさないこと。
+         以前 box-shadow を 0 0 0 15px の不透明な縁取りにしており、下15pxぶんが
+         操作列の上に黒い帯として乗って中身を隠していた。
+         影は枠の外へ広がるので、枠の位置を比べても見つからない。
+         「広がり(spread)を持つ不透明な影」そのものを見る。 */
+      out.opaqueRing = (getComputedStyle(tabs).boxShadow || '').split(/,(?![^()]*\))/)
+        .filter(layer => {
+          const nums = layer.match(/-?[\d.]+px/g) || [];
+          const spread = nums.length >= 4 ? parseFloat(nums[3]) : 0;
+          const rgba = /rgba\(([^)]+)\)/.exec(layer);
+          const alpha = rgba ? parseFloat(rgba[1].split(',')[3] ?? '1') : 1;
+          return spread > 1 && alpha > .95;
+        });
       body.scrollTop = 0;
     }
     /* 開始階層は 1+5n だけ。管理者でも出撃バーからは刻みを外せないこと。 */
@@ -774,6 +805,7 @@ await page.goto(base); await page.waitForTimeout(500);
   });
   if (!town.tabsFound) problems.push('倉庫のタブが .sbody の直下に無い（固定できない）');
   else if (town.tabDrift > 1) problems.push(`倉庫のタブが中身と一緒に流れる（${town.scrolled}px スクロールで ${town.tabDrift}px 動いた）`);
+  if (town.opaqueRing && town.opaqueRing.length) problems.push(`固定したタブの影が不透明で下の行を隠す（${town.opaqueRing.join(' / ')}）`);
   if (town.snapPlain.join(',') !== '1,1,1,6,21,96') problems.push(`開始階層が1+5nに切り下がらない（${town.snapPlain.join(',')}）`);
   if (town.snapAdmin.join(',') !== '21,41') problems.push(`管理者だと出撃バーから1階層単位で潜れる（${town.snapAdmin.join(',')}）`);
   if (town.exactAdmin !== 23) problems.push(`管理者パネルの1階層単位テストまで刻まれている（${town.exactAdmin}）`);
